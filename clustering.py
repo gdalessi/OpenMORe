@@ -80,6 +80,7 @@ class lpca:
         
         # Initialize solution
         idx = initialize_clusters(self.X, self.method, self.k)
+        residuals = np.array(0)
         # Iterate
         while(iteration < iter_max):
             sq_rec_oss = np.zeros((rows, cols), dtype=float)
@@ -111,6 +112,7 @@ class lpca:
             # Update counter
             iteration += 1
         print("Convergence reached in {} iterations.".format(iteration))
+        plot_residuals(iteration, residuals)
         return idx
         
     

@@ -15,11 +15,14 @@ MODULE: operations.py
 
 '''
 
-__all__ = ["get_cluster", "get_centroids", "fitPCA", "check_sanity_int", "check_sanity_NaN"]
+__all__ = ["get_cluster", "get_centroids", "fitPCA", "check_sanity_int", "check_sanity_NaN", "plot_residuals"]
 
 import numpy as np
 import pandas as pd
 from sklearn.decomposition import PCA
+
+import matplotlib
+import matplotlib.pyplot as plt
 
 # -----------------
 # Functions
@@ -53,3 +56,14 @@ def check_sanity_NaN(X):
     else:
         raise Exception("The input matrix contains NaN values. Please double-check your input.")
         exit()
+
+def plot_residuals(iterations, error):
+    matplotlib.rcParams.update({'font.size' : 18, 'text.usetex' : True})
+    itr = np.linspace(1,iterations, iterations)
+    fig = plt.figure()
+    axes = fig.add_axes([0.15,0.15,0.7,0.7], frameon=True)
+    axes.plot(itr,error[1:], color='b', marker='s', linestyle='-', linewidth=2, markersize=4, markerfacecolor='b')
+    axes.set_xlabel('Iterations [-]')
+    axes.set_ylabel('Reconstruction error [-]')
+    axes.set_title('Convergence residuals')
+    plt.show()

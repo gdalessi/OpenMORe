@@ -28,7 +28,7 @@ PROGRAM: lpca.py
     in the previous step. A new set of centroids is computed after the new partitioning
     step, their coordinates are calculated as the mean of all the observations in each
     cluster;
-    
+
     4. Iteration: All the previous steps are iterated until convergence is reached. The convergence
     criterion is that the variation of the global mean reconstruction error between two consecutive
     iterations must be below a fixed threshold.
@@ -81,7 +81,7 @@ settings = {
     "centering_method"          : "MEAN",
     "scaling_method"            : "AUTO",
     "initialization_method"     : "KMEANS",
-    "number_of_clusters"        : "abcd",
+    "number_of_clusters"        : 4,
     "number_of_eigenvectors"    : 15
 }
 
