@@ -18,6 +18,7 @@ MODULE: preprocessing.py
 __all__ = ["center", "scale", "center_scale"]
 
 import numpy as np
+import pandas as pd
 
 
 
@@ -59,3 +60,32 @@ def center_scale(X, mu, sig):
     X0 = X - mu
     X0 = X0 / (sig + TOL)
     return X0
+
+
+# -------------------
+# Standalone option:
+# -------------------
+
+
+if __name__ == "__main__":
+
+    file_options = {
+    "path_to_file"              : "/Users/giuseppedalessio/Dropbox/python_course/LPCA/",
+    "file_name"                 : "cfdf.csv",
+    }
+
+    settings = {
+    "centering_method"          : "MEAN",
+    "scaling_method"            : "AUTO",
+}
+
+    try:
+        print("Reading the training matrix..")
+        X = pd.read_csv(file_options["path_to_file"] + file_options["file_name"], sep = ',', header = None) 
+        print("The training matrix has been read successfully!")
+    except OSError:
+        print("Could not open/read the selected file: " + file_options["file_name"])
+        exit()
+
+    X_tilde = center_scale(X, center(X, method=settings["centering_method"]), scale(X, method=settings["scaling_method"]))
+
