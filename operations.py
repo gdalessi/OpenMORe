@@ -15,7 +15,7 @@ MODULE: operations.py
 
 '''
 
-__all__ = ["get_cluster", "get_centroids", "fitPCA"]
+__all__ = ["get_cluster", "get_centroids", "fitPCA", "check_sanity_int"]
 
 import numpy as np
 from sklearn.decomposition import PCA
@@ -38,3 +38,10 @@ def fitPCA(X, n_eig):
     pca.fit(X)
     eigenvec = pca.components_
     return np.array(eigenvec)
+
+def check_sanity_int(kappa):
+    if isinstance(kappa, int) == True:
+        return kappa
+    else:
+        raise Exception("The number of cluster and/or eigenvectors input must be integers. Please provide a valid input.")
+        exit()
