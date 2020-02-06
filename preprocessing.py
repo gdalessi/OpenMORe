@@ -9,6 +9,31 @@ MODULE: preprocessing.py
 @Contacts:
     giuseppe.dalessio@ulb.ac.be
 
+@Brief: 
+    Centering and scaling functions for multivariate data.
+
+@Details: 
+    In multivariate data-sets the variables are characterized by different units and ranges,
+    thus preprocessing in the form of centering and scaling is a mandatory operation.
+    Centering consists of subtracting the mean value of each variable to all data-set
+    observations. Scaling is achieved by dividing each variable by a given scaling factor. Therefore, the
+    i-th observation of the j-th variable, x_{i,j} can be
+    centered and scaled by means of:
+
+    \tilde{x_{i,j}} = (x_{i,j} - mu_{j}) / (sig_{j}),
+
+    where mu_{j} and sig_{j} are the centering and scaling factor for the considered j-th variable, respectively.
+
+    AUTO: the standard deviation of each variable is used as a scaling factor.
+    PARETO: the squared root of the standard deviation is used as a scaling f.
+    RANGE: the difference between the minimum and the maximum value is adopted as a scaling f.
+    VAST: the ratio between the variance and the mean of each variable is used as a scaling f.
+
+@Cite:
+    [a] D'Alessio, Giuseppe, et al. "Analysis of turbulent reacting jets via Principal Component Analysis", Data Analysis in Direct Numerical Simulation of Turbulent Combustion, Springer (2020).
+    [b] Parente, Alessandro, and James C. Sutherland. "Principal component analysis of turbulent combustion data: Data pre-processing and manifold sensitivity." Combustion and flame 160.2 (2013): 340-350.
+
+
 @Additional notes:
     This cose is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
     Please report any bug to: giuseppe.dalessio@ulb.ac.be
