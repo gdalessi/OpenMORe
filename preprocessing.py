@@ -30,6 +30,8 @@ def center(X, method):
         mu = np.mean(X, axis = 0)
     elif method == 'MIN' or method == 'min' or method == 'Min':
         mu = np.min(X, axis = 0)
+    else:
+        raise Exception("Caught an exception: unsupported centering option. Supported centering: MEAN or MIN.")
     return mu
 
 
@@ -47,12 +49,13 @@ def scale(X, method):
         maxima = np.max(X, axis = 0)
         minima = np.min(X, axis = 0)
         sig = maxima - minima
+    else:
+        raise Exception("Caught an exception: unsupported scaling option. Supported centering: AUTO, PARETO, VAST or RANGE.")
     return sig
 
 
 def center_scale(X, mu, sig):
     TOL = 1E-10
-    # Main
     X0 = X - mu
     X0 = X0 / (sig + TOL)
     return X0
