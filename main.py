@@ -61,7 +61,7 @@ import matplotlib.pyplot as plt
 
 from preprocessing import *
 from initialization import *
-from operations import check_sanity_int
+from operations import check_sanity_int, check_sanity_NaN
 
 import clustering
 
@@ -83,7 +83,7 @@ settings = {
 
 try:
     print("Reading the training matrix..")
-    X = pd.read_csv(file_options["path_to_file"] + file_options["file_name"], sep = ',', header = None) 
+    X = check_sanity_NaN(pd.read_csv(file_options["path_to_file"] + file_options["file_name"], sep = ',', header = None))
     print("The training matrix has been read successfully!")
 except OSError:
     print("Could not open/read the selected file: " + file_options["file_name"])

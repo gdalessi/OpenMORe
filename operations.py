@@ -15,9 +15,10 @@ MODULE: operations.py
 
 '''
 
-__all__ = ["get_cluster", "get_centroids", "fitPCA", "check_sanity_int"]
+__all__ = ["get_cluster", "get_centroids", "fitPCA", "check_sanity_int", "check_sanity_NaN"]
 
 import numpy as np
+import pandas as pd
 from sklearn.decomposition import PCA
 
 # -----------------
@@ -44,4 +45,11 @@ def check_sanity_int(kappa):
         return kappa
     else:
         raise Exception("The number of cluster and/or eigenvectors input must be integers. Please provide a valid input.")
+        exit()
+
+def check_sanity_NaN(X):
+    if X.isna().values.any() == False:
+        return X
+    else:
+        raise Exception("The input matrix contains NaN values. Please double-check your input.")
         exit()
