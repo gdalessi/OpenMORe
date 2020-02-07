@@ -3,8 +3,8 @@ Local Principal Component Analysis clustering algorithm.
 
 @Details:
 The iterative Local Principal Component Analysis clustering algorithm is based on the following steps:
-    0. Preprocessing: The training matrix X is centered and scaled, after being loaded. Four scaling are available,
-    AUTO, VAST, PARETO, RANGE - Two centering are available, MEAN and MIN;
+
+    0. Preprocessing: The training matrix X is centered and scaled, after being loaded. Four scaling are available, AUTO, VAST, PARETO, RANGE - Two centering are available, MEAN and MIN;
     
     1. Initialization: The cluster centroids are initializated: a random allocation (RANDOM)
     or a previous clustering solution (KMEANS) can be chosen to compute the centroids initial values; 
