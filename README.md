@@ -1,4 +1,4 @@
-# clustering
+# Clustering
 Local Principal Component Analysis clustering algorithm.
 
 @Details:
