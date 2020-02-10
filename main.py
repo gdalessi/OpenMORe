@@ -65,7 +65,6 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 from preprocessing import *
-from initialization import *
 from operations import check_sanity_int, check_sanity_NaN
 
 import clustering

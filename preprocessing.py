@@ -15,7 +15,7 @@ MODULE: preprocessing.py
 @Details: 
     In multivariate data-sets the variables are characterized by different units and ranges,
     thus preprocessing in the form of centering and scaling is a mandatory operation.
-    Centering consists of subtracting the mean value of each variable to all data-set
+    Centering consists of subtracting the mean/min value of each variable to all data-set
     observations. Scaling is achieved by dividing each variable by a given scaling factor. Therefore, the
     i-th observation of the j-th variable, x_{i,j} can be
     centered and scaled by means of:
@@ -51,6 +51,9 @@ import pandas as pd
 # Functions
 # -----------------
 def center(X, method):
+    '''
+    Compute the mean/min value (mu) of each variable of all data-set observations.
+    '''
     # Main
     if method == 'MEAN' or method == 'mean' or method == 'Mean':
         mu = np.mean(X, axis = 0)
@@ -62,6 +65,9 @@ def center(X, method):
 
 
 def scale(X, method):
+    '''
+    Compute the scaling factor (sig) for each variable of the data-set
+    '''
     # Main
     if method == 'AUTO' or method == 'auto' or method == 'Auto':
         sig = np.std(X, axis = 0)
@@ -81,6 +87,22 @@ def scale(X, method):
 
 
 def center_scale(X, mu, sig):
+    '''
+    Center and scale a given multivariate data-set X.
+    Centering consists of subtracting the mean/min value of each variable to all data-set
+    observations. Scaling is achieved by dividing each variable by a given scaling factor. Therefore, the
+    i-th observation of the j-th variable, x_{i,j} can be
+    centered and scaled by means of:
+
+    \tilde{x_{i,j}} = (x_{i,j} - mu_{j}) / (sig_{j}),
+
+    where mu_{j} and sig_{j} are the centering and scaling factor for the considered j-th variable, respectively.
+
+    AUTO: the standard deviation of each variable is used as a scaling factor.
+    PARETO: the squared root of the standard deviation is used as a scaling f.
+    RANGE: the difference between the minimum and the maximum value is adopted as a scaling f.
+    VAST: the ratio between the variance and the mean of each variable is used as a scaling f.
+    '''
     TOL = 1E-10
     X0 = X - mu
     X0 = X0 / (sig + TOL)
@@ -97,11 +119,13 @@ if __name__ == "__main__":
     file_options = {
     "path_to_file"              : "/Users/giuseppedalessio/Dropbox/python_course/LPCA/",
     "file_name"                 : "cfdf.csv",
+    "output_name"               : "X_tilde.csv"
     }
 
     settings = {
     "centering_method"          : "MEAN",
     "scaling_method"            : "AUTO",
+    "write_centscal"            : True,
 }
 
     try:
@@ -113,4 +137,7 @@ if __name__ == "__main__":
         exit()
 
     X_tilde = center_scale(X, center(X, method=settings["centering_method"]), scale(X, method=settings["scaling_method"]))
+
+    if settings["write_centscal"]:
+        np.savetxt(file_options["output_name"], X_tilde)
 

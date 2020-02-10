@@ -54,32 +54,46 @@ MODULE: clustering.py
 '''
 
 
-
-from initialization import *
 from operations import *
 import numpy as np
+from sklearn.cluster import KMeans
 
 class lpca:
-    def __init__(self, X, k, n_eigs, initialization):
+    def __init__(self, X, k, n_eigs, method):
         self.X = np.array(X)
         self.k = k
         self.nPCs = n_eigs
-        self.method = initialization
+        self.method = method
+    
+    @staticmethod
+    def initialize_clusters(X, k, method):
+        if method == 'RANDOM' or method == 'random' or method == 'Random':
+            idx = np.random.random_integers(1, k, size=(X.shape[0], 1))
+        elif method == 'KMEANS' or method == 'kmeans' or method == 'Kmeans':
+            kmeans = KMeans(n_clusters=k, random_state=0).fit(X)
+            idx = kmeans.labels_
+        else:
+            raise Exception("Initialization option not supported. Please choose one between RANDOM or KMEANS.")
+        return idx
+    
+    @staticmethod
+    def initialize_parameters():
+        iteration = 0
+        eps_rec = 1.0
+        residuals = np.array(0)
+        iter_max = 500
+        eps_tol = 1E-8
+
+        return iteration, eps_rec, residuals, iter_max, eps_tol
+
 
     def fit(self):
         print("Fitting Local PCA model...")
         # Initialization
-        convergence = 0
-        iteration = 0
-        eps_rec = 1.0
+        iteration, eps_rec, residuals, iter_max, eps_tol = lpca.initialize_parameters()
         rows, cols = np.shape(self.X)
-        residuals = np.array(0)
-        iter_max = 500
-        eps_tol = 1E-8
-        # Data pre-processing
-        
         # Initialize solution
-        idx = initialize_clusters(self.X, self.method, self.k)
+        idx = lpca.initialize_clusters(self.X, self.k, self.method)
         residuals = np.array(0)
         # Iterate
         while(iteration < iter_max):
