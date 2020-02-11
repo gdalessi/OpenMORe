@@ -91,7 +91,7 @@ class lpca:
         In each cluster, the condition n_obs > n_var must be ensured. In fact,
         a cluster with more variables than observations could not have any sense
         from a statistical point of view. Thus, the number of clusters (k) has 
-        to be lowered until the condition n_obs > n_var is respected.
+        to be lowered so the condition n_obs > n_var can be respected in each cluster.
         '''
         for jj in range(1, max(idx)):
             cluster_ = get_cluster(X, idx, jj)
@@ -99,7 +99,7 @@ class lpca:
                 pos = np.where(idx != 0)
                 idx[pos] -= 1
                 print("WARNING:")
-                print("\tA cluster with less observations than variables was found.")
+                print("\tA cluster with less observations than variables was found:")
                 print("\tThe number of cluster was lowered to ensure statistically meaningful results.")
                 print("\tThe current number of clusters is equal to: {}".format(max(idx)))
                 break
