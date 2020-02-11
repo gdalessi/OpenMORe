@@ -64,15 +64,14 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 
-from preprocessing import *
-from operations import check_sanity_int, check_sanity_NaN
+from operations import *
 
 import clustering
 
 
 file_options = {
-    "path_to_file"              : "/Users/giuseppedalessio/Dropbox/python_course/LPCA/",
-    "file_name"                 : "cfdf.csv",
+    "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data",
+    "file_name"                 : "/concentrations.csv",
 }
 
 
@@ -80,8 +79,8 @@ settings = {
     "centering_method"          : "MEAN",
     "scaling_method"            : "AUTO",
     "initialization_method"     : "KMEANS",
-    "number_of_clusters"        : 8,
-    "number_of_eigenvectors"    : 15
+    "number_of_clusters"        : 16,
+    "number_of_eigenvectors"    : 5
 }
 
 

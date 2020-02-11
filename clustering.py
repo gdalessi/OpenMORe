@@ -88,18 +88,15 @@ class lpca:
     @staticmethod
     def merge_clusters(X, idx):
         '''
-        In each cluster, the condition n_obs > n_var must be ensured. In fact,
-        a cluster with more variables than observations could not have any sense
-        from a statistical point of view. Thus, the number of clusters (k) has 
-        to be lowered so the condition n_obs > n_var can be respected in each cluster.
+        Remove a cluster if it is empty or not statistically meaningful.
         '''
         for jj in range(1, max(idx)):
             cluster_ = get_cluster(X, idx, jj)
-            if cluster_.shape[0] < X.shape[1]:
+            if cluster_.shape[0] < 2:
                 pos = np.where(idx != 0)
                 idx[pos] -= 1
                 print("WARNING:")
-                print("\tA cluster with less observations than variables was found:")
+                print("\tAn empty cluster was found:")
                 print("\tThe number of cluster was lowered to ensure statistically meaningful results.")
                 print("\tThe current number of clusters is equal to: {}".format(max(idx)))
                 break
