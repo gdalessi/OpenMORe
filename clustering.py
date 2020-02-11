@@ -82,10 +82,28 @@ class lpca:
         eps_rec = 1.0
         residuals = np.array(0)
         iter_max = 500
-        eps_tol = 1E-8
-
+        eps_tol = 1E-16
         return iteration, eps_rec, residuals, iter_max, eps_tol
-
+    
+    @staticmethod
+    def merge_clusters(X, idx):
+        '''
+        In each cluster, the condition n_obs > n_var must be ensured. In fact,
+        a cluster with more variables than observations could not have any sense
+        from a statistical point of view. Thus, the number of clusters (k) has 
+        to be lowered until the condition n_obs > n_var is respected.
+        '''
+        for jj in range(1, max(idx)):
+            cluster_ = get_cluster(X, idx, jj)
+            if cluster_.shape[0] < X.shape[1]:
+                pos = np.where(idx != 0)
+                idx[pos] -= 1
+                print("WARNING:")
+                print("\tA cluster with less observations than variables was found.")
+                print("\tThe number of cluster was lowered to ensure statistically meaningful results.")
+                print("\tThe current number of clusters is equal to: {}".format(max(idx)))
+                break
+        return idx
 
     def fit(self):
         print("Fitting Local PCA model...")
@@ -112,7 +130,7 @@ class lpca:
             # Update convergence
             rec_err_min = np.min(sq_rec_err, axis = 1)
             eps_rec_new = np.mean(rec_err_min, axis = 0)
-            eps_rec_var = np.abs((eps_rec_new - eps_rec) / (eps_rec_new))
+            eps_rec_var = np.abs((eps_rec_new - eps_rec) / (eps_rec_new) + eps_tol)
             eps_rec = eps_rec_new
             # Print info
             print("- Iteration number: {}".format(iteration+1))
@@ -125,6 +143,9 @@ class lpca:
                 residuals = np.append(residuals, eps_rec_new)
             # Update counter
             iteration += 1
+            #compute only statistical meaningful groups of points
+            idx = lpca.merge_clusters(self.X, idx)
+            self.k = max(idx)+1
         print("Convergence reached in {} iterations.".format(iteration))
         plot_residuals(iteration, residuals)
         return idx

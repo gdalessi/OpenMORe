@@ -80,7 +80,7 @@ settings = {
     "centering_method"          : "MEAN",
     "scaling_method"            : "AUTO",
     "initialization_method"     : "KMEANS",
-    "number_of_clusters"        : 4,
+    "number_of_clusters"        : 8,
     "number_of_eigenvectors"    : 15
 }
 
