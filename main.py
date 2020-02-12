@@ -10,7 +10,7 @@ PROGRAM: lpca.py
     giuseppe.dalessio@ulb.ac.be
 
 @Brief: 
-    Clustering via Local Principal Component Analysis.
+    Clustering via Local Principal Component Analysis and classification of new observations by means of the same metrics.
 
 @Details: 
     The iterative Local Principal Component Analysis clustering algorithm is based on the following steps:
@@ -59,7 +59,6 @@ PROGRAM: lpca.py
 '''
 
 
-import pandas as pd
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
@@ -70,8 +69,8 @@ import clustering
 
 
 file_options = {
-    "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data",
-    "file_name"                 : "/concentrations.csv",
+    "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data/",
+    "file_name"                 : "cfdf.csv",
 }
 
 
@@ -79,19 +78,18 @@ settings = {
     "centering_method"          : "MEAN",
     "scaling_method"            : "AUTO",
     "initialization_method"     : "KMEANS",
-    "number_of_clusters"        : 16,
-    "number_of_eigenvectors"    : 5
+    "number_of_clusters"        : 8,
+    "number_of_eigenvectors"    : 12,
+    "classify"                  : True
 }
 
 
 try:
-    print("Reading the training matrix..")
-    X = check_sanity_NaN(pd.read_csv(file_options["path_to_file"] + file_options["file_name"], sep = ',', header = None))
-    print("The training matrix has been read successfully!")
+    print("Reading training matrix..")
+    X = np.genfromtxt(file_options["path_to_file"] + file_options["file_name"], delimiter= ',')
 except OSError:
     print("Could not open/read the selected file: " + file_options["file_name"])
     exit()
-
 
 
 X_tilde = center_scale(X, center(X, method=settings["centering_method"]), scale(X, method=settings["scaling_method"]))
@@ -99,7 +97,24 @@ X_tilde = center_scale(X, center(X, method=settings["centering_method"]), scale(
 model = clustering.lpca(X_tilde, check_sanity_int(settings["number_of_clusters"]), check_sanity_int(settings["number_of_eigenvectors"]), settings["initialization_method"])
 index = model.fit()
 
-np.savetxt("idx_new_version_python.txt", index)
+np.savetxt("idx.txt", index)
 
+if settings["classify"]:
 
+    file_options_classifier = {
+        "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data/",
+        "file_name"                 : "thermoC_timestep.csv",
+    }
 
+    try:
+        print("Reading test matrix..")
+        Y = np.genfromtxt(file_options_classifier["path_to_file"] + file_options_classifier["file_name"], delimiter= ',')
+    except OSError:
+        print("Could not open/read the selected file: " + file_options["file_name"])
+        exit()
+    
+    # Input to the classifier: X = training matrix, Y = test matrix
+    classifier = clustering.VQclassifier(X, settings["centering_method"], settings["scaling_method"], index, Y)
+    classification_vector = classifier.fit()
+
+    np.savetxt("flame_classification.txt", classification_vector)

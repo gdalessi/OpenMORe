@@ -10,9 +10,11 @@ MODULE: clustering.py
     giuseppe.dalessio@ulb.ac.be
 
 @Brief: 
-    Clustering via Local Principal Component Analysis.
+    Class lpca: Clustering via Local Principal Component Analysis (LPCA).
+    Class VQclassifier: Classify new observations via LPCA on the basis of a previous clustering solution.
 
 @Details: 
+    ***** CLUSTERING *****
     The iterative Local Principal Component Analysis clustering algorithm is based on the following steps:
     0. Preprocessing: The training matrix X is centered and scaled, after being loaded. Four scaling are available,
     AUTO, VAST, PARETO, RANGE - Two centering are available, MEAN and MIN;
@@ -27,6 +29,13 @@ MODULE: clustering.py
     4. Iteration: All the previous steps are iterated until convergence is reached. The convergence
     criterion is that the variation of the global mean reconstruction error between two consecutive
     iterations must be below a fixed threshold.
+
+    ***** CLASSIFICATION *****
+    For the classification task, instead, the following steps are accomplished:
+    0. Preprocessing: The set of new observations Y is centered and scaled with the centering and scaling factors
+    computed from the training dataset, X.
+    1. For each cluster of the training matrix, computes the Principal Components.
+    2. Assign each observation y \in Y to the cluster which minimizes the local reconstruction error.
 
 @Cite:
     - Local algorithm for dimensionality reduction:
@@ -67,6 +76,10 @@ class lpca:
     
     @staticmethod
     def initialize_clusters(X, k, method):
+        '''
+        The clustering solution must be initialized. Two methods are available,
+        a random allocation (RANDOM) or a previous clustering solution (KMEANS).
+        '''
         if method == 'RANDOM' or method == 'random' or method == 'Random':
             idx = np.random.random_integers(1, k, size=(X.shape[0], 1))
         elif method == 'KMEANS' or method == 'kmeans' or method == 'Kmeans':
@@ -88,7 +101,7 @@ class lpca:
     @staticmethod
     def merge_clusters(X, idx):
         '''
-        Remove a cluster if it is empty or not statistically meaningful.
+        Remove a cluster if it is empty, or not statistically meaningful.
         '''
         for jj in range(1, max(idx)):
             cluster_ = get_cluster(X, idx, jj)
@@ -103,6 +116,9 @@ class lpca:
         return idx
 
     def fit(self):
+        '''
+        Group the observations depending on the PCA reconstruction error.
+        '''
         print("Fitting Local PCA model...")
         # Initialization
         iteration, eps_rec, residuals, iter_max, eps_tol = lpca.initialize_parameters()
@@ -117,9 +133,9 @@ class lpca:
             for ii in range(0, self.k):
                 cluster = get_cluster(self.X, idx, ii)
                 centroids = get_centroids(cluster)
-                modes = fitPCA(cluster, self.nPCs)
+                modes = PCA_fit(cluster, self.nPCs)
                 C_mat = np.matlib.repmat(centroids, rows, 1)
-                rec_err_os = (self.X - C_mat) - (self.X - C_mat) @ np.transpose(modes) @ modes 
+                rec_err_os = (self.X - C_mat) - (self.X - C_mat) @ modes[0] @ modes[0].T
                 sq_rec_oss = np.power(rec_err_os, 2)
                 sq_rec_err[:,ii] = sq_rec_oss.sum(axis=1)
             # Update idx
@@ -140,11 +156,50 @@ class lpca:
                 residuals = np.append(residuals, eps_rec_new)
             # Update counter
             iteration += 1
-            #compute only statistical meaningful groups of points
+            # Consider only statistical meaningful groups of points
             idx = lpca.merge_clusters(self.X, idx)
             self.k = max(idx)+1
         print("Convergence reached in {} iterations.".format(iteration))
         plot_residuals(iteration, residuals)
         return idx
-        
+
+
+class VQclassifier:
+    def __init__(self, X, cent_crit, scal_crit, idx, Y):
+        self.X = X
+        self.cent_crit = cent_crit
+        self.scal_crit = scal_crit
+        self.idx = idx
+        self.k = max(self.idx)
+        self.Y = Y
+        self.nPCs = round(self.Y.shape[1] - (self.Y.shape[1]) /5) #Use the max number of PCs, remove only the last 20% which contains noise
     
+    def fit(self):
+        '''
+        Classify a new set of observations on the basis of a previous
+        LPCA partitioning.
+        '''
+        print("Classifying the new observations...")
+        # Compute the centering/scaling factors of the training matrix
+        mu = center(self.X, self.cent_crit)
+        sigma = scale(self.X, self.scal_crit)
+        # Scale the new matrix with these factors
+        Y_tilde = center_scale(self.Y, mu, sigma)
+        # Initialize arrays
+        rows, cols = np.shape(self.Y)
+        sq_rec_oss = np.zeros((rows, cols), dtype=float)
+        sq_rec_err = np.zeros((rows, self.k), dtype=float)
+        # Compute the reconstruction errors
+        for ii in range (0, self.k):
+            cluster = get_cluster(self.X, self.idx, ii)
+            centroids = get_centroids(cluster)
+            modes = PCA_fit(cluster, self.nPCs)
+            C_mat = np.matlib.repmat(centroids, rows, 1)
+            rec_err_os = (self.Y - C_mat) - (self.Y - C_mat) @ modes[0] @ modes[0].T
+            sq_rec_oss = np.power(rec_err_os, 2)
+            sq_rec_err[:,ii] = sq_rec_oss.sum(axis=1)
+        
+        # Assign the label
+        idx_classification = np.argmin(sq_rec_err, axis = 1)
+
+        return idx_classification
