@@ -66,6 +66,8 @@ MODULE: clustering.py
 from operations import *
 import numpy as np
 from sklearn.cluster import KMeans
+import matplotlib
+import matplotlib.pyplot as plt
 
 class lpca:
     def __init__(self, X, k, n_eigs, method):
@@ -74,6 +76,7 @@ class lpca:
         self.nPCs = n_eigs
         self.method = method
     
+
     @staticmethod
     def initialize_clusters(X, k, method):
         '''
@@ -89,6 +92,7 @@ class lpca:
             raise Exception("Initialization option not supported. Please choose one between RANDOM or KMEANS.")
         return idx
     
+
     @staticmethod
     def initialize_parameters():
         iteration = 0
@@ -98,6 +102,7 @@ class lpca:
         eps_tol = 1E-16
         return iteration, eps_rec, residuals, iter_max, eps_tol
     
+
     @staticmethod
     def merge_clusters(X, idx):
         '''
@@ -114,6 +119,27 @@ class lpca:
                 print("\tThe current number of clusters is equal to: {}".format(max(idx)))
                 break
         return idx
+
+
+    @staticmethod
+    def plot_residuals(iterations, error):
+        '''
+        Plot the reconstruction error behavior for the LPCA iterative
+        algorithm vs the iterations.
+        - Input:
+        iterations = linspace vector from 1 to the total number of iterations
+        error = reconstruction error story
+        '''
+        matplotlib.rcParams.update({'font.size' : 18, 'text.usetex' : True})
+        itr = np.linspace(1,iterations, iterations)
+        fig = plt.figure()
+        axes = fig.add_axes([0.15,0.15,0.7,0.7], frameon=True)
+        axes.plot(itr,error[1:], color='b', marker='s', linestyle='-', linewidth=2, markersize=4, markerfacecolor='b')
+        axes.set_xlabel('Iterations [-]')
+        axes.set_ylabel('Reconstruction error [-]')
+        axes.set_title('Convergence residuals')
+        plt.show()
+
 
     def fit(self):
         '''
@@ -160,7 +186,7 @@ class lpca:
             idx = lpca.merge_clusters(self.X, idx)
             self.k = max(idx)+1
         print("Convergence reached in {} iterations.".format(iteration))
-        plot_residuals(iteration, residuals)
+        lpca.plot_residuals(iteration, residuals)
         return idx
 
 

@@ -79,8 +79,8 @@ settings = {
     "scaling_method"            : "AUTO",
     "initialization_method"     : "KMEANS",
     "number_of_clusters"        : 8,
-    "number_of_eigenvectors"    : 12,
-    "classify"                  : True
+    "number_of_eigenvectors"    : 5,
+    "classify"                  : False
 }
 
 
