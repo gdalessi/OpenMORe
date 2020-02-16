@@ -1,5 +1,5 @@
 '''
-PROGRAM: lpca.py
+PROGRAM: main.py
 
 @Authors: 
     G. D'Alessio [1,2], G. Aversano [1], A. Parente[1]
@@ -31,7 +31,7 @@ PROGRAM: lpca.py
 
     4. Iteration: All the previous steps are iterated until convergence is reached. The convergence
     criterion is that the variation of the global mean reconstruction error between two consecutive
-    iterations must be below a fixed threshold.
+    iterations must be below a fixed threshold, or the maximum number of iterations has been reached.
 
 @Cite:
     - Local algorithm for dimensionality reduction:
@@ -64,13 +64,14 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 from operations import *
+from reduced_order_modelling import *
 
 import clustering
 
 
 file_options = {
     "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data/",
-    "file_name"                 : "cfdf.csv",
+    "input_file_name"           : "cfdf.csv",
 }
 
 
@@ -80,41 +81,47 @@ settings = {
     "initialization_method"     : "KMEANS",
     "number_of_clusters"        : 8,
     "number_of_eigenvectors"    : 5,
-    "classify"                  : False
+    "classify"                  : False,
+    "write_on_txt"              : False
 }
 
 
 try:
     print("Reading training matrix..")
-    X = np.genfromtxt(file_options["path_to_file"] + file_options["file_name"], delimiter= ',')
+    X = np.genfromtxt(file_options["path_to_file"] + file_options["input_file_name"], delimiter= ',')
 except OSError:
-    print("Could not open/read the selected file: " + file_options["file_name"])
+    print("Could not open/read the selected file: " + file_options["input_file_name"])
     exit()
 
 
+check_dummy(X, settings["number_of_clusters"], settings["number_of_eigenvectors"])
+
 X_tilde = center_scale(X, center(X, method=settings["centering_method"]), scale(X, method=settings["scaling_method"]))
+
 
 model = clustering.lpca(X_tilde, check_sanity_int(settings["number_of_clusters"]), check_sanity_int(settings["number_of_eigenvectors"]), settings["initialization_method"])
 index = model.fit()
 
-np.savetxt("idx.txt", index)
+if settings["write_on_txt"]:
+    np.savetxt("idx_training.txt", index)
 
 if settings["classify"]:
 
     file_options_classifier = {
         "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data/",
-        "file_name"                 : "thermoC_timestep.csv",
+        "test_file_name"            : "thermoC_timestep.csv",
     }
 
     try:
         print("Reading test matrix..")
-        Y = np.genfromtxt(file_options_classifier["path_to_file"] + file_options_classifier["file_name"], delimiter= ',')
+        Y = np.genfromtxt(file_options_classifier["path_to_file"] + file_options_classifier["test_file_name"], delimiter= ',')
     except OSError:
-        print("Could not open/read the selected file: " + file_options["file_name"])
+        print("Could not open/read the selected file: " + file_options["test_file_name"])
         exit()
     
     # Input to the classifier: X = training matrix, Y = test matrix
     classifier = clustering.VQclassifier(X, settings["centering_method"], settings["scaling_method"], index, Y)
     classification_vector = classifier.fit()
 
-    np.savetxt("flame_classification.txt", classification_vector)
+    if settings["write_on_txt"]:
+        np.savetxt("idx_test.txt", classification_vector)

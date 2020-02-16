@@ -64,10 +64,12 @@ MODULE: clustering.py
 
 
 from operations import *
+from reduced_order_modelling import *
 import numpy as np
 from sklearn.cluster import KMeans
 import matplotlib
 import matplotlib.pyplot as plt
+ 
 
 class lpca:
     def __init__(self, X, k, n_eigs, method):
@@ -84,7 +86,7 @@ class lpca:
         a random allocation (RANDOM) or a previous clustering solution (KMEANS).
         '''
         if method == 'RANDOM' or method == 'random' or method == 'Random':
-            idx = np.random.random_integers(1, k, size=(X.shape[0], 1))
+            idx = np.random.random_integers(0, k, size=(X.shape[0], 1))
         elif method == 'KMEANS' or method == 'kmeans' or method == 'Kmeans':
             kmeans = KMeans(n_clusters=k, random_state=0).fit(X)
             idx = kmeans.labels_
@@ -198,7 +200,7 @@ class VQclassifier:
         self.idx = idx
         self.k = max(self.idx)
         self.Y = Y
-        self.nPCs = round(self.Y.shape[1] - (self.Y.shape[1]) /5) #Use the max number of PCs, remove only the last 20% which contains noise
+        self.nPCs = round(self.Y.shape[1] - (self.Y.shape[1]) /5) #Use a very high number of PCs to classify,removing only the last 20% which contains noise
     
     def fit(self):
         '''
