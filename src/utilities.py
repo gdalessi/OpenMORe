@@ -1,8 +1,8 @@
 '''
-MODULE: operations.py
+MODULE: utilities.py
 
-@Authors: 
-    G. D'Alessio [1,2], G. Aversano [1], A. Parente[1]
+@Author: 
+    G. D'Alessio [1,2]
     [1]: Université Libre de Bruxelles, Aero-Thermo-Mechanics Laboratory, Bruxelles, Belgium
     [2]: CRECK Modeling Lab, Department of Chemistry, Materials and Chemical Engineering, Politecnico di Milano
 

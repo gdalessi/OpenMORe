@@ -12,30 +12,7 @@ MODULE: clustering.py
 @Brief: 
     Class lpca: Clustering via Local Principal Component Analysis (LPCA).
     Class VQclassifier: Classify new observations via LPCA on the basis of a previous clustering solution.
-
-@Details: 
-    ***** CLUSTERING *****
-    The iterative Local Principal Component Analysis clustering algorithm is based on the following steps:
-    0. Preprocessing: The training matrix X is centered and scaled, after being loaded. Four scaling are available,
-    AUTO, VAST, PARETO, RANGE - Two centering are available, MEAN and MIN;
-    1. Initialization: The cluster centroids are initializated: a random allocation (RANDOM)
-    or a previous clustering solution (KMEANS) can be chosen to compute the centroids initial values; 
-    2. Partition: Each observation is assigned to a cluster k such that the local reconstruction
-    error is minimized;
-    3. PCA: The Principal Component Analysis is performed in each of the clusters found
-    in the previous step. A new set of centroids is computed after the new partitioning
-    step, their coordinates are calculated as the mean of all the observations in each
-    cluster;
-    4. Iteration: All the previous steps are iterated until convergence is reached. The convergence
-    criterion is that the variation of the global mean reconstruction error between two consecutive
-    iterations must be below a fixed threshold.
-
-    ***** CLASSIFICATION *****
-    For the classification task, instead, the following steps are accomplished:
-    0. Preprocessing: The set of new observations Y is centered and scaled with the centering and scaling factors
-    computed from the training dataset, X.
-    1. For each cluster of the training matrix, computes the Principal Components.
-    2. Assign each observation y \in Y to the cluster which minimizes the local reconstruction error.
+    Class spectral: Clustering via unnormalized spectral clustering. 
 
 @Cite:
     - Local algorithm for dimensionality reduction:
@@ -56,6 +33,9 @@ MODULE: clustering.py
     [g] Parente, Alessandro, et al. "Identification of low-dimensional manifolds in turbulent flames." Proceedings of the Combustion Institute. 2009 Jan 1;32(1):1579-86.
     [h] Aversano, Gianmarco, et al. "Application of reduced-order models based on PCA & Kriging for the development of digital twins of reacting flow applications." Computers & chemical engineering 121 (2019): 422-441.
 
+    - Spectral clustering:
+    [i] Von Luxburg, Ulrike. "A tutorial on spectral clustering." Statistics and computing 17.4 (2007): 395-416.
+
 @Additional notes:
     This cose is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
     Please report any bug to: giuseppe.dalessio@ulb.ac.be
@@ -63,7 +43,7 @@ MODULE: clustering.py
 '''
 
 
-from operations import *
+from utilities import *
 from reduced_order_modelling import *
 import numpy as np
 from sklearn.cluster import KMeans
@@ -72,6 +52,22 @@ import matplotlib.pyplot as plt
  
 
 class lpca:
+    '''
+    The iterative Local Principal Component Analysis clustering algorithm is based on the following steps:
+    0. Preprocessing: The training matrix X is centered and scaled, after being loaded. Four scaling are available,
+    AUTO, VAST, PARETO, RANGE - Two centering are available, MEAN and MIN;
+    1. Initialization: The cluster centroids are initializated: a random allocation (RANDOM)
+    or a previous clustering solution (KMEANS) can be chosen to compute the centroids initial values; 
+    2. Partition: Each observation is assigned to a cluster k such that the local reconstruction
+    error is minimized;
+    3. PCA: The Principal Component Analysis is performed in each of the clusters found
+    in the previous step. A new set of centroids is computed after the new partitioning
+    step, their coordinates are calculated as the mean of all the observations in each
+    cluster;
+    4. Iteration: All the previous steps are iterated until convergence is reached. The convergence
+    criterion is that the variation of the global mean reconstruction error between two consecutive
+    iterations must be below a fixed threshold.
+    '''
     def __init__(self, X, k, n_eigs, method):
         self.X = np.array(X)
         self.k = k
@@ -193,6 +189,13 @@ class lpca:
 
 
 class VQclassifier:
+    '''
+    For the classification task the following steps are accomplished:
+    0. Preprocessing: The set of new observations Y is centered and scaled with the centering and scaling factors
+    computed from the training dataset, X.
+    1. For each cluster of the training matrix, computes the Principal Components.
+    2. Assign each observation y \in Y to the cluster which minimizes the local reconstruction error.
+    '''
     def __init__(self, X, cent_crit, scal_crit, idx, Y):
         self.X = X
         self.cent_crit = cent_crit
@@ -231,3 +234,47 @@ class VQclassifier:
         idx_classification = np.argmin(sq_rec_err, axis = 1)
 
         return idx_classification
+
+
+class spectral:
+    '''
+    The spectral clustering algorithm is based on the following steps:
+    1) Construct a similarity graph, with A its weighted adjacency matrix.
+    2) Compute the unnormalized laplacian matrix L from A.
+    3) Decompose the L matrix, computing its eigenvalues and eigenvectors.
+    4) Compute the matrix U (n x k), where the columns are the first 'k' eigenvectors from the decomposition.
+    5) Apply k-Means on the U matrix.
+
+    WARNING: It is extremely expensive from a CPU point of view. It cannot be applied to large matrices.sr
+    ''' 
+    def __init__(self, X, k, sigma=False):
+        self.X = X
+        self.k = k
+        if not sigma:                       # sigma is the neighborhood radius. Generally its value must be optimized by means of a grid search.
+            self.sigma = 0.5
+        else:
+            self.sigma = sigma
+
+
+    def fit(self):
+        from sklearn.neighbors import radius_neighbors_graph
+        from scipy.sparse import csgraph
+
+        # Compute the adjancency matrix from the training dataset (epsilon-neighborhood graph)
+        print("Computing Adjacency matrix..")
+        A = radius_neighbors_graph(self.X, self.sigma, mode='distance', metric='euclidean')
+        A = A.toarray()
+
+        # Compute the unnormalized Laplacian
+        L = csgraph.laplacian(A, normed=False)
+
+        # Laplacian decomposition - retain only the first 'k' eigenvectors 
+        eigval, eigvec = np.linalg.eig(L)
+        eigvec = eigvec[:, :self.k]
+
+        # Apply k-Means on the new points representation
+        kmeans = KMeans(n_clusters=self.k, random_state=0).fit(eigvec)
+        idx = kmeans.labels_
+        centroids = kmeans.cluster_centers_
+
+        return idx, centroids, eigvec

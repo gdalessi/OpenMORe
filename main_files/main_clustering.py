@@ -63,7 +63,7 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 
-from operations import *
+from utilities import *
 from reduced_order_modelling import *
 
 import clustering
