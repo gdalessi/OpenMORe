@@ -6,7 +6,7 @@ In the /main_files/ folder, the main files to accomplish a specific task are con
 
 
 # Required external libraries:
-Numpy and Matplotlib are required for almost all the ROM functions. For some function Scipy or Sklearn are also necessary.
+Numpy and Matplotlib are required for almost all the ROM functions. For some function Scipy or Sklearn can also be necessary.
 
 
 # Module: clustering.py
