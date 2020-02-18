@@ -20,12 +20,15 @@ Three main classes are available for clustering/classification tasks:
 # Module: reduced_order_modelling.py
 A wide range of PCA-based functions for reduced-order-modelling are available in this module:
 
-- Principal Component Analysis
-- Kernel Principal Component Analysis
-- Local Principal Component Analysis
+- Principal Component Analysis (PCA)
+- Kernel Principal Component Analysis (KPCA)
+- Local Principal Component Analysis (LPCA)
 
 Moreover, a class for a PCA-based variable selection (coupled with Procustes Analysis) is also available.
 
+
+# Module: utilities.py
+A wide range of preprocessing functions (to center, scale etc.) and other tools are available in this module. 
 
 # Cite:
 If you use these scripts for research purposes, these are few reference you can cite, depending on your application.
