@@ -48,18 +48,18 @@ def center(X, method, return_centered_matrix= False):
     '''
     # Main
     if not return_centered_matrix:
-        if method == 'MEAN' or method == 'mean' or method == 'Mean':
+        if method.lower() == 'mean':
             mu = np.mean(X, axis = 0)
-        elif method == 'MIN' or method == 'min' or method == 'Min':
+        elif method.lower() == 'min':
             mu = np.min(X, axis = 0)
         else:
             raise Exception("Unsupported centering option. Please choose: MEAN or MIN.")
         return mu
     else:
-        if method == 'MEAN' or method == 'mean' or method == 'Mean':
+        if method.lower() == 'mean':
             mu = np.mean(X, axis = 0)
             X0 = X - mu
-        elif method == 'MIN' or method == 'min' or method == 'Min':
+        elif method.lower() == 'min':
             mu = np.min(X, axis = 0)
             X0 = X - mu
         else:
@@ -90,7 +90,7 @@ def center_scale(X, mu, sig):
         X0 = X0 / (sig + TOL)
         return X0
     else:
-        raise Exception("The matrix to be centered & scaled the centering/scaling vectors must have the same dimensionality.")
+        raise Exception("The matrix to be centered & scaled and the centering/scaling vectors must have the same dimensionality.")
 
 
 def check_sanity_int(kappa):
@@ -172,15 +172,15 @@ def scale(X, method, return_scaled_matrix=False):
     '''
     # Main
     if not return_scaled_matrix:
-        if method == 'AUTO' or method == 'auto' or method == 'Auto':
+        if method.lower() == 'auto':
             sig = np.std(X, axis = 0)
-        elif method == 'PARETO' or method == 'pareto' or method == 'Pareto':
+        elif method.lower() == 'pareto':
             sig = np.sqrt(np.std(X, axis = 0))
-        elif method == 'VAST' or method == 'vast' or method == 'Vast':
+        elif method.lower() == 'vast':
             variances = np.var(X, axis = 0)
             means = np.mean(X, axis = 0)
             sig = variances / means
-        elif method == 'RANGE' or method == 'range' or method == 'Range':
+        elif method.lower() == 'range':
             maxima = np.max(X, axis = 0)
             minima = np.min(X, axis = 0)
             sig = maxima - minima
@@ -188,18 +188,18 @@ def scale(X, method, return_scaled_matrix=False):
             raise Exception("Unsupported scaling option. Please choose: AUTO, PARETO, VAST or RANGE.")
         return sig
     else:
-        if method == 'AUTO' or method == 'auto' or method == 'Auto':
+        if method.lower() == 'auto':
             sig = np.std(X, axis = 0)
             X0 = X / (sig + TOL)
-        elif method == 'PARETO' or method == 'pareto' or method == 'Pareto':
+        elif method.lower() == 'pareto':
             sig = np.sqrt(np.std(X, axis = 0))
             X0 = X / (sig + TOL)
-        elif method == 'VAST' or method == 'vast' or method == 'Vast':
+        elif method.lower() == 'vast':
             variances = np.var(X, axis = 0)
             means = np.mean(X, axis = 0)
             sig = variances / means
             X0 = X / (sig + TOL)
-        elif method == 'RANGE' or method == 'range' or method == 'Range':
+        elif method.lower() == 'range':
             maxima = np.max(X, axis = 0)
             minima = np.min(X, axis = 0)
             sig = maxima - minima
