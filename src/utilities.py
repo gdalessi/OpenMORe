@@ -171,6 +171,7 @@ def scale(X, method, return_scaled_matrix=False):
     X0 = centered data matrix (optional)
     '''
     # Main
+    TOL = 1E-16
     if not return_scaled_matrix:
         if method.lower() == 'auto':
             sig = np.std(X, axis = 0)

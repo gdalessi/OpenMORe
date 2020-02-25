@@ -14,28 +14,6 @@ MODULE: clustering.py
     Class VQclassifier: Classify new observations via LPCA on the basis of a previous clustering solution.
     Class spectral: Clustering via unnormalized spectral clustering. 
 
-@Cite:
-    - Local algorithm for dimensionality reduction:
-    [a] Kambhatla, Nandakishore, and Todd K. Leen. "Dimension reduction by local principal component analysis.", Neural computation 9.7 (1997): 1493-1516.
-
-    - Clustering applications:
-    [b] D’Alessio, Giuseppe, et al. "Adaptive chemistry via pre-partitioning of composition space and mechanism reduction.", Combustion and Flame 211 (2020): 68-82.
-
-    - Data analysis applications:
-    [c] Parente, Alessandro, et al. "Investigation of the MILD combustion regime via principal component analysis." Proceedings of the Combustion Institute 33.2 (2011): 3333-3341.
-    [d] D'Alessio, Giuseppe, et al. "Analysis of turbulent reacting jets via Principal Component Analysis", Data Analysis in Direct Numerical Simulation of Turbulent Combustion, Springer (2020).
-    [e] Bellemans, Aurélie, et al. "Feature extraction and reduced-order modelling of nitrogen plasma models using principal component analysis." Computers & chemical engineering 115 (2018): 504-514.
-
-    - Preprocessing effects on PCA:
-    [f] Parente, Alessandro, and James C. Sutherland. "Principal component analysis of turbulent combustion data: Data pre-processing and manifold sensitivity." Combustion and flame 160.2 (2013): 340-350.
-
-    - Model order reduction:
-    [g] Parente, Alessandro, et al. "Identification of low-dimensional manifolds in turbulent flames." Proceedings of the Combustion Institute. 2009 Jan 1;32(1):1579-86.
-    [h] Aversano, Gianmarco, et al. "Application of reduced-order models based on PCA & Kriging for the development of digital twins of reacting flow applications." Computers & chemical engineering 121 (2019): 422-441.
-
-    - Spectral clustering:
-    [i] Von Luxburg, Ulrike. "A tutorial on spectral clustering." Statistics and computing 17.4 (2007): 395-416.
-
 @Additional notes:
     This cose is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
     Please report any bug to: giuseppe.dalessio@ulb.ac.be
@@ -164,7 +142,7 @@ class lpca:
                 sq_rec_oss = np.power(rec_err_os, 2)
                 sq_rec_err[:,ii] = sq_rec_oss.sum(axis=1)
             # Update idx
-            idx = np.argmin(sq_rec_err, axis = 1)
+            idx = np.argmin(sq_rec_err, axis = 1)       #prof. Before: idx = np.argmin(sq_rec_err, axis = 1)
             # Update convergence
             rec_err_min = np.min(sq_rec_err, axis = 1)
             eps_rec_new = np.mean(rec_err_min, axis = 0)
