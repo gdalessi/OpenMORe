@@ -1,3 +1,26 @@
+'''
+MODULE: ANN.py
+
+@Author: 
+    G. D'Alessio [1,2]
+    [1]: Université Libre de Bruxelles, Aero-Thermo-Mechanics Laboratory, Bruxelles, Belgium
+    [2]: CRECK Modeling Lab, Department of Chemistry, Materials and Chemical Engineering, Politecnico di Milano
+
+@Contacts:
+    giuseppe.dalessio@ulb.ac.be
+
+@Details:
+    This module contains a set of functions/classes which are based on ANN. The following architectures are implemented:
+    1) Single-layer MLP for classification tasks.
+    2) Autoencoder for non-linear dimensionality reduction.
+    3) Single-layer MLP for regression tasks.
+
+@Additional notes:
+    This code is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+    Please report any bug to: giuseppe.dalessio@ulb.ac.be
+
+'''
+
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
@@ -25,6 +48,16 @@ class MLP_classifier:
             self.activation = activation
         self.save_txt = save
 
+        if self.X.shape[0] != self.Y.shape[0]:
+            raise Exception("The number of observations (Input and Output) does not match: please check again your Input/Output. Exiting...")
+            exit()
+        elif self.neurons <= 0:
+            raise Exception("The number of neurons in the hidden layer must be a positive, non-negative integer. Exiting..")
+            exit()
+        elif isinstance(self.neurons, int) != True: 
+            raise Exception("The number of neurons in the hidden layer must be an integer. Exiting..")
+            exit()
+
 
     @staticmethod
     def set_hard_parameters():
@@ -40,7 +73,27 @@ class MLP_classifier:
 
         return activation_output, batch_size_, n_epochs_, path_, monitor_early_stop, optimizer_, patience_, loss_classification_, metrics_classification_
 
+    
+    @staticmethod
+    def idx_to_labels(idx):
+        k = max(idx) +1
+        n_observations = idx.shape[0]
+        labels = np.zeros(n_observations, k)
+
+        for ii in range(0,n_observations):
+            for jj in range(0,k):
+                if idx[ii] == jj:
+                    labels[ii,jj] = 1
+        
+        return labels
+    
+
     def fit_network(self):
+
+        if self.Y.shape[1] == 1:        # check if the Y matrix is in the correct form
+            print("Changing idx shape in the correct format: [n x k]..")
+            self.Y = MLP_classifier.idx_to_labels(self.Y)
+
         X_train, X_test, y_train, y_test = train_test_split(self.X, self.Y, test_size=0.3)
         input_dimension = self.X.shape[1]
         number_of_classes = self.Y.shape[1]
@@ -105,6 +158,17 @@ class Autoencoder:
             self.activation_function = activation_function
         self.save_txt = save
 
+        if self.neurons <= 0:
+            raise Exception("The number of neurons in the hidden layer must be a positive, non-negative integer. Exiting..")
+            exit()
+        elif isinstance(self.encoding_dimension, int) != True: 
+            raise Exception("The number of neurons in the hidden layer must be an integer. Exiting..")
+            exit()
+        elif self.encoding_dimension >= self.X.shape[1]:
+            raise Exception("The reduced dimensionality cannot be larger than the original number of variables. Exiting..")
+            exit()
+
+
     @staticmethod
     def set_hard_parameters():
         activation_output = 'linear'
@@ -164,6 +228,7 @@ class Autoencoder:
 
             np.savetxt(path_+ 'Encoded_matrix.txt', encoded_X)
 
+
 class MLP_regressor:
     def __init__(self, X, Y, n_neurons, ReLU=True, save=False):
         self.X = X
@@ -178,6 +243,17 @@ class MLP_regressor:
             activation_function = LR 
             self.activation_function = activation_function
         self.save_txt = save
+
+        if self.X.shape[0] != self.Y.shape[0]:
+            raise Exception("The number of observations (Input and Output) does not match: please check again your Input/Output. Exiting...")
+            exit()
+        elif self.neurons <= 0:
+            raise Exception("The number of neurons in the hidden layer must be a positive, non-negative integer. Exiting..")
+            exit()
+        elif isinstance(self.neurons, int) != True: 
+            raise Exception("The number of neurons in the hidden layer must be an integer. Exiting..")
+            exit()
+
 
     @staticmethod
     def set_hard_parameters():

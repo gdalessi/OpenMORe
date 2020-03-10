@@ -14,7 +14,7 @@ MODULE: utilities.py
     A detailed description is available under the definition of each function.
 
 @Additional notes:
-    This cose is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+    This code is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
     Please report any bug to: giuseppe.dalessio@ulb.ac.be
 
 '''
