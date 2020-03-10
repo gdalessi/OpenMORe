@@ -30,8 +30,11 @@ except OSError:
 #model = ANN.MLP_classifier(X,Y, 10)
 #index = model.fit_network()
 
-model = ANN.Autoencoder(X, 5)
-model.fit()
+#model = ANN.Autoencoder(X, 50)
+#model.fit()
+
+model = ANN.MLP_regressor(X,Y,50)
+yo = model.fit_network()
 
 
 print("end OK!!")
