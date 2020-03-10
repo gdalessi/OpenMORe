@@ -7,7 +7,7 @@ In the /main_files/ folder, the main files to accomplish a specific task are con
 
 # Required external libraries:
 Numpy and Matplotlib are required for almost all the ROM functions. For some function Scipy or Sklearn can also be necessary.
-For the module ANN.py, Keras is required
+For the module ANN.py, Keras is required.
 
 # Module: clustering.py
 Three main classes are available for clustering/classification tasks:
