@@ -7,7 +7,7 @@ In the /main_files/ folder, the main files to accomplish a specific task are con
 
 # Required external libraries:
 Numpy and Matplotlib are required for almost all the ROM functions. For some function Scipy or Sklearn can also be necessary.
-
+For the module ANN.py, Keras is required
 
 # Module: clustering.py
 Three main classes are available for clustering/classification tasks:
@@ -29,6 +29,13 @@ Moreover, a class for a PCA-based variable selection (coupled with Procustes Ana
 
 # Module: utilities.py
 A wide range of preprocessing functions (to center, scale etc.) and other tools are available in this module. 
+
+
+# Module: ANN.py
+This module contains a set of functions/classes which are based on ANN. The following architectures are implemented:
+    1) Single-layer MLP for classification tasks.
+    2) Autoencoder for non-linear dimensionality reduction.
+    3) Single-layer MLP for regression tasks.
 
 # Cite:
 If you use these scripts for research purposes, these are few reference you can cite, depending on your application.
