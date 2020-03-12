@@ -34,24 +34,34 @@ from keras.layers import LeakyReLU
 
 
 class MLP_classifier:
-    def __init__(self, X, Y, n_neurons, save=False):
+    def __init__(self, X, Y, save=False):
         self.X = X
         self.Y = Y
-        self.neurons = n_neurons
+        #self.neurons = n_neurons
         
         self._activation = 'relu'
         self._batch_size = 64
         self._n_epochs = 1000
+        self._n_neurons = 2
         
         self.save_txt = save
 
         if self.X.shape[0] != self.Y.shape[0]:
             raise Exception("The number of observations (Input and Output) does not match: please check again your Input/Output. Exiting...")
             exit()
-        elif self.neurons <= 0:
+
+    @property
+    def neurons(self):
+        return self._n_neurons
+    
+    @neurons.setter
+    def neurons(self, new_number):
+        self._n_neurons = new_number
+
+        if self._n_neurons <= 0:
             raise Exception("The number of neurons in the hidden layer must be a positive integer. Exiting..")
             exit()
-        elif isinstance(self.neurons, int) != True: 
+        elif isinstance(self._n_neurons, int) != True: 
             raise Exception("The number of neurons in the hidden layer must be an integer. Exiting..")
             exit()
 
@@ -76,6 +86,13 @@ class MLP_classifier:
     def batch_size(self, new_batchsize):
         self._batch_size = new_batchsize
 
+        if self._batch_size <= 0:
+            raise Exception("The batch size must be a positive integer. Exiting..")
+            exit()
+        elif isinstance(self._batch_size, int) != True: 
+            raise Exception("The batch size must be an integer. Exiting..")
+            exit()
+
     @property
     def n_epochs(self):
         return self._n_epochs
@@ -83,6 +100,13 @@ class MLP_classifier:
     @n_epochs.setter
     def n_epochs(self, new_epochs):
         self._n_epochs = new_epochs
+
+        if self._n_epochs <= 0:
+            raise Exception("The number of epochs must be a positive integer. Exiting..")
+            exit()
+        elif isinstance(self._n_epochs, int) != True: 
+            raise Exception("The number of epochs must be an integer. Exiting..")
+            exit()
 
     @staticmethod
     def set_hard_parameters():
@@ -123,7 +147,7 @@ class MLP_classifier:
         activation_output, path_, monitor_early_stop, optimizer_, patience_, loss_classification_, metrics_classification_ = MLP_classifier.set_hard_parameters()
 
         classifier = Sequential()
-        classifier.add(Dense(self.neurons, activation=self._activation, kernel_initializer='random_normal', input_dim=input_dimension))
+        classifier.add(Dense(self._n_neurons, activation=self._activation, kernel_initializer='random_normal', input_dim=input_dimension))
         classifier.add(Dense(number_of_classes, activation=activation_output, kernel_initializer='random_normal'))
         classifier.summary()
 
@@ -168,21 +192,29 @@ class MLP_classifier:
 
 
 class Autoencoder:
-    def __init__(self, X, encoding_dimension, save=False):
+    def __init__(self, X, save=False):
         self.X = X
-        self.encoding_dimension = encoding_dimension
         
+        self._n_neurons = 1
         self._activation = 'relu'
         self._batch_size = 64
         self._n_epochs = 1000
 
-        if self.encoding_dimension <= 0:
-            raise Exception("The number of neurons in the hidden layer must be a positive, non-negative integer. Exiting..")
+    @property
+    def neurons(self):
+        return self._n_neurons
+    
+    @neurons.setter
+    def neurons(self, new_number):
+        self._n_neurons = new_number
+
+        if self._n_neurons <= 0:
+            raise Exception("The number of neurons in the hidden layer must be a positive integer. Exiting..")
             exit()
-        elif isinstance(self.encoding_dimension, int) != True: 
+        elif isinstance(self._n_neurons, int) != True: 
             raise Exception("The number of neurons in the hidden layer must be an integer. Exiting..")
             exit()
-        elif self.encoding_dimension >= self.X.shape[1]:
+        elif self._n_neurons >= self.X.shape[1]:
             raise Exception("The reduced dimensionality cannot be larger than the original number of variables. Exiting..")
             exit()
 
@@ -207,6 +239,13 @@ class Autoencoder:
     def batch_size(self, new_batchsize):
         self._batch_size = new_batchsize
 
+        if self._batch_size <= 0:
+            raise Exception("The batch size must be a positive integer. Exiting..")
+            exit()
+        elif isinstance(self._batch_size, int) != True: 
+            raise Exception("The batch size must be an integer. Exiting..")
+            exit()
+
     @property
     def n_epochs(self):
         return self._n_epochs
@@ -214,6 +253,13 @@ class Autoencoder:
     @n_epochs.setter
     def n_epochs(self, new_epochs):
         self._n_epochs = new_epochs
+
+        if self._n_epochs <= 0:
+            raise Exception("The number of epochs must be a positive integer. Exiting..")
+            exit()
+        elif isinstance(self._n_epochs, int) != True: 
+            raise Exception("The number of epochs must be an integer. Exiting..")
+            exit()
 
 
     @staticmethod
@@ -239,13 +285,13 @@ class Autoencoder:
         activation_output, path_, monitor_early_stop, optimizer_, patience_, loss_function_, metrics_ = Autoencoder.set_hard_parameters()
 
         input_data = Input(shape=(input_dimension,))
-        encoded = Dense(self.encoding_dimension, activation=self._activation)(input_data)
+        encoded = Dense(self._n_neurons, activation=self._activation)(input_data)
         decoded = Dense(input_dimension, activation=activation_output)(encoded)
         
         autoencoder = Model(input_data, decoded)
 
         encoder = Model(input_data, encoded)
-        encoded_input = Input(shape=(self.encoding_dimension,))
+        encoded_input = Input(shape=(self._n_neurons,))
         decoder_layer = autoencoder.layers[-1]
         decoder = Model(encoded_input, decoder_layer(encoded_input))
 
@@ -275,11 +321,11 @@ class Autoencoder:
 
 
 class MLP_regressor:
-    def __init__(self, X, Y, n_neurons, ReLU=True, save=False):
+    def __init__(self, X, Y, save=False):
         self.X = X
         self.Y = Y
-        self.neurons = n_neurons
-        
+
+        self._n_neurons = 2
         self._activation = 'relu'
         self._batch_size = 64
         self._n_epochs = 1000
@@ -289,14 +335,22 @@ class MLP_regressor:
         if self.X.shape[0] != self.Y.shape[0]:
             raise Exception("The number of observations (Input and Output) does not match: please check again your Input/Output. Exiting...")
             exit()
-        elif self.neurons <= 0:
-            raise Exception("The number of neurons in the hidden layer must be a positive, non-negative integer. Exiting..")
+    
+    @property
+    def neurons(self):
+        return self._n_neurons
+    
+    @neurons.setter
+    def neurons(self, new_number):
+        self._n_neurons = new_number
+
+        if self._n_neurons <= 0:
+            raise Exception("The number of neurons in the hidden layer must be a positive integer. Exiting..")
             exit()
-        elif isinstance(self.neurons, int) != True: 
+        elif isinstance(self._n_neurons, int) != True: 
             raise Exception("The number of neurons in the hidden layer must be an integer. Exiting..")
             exit()
 
-    
     @property
     def activation(self):
         return self._activation
@@ -318,6 +372,13 @@ class MLP_regressor:
     def batch_size(self, new_batchsize):
         self._batch_size = new_batchsize
 
+        if self._batch_size <= 0:
+            raise Exception("The batch size must be a positive integer. Exiting..")
+            exit()
+        elif isinstance(self._batch_size, int) != True: 
+            raise Exception("The batch size must be an integer. Exiting..")
+            exit()
+
     @property
     def n_epochs(self):
         return self._n_epochs
@@ -325,6 +386,13 @@ class MLP_regressor:
     @n_epochs.setter
     def n_epochs(self, new_epochs):
         self._n_epochs = new_epochs
+
+        if self._n_epochs <= 0:
+            raise Exception("The number of epochs must be a positive integer. Exiting..")
+            exit()
+        elif isinstance(self._n_epochs, int) != True: 
+            raise Exception("The number of epochs must be an integer. Exiting..")
+            exit()
 
 
     @staticmethod
@@ -349,7 +417,7 @@ class MLP_regressor:
         activation_output, path_, monitor_early_stop, optimizer_, patience_, loss_function_, metrics_ = MLP_regressor.set_hard_parameters()
 
         model = Sequential()
-        model.add(Dense(self.neurons, input_dim=input_dimension, kernel_initializer='normal', activation=self._activation)) 
+        model.add(Dense(self._n_neurons, input_dim=input_dimension, kernel_initializer='normal', activation=self._activation)) 
         model.add(Dense(output_dimension, activation=activation_output))
         model.summary()
 
