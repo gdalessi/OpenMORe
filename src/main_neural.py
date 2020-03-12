@@ -28,14 +28,14 @@ except OSError:
     exit()
 
 ### CLASSIFICATION ###
-model = ANN.MLP_classifier(X,Y)
+'''model = ANN.MLP_classifier(X,Y)
 model.neurons = 50
 model.activation = 'relu'
 print(model.activation)
 model.n_epochs = 100
 #model.batch_size = 1
 index = model.fit_network()
-
+'''
 ### DIMENSIONALITY REDUCTION ###
 '''model = ANN.Autoencoder(X)
 model.neurons = 50
