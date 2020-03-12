@@ -34,36 +34,59 @@ from keras.layers import LeakyReLU
 
 
 class MLP_classifier:
-    def __init__(self, X, Y, n_neurons, ReLU=True, save=False):
+    def __init__(self, X, Y, n_neurons, save=False):
         self.X = X
         self.Y = Y
         self.neurons = n_neurons
-        if ReLU:
-            activation = 'relu'
-            self.activation = activation
-        else:
-            LR = LeakyReLU(alpha=0.0001)
-            LR.__name__ = 'relu'    #just to fool python change the name of the LeakyRelu
-            activation = LR 
-            self.activation = activation
+        
+        self._activation = 'relu'
+        self._batch_size = 64
+        self._n_epochs = 1000
+        
         self.save_txt = save
 
         if self.X.shape[0] != self.Y.shape[0]:
             raise Exception("The number of observations (Input and Output) does not match: please check again your Input/Output. Exiting...")
             exit()
         elif self.neurons <= 0:
-            raise Exception("The number of neurons in the hidden layer must be a positive, non-negative integer. Exiting..")
+            raise Exception("The number of neurons in the hidden layer must be a positive integer. Exiting..")
             exit()
         elif isinstance(self.neurons, int) != True: 
             raise Exception("The number of neurons in the hidden layer must be an integer. Exiting..")
             exit()
 
+    @property
+    def activation(self):
+        return self._activation
+    
+    @activation.setter
+    def activation(self, new_activation):
+        if new_activation == 'leaky_relu':
+            LR = LeakyReLU(alpha=0.0001)
+            LR.__name__= 'relu'
+            self._activation= LR
+        else:
+            self._activation = new_activation
+
+    @property
+    def batch_size(self):
+        return self._batch_size
+    
+    @batch_size.setter
+    def batch_size(self, new_batchsize):
+        self._batch_size = new_batchsize
+
+    @property
+    def n_epochs(self):
+        return self._n_epochs
+    
+    @n_epochs.setter
+    def n_epochs(self, new_epochs):
+        self._n_epochs = new_epochs
 
     @staticmethod
     def set_hard_parameters():
         activation_output = 'softmax'
-        batch_size_ = 64
-        n_epochs_ = 1000 # it's a lot but we will have early stopping anyway
         path_ = os.getcwd()
         monitor_early_stop= 'val_loss'
         optimizer_= 'adam'
@@ -71,7 +94,7 @@ class MLP_classifier:
         loss_classification_= 'categorical_crossentropy'
         metrics_classification_= 'accuracy'
 
-        return activation_output, batch_size_, n_epochs_, path_, monitor_early_stop, optimizer_, patience_, loss_classification_, metrics_classification_
+        return activation_output, path_, monitor_early_stop, optimizer_, patience_, loss_classification_, metrics_classification_
 
     
     @staticmethod
@@ -97,10 +120,10 @@ class MLP_classifier:
         X_train, X_test, y_train, y_test = train_test_split(self.X, self.Y, test_size=0.3)
         input_dimension = self.X.shape[1]
         number_of_classes = self.Y.shape[1]
-        activation_output, batch_size_, n_epochs_, path_, monitor_early_stop, optimizer_, patience_, loss_classification_, metrics_classification_ = MLP_classifier.set_hard_parameters()
+        activation_output, path_, monitor_early_stop, optimizer_, patience_, loss_classification_, metrics_classification_ = MLP_classifier.set_hard_parameters()
 
         classifier = Sequential()
-        classifier.add(Dense(self.neurons, activation=self.activation, kernel_initializer='random_normal', input_dim=input_dimension))
+        classifier.add(Dense(self.neurons, activation=self._activation, kernel_initializer='random_normal', input_dim=input_dimension))
         classifier.add(Dense(number_of_classes, activation=activation_output, kernel_initializer='random_normal'))
         classifier.summary()
 
@@ -108,7 +131,7 @@ class MLP_classifier:
         mcp_save = ModelCheckpoint(filepath=path_ + '/best_weights.h5', verbose=1, save_best_only=True, monitor=monitor_early_stop, mode='min')
 
         classifier.compile(optimizer =optimizer_,loss=loss_classification_, metrics =[metrics_classification_])
-        history = classifier.fit(X_train, y_train, validation_data=(X_test, y_test), batch_size=batch_size_, epochs=n_epochs_, callbacks=[earlyStopping, mcp_save])
+        history = classifier.fit(X_train, y_train, validation_data=(X_test, y_test), batch_size=self._batch_size, epochs=self._n_epochs, callbacks=[earlyStopping, mcp_save])
 
         # Summarize history for accuracy
         plt.plot(history.history['acc'])
@@ -145,20 +168,15 @@ class MLP_classifier:
 
 
 class Autoencoder:
-    def __init__(self, X, encoding_dimension, ReLU=True, save=False):
+    def __init__(self, X, encoding_dimension, save=False):
         self.X = X
         self.encoding_dimension = encoding_dimension
-        if ReLU:
-            activation_function = 'relu'
-            self.activation_function = activation_function
-        else:
-            LR = LeakyReLU(alpha=0.0001)
-            LR.__name__ = 'relu'    #just to fool python change the name of the LeakyRelu
-            activation_function = LR 
-            self.activation_function = activation_function
-        self.save_txt = save
+        
+        self._activation = 'relu'
+        self._batch_size = 64
+        self._n_epochs = 1000
 
-        if self.neurons <= 0:
+        if self.encoding_dimension <= 0:
             raise Exception("The number of neurons in the hidden layer must be a positive, non-negative integer. Exiting..")
             exit()
         elif isinstance(self.encoding_dimension, int) != True: 
@@ -168,12 +186,39 @@ class Autoencoder:
             raise Exception("The reduced dimensionality cannot be larger than the original number of variables. Exiting..")
             exit()
 
+    @property
+    def activation(self):
+        return self._activation
+    
+    @activation.setter
+    def activation(self, new_activation):
+        if new_activation == 'leaky_relu':
+            LR = LeakyReLU(alpha=0.0001)
+            LR.__name__= 'relu'
+            self._activation= LR
+        else:
+            self._activation = new_activation
+
+    @property
+    def batch_size(self):
+        return self._batch_size
+    
+    @batch_size.setter
+    def batch_size(self, new_batchsize):
+        self._batch_size = new_batchsize
+
+    @property
+    def n_epochs(self):
+        return self._n_epochs
+    
+    @n_epochs.setter
+    def n_epochs(self, new_epochs):
+        self._n_epochs = new_epochs
+
 
     @staticmethod
     def set_hard_parameters():
         activation_output = 'linear'
-        batch_size_ = 64
-        n_epochs_ = 1000 # it's a lot but we will have early stopping anyway
         path_ = os.getcwd()
         monitor_early_stop= 'val_loss'
         optimizer_= 'adam'
@@ -181,7 +226,7 @@ class Autoencoder:
         loss_function_= 'mse'
         metrics_= 'accuracy'
 
-        return activation_output, batch_size_, n_epochs_, path_, monitor_early_stop, optimizer_, patience_, loss_function_, metrics_
+        return activation_output, path_, monitor_early_stop, optimizer_, patience_, loss_function_, metrics_
 
     
     def fit(self):
@@ -191,10 +236,10 @@ class Autoencoder:
         input_dimension = self.X.shape[1]
         X_train, X_test, y_train, y_test = train_test_split(self.X, self.X, test_size=0.3)
         
-        activation_output, batch_size_, n_epochs_, path_, monitor_early_stop, optimizer_, patience_, loss_function_, metrics_ = Autoencoder.set_hard_parameters()
+        activation_output, path_, monitor_early_stop, optimizer_, patience_, loss_function_, metrics_ = Autoencoder.set_hard_parameters()
 
         input_data = Input(shape=(input_dimension,))
-        encoded = Dense(self.encoding_dimension, activation=self.activation_function)(input_data)
+        encoded = Dense(self.encoding_dimension, activation=self._activation)(input_data)
         decoded = Dense(input_dimension, activation=activation_output)(encoded)
         
         autoencoder = Model(input_data, decoded)
@@ -207,7 +252,7 @@ class Autoencoder:
         autoencoder.compile(optimizer=optimizer_, loss=loss_function_)
 
         earlyStopping = EarlyStopping(monitor=monitor_early_stop, patience=patience_, verbose=1, mode='min')
-        history = autoencoder.fit(X_train, X_train, validation_data=(X_test, X_test), epochs=n_epochs_, batch_size=batch_size_, shuffle=True, callbacks=[earlyStopping])
+        history = autoencoder.fit(X_train, X_train, validation_data=(X_test, X_test), epochs=self._n_epochs, batch_size=self._batch_size, shuffle=True, callbacks=[earlyStopping])
 
         plt.plot(history.history['loss'])
         plt.plot(history.history['val_loss'])
@@ -234,14 +279,11 @@ class MLP_regressor:
         self.X = X
         self.Y = Y
         self.neurons = n_neurons
-        if ReLU:
-            activation_function = 'relu'
-            self.activation_function = activation_function
-        else:
-            LR = LeakyReLU(alpha=0.0001)
-            LR.__name__ = 'relu'    #just to fool python change the name of the LeakyRelu
-            activation_function = LR 
-            self.activation_function = activation_function
+        
+        self._activation = 'relu'
+        self._batch_size = 64
+        self._n_epochs = 1000
+        
         self.save_txt = save
 
         if self.X.shape[0] != self.Y.shape[0]:
@@ -254,12 +296,40 @@ class MLP_regressor:
             raise Exception("The number of neurons in the hidden layer must be an integer. Exiting..")
             exit()
 
+    
+    @property
+    def activation(self):
+        return self._activation
+    
+    @activation.setter
+    def activation(self, new_activation):
+        if new_activation == 'leaky_relu':
+            LR = LeakyReLU(alpha=0.0001)
+            LR.__name__= 'relu'
+            self._activation= LR
+        else:
+            self._activation = new_activation
+
+    @property
+    def batch_size(self):
+        return self._batch_size
+    
+    @batch_size.setter
+    def batch_size(self, new_batchsize):
+        self._batch_size = new_batchsize
+
+    @property
+    def n_epochs(self):
+        return self._n_epochs
+    
+    @n_epochs.setter
+    def n_epochs(self, new_epochs):
+        self._n_epochs = new_epochs
+
 
     @staticmethod
     def set_hard_parameters():
         activation_output = 'linear'
-        batch_size_ = 64
-        n_epochs_ = 1000 # it's a lot but we will have early stopping anyway
         path_ = os.getcwd()
         monitor_early_stop= 'mean_squared_error'
         optimizer_= 'adam'
@@ -267,7 +337,7 @@ class MLP_regressor:
         loss_function_= 'mean_squared_error'
         metrics_= 'mse'
 
-        return activation_output, batch_size_, n_epochs_, path_, monitor_early_stop, optimizer_, patience_, loss_function_, metrics_
+        return activation_output, path_, monitor_early_stop, optimizer_, patience_, loss_function_, metrics_
 
 
     def fit_network(self):
@@ -276,17 +346,17 @@ class MLP_regressor:
 
         X_train, X_test, y_train, y_test = train_test_split(self.X, self.Y, test_size=0.3)
 
-        activation_output, batch_size_, n_epochs_, path_, monitor_early_stop, optimizer_, patience_, loss_function_, metrics_ = MLP_regressor.set_hard_parameters()
+        activation_output, path_, monitor_early_stop, optimizer_, patience_, loss_function_, metrics_ = MLP_regressor.set_hard_parameters()
 
         model = Sequential()
-        model.add(Dense(self.neurons, input_dim=input_dimension, kernel_initializer='normal', activation=self.activation_function)) 
+        model.add(Dense(self.neurons, input_dim=input_dimension, kernel_initializer='normal', activation=self._activation)) 
         model.add(Dense(output_dimension, activation=activation_output))
         model.summary()
 
         earlyStopping = EarlyStopping(monitor=monitor_early_stop, patience=patience_, verbose=0, mode='min')
         mcp_save = ModelCheckpoint(filepath=path_+ '/best_weights2c.h5', verbose=1, save_best_only=True, monitor=monitor_early_stop, mode='min')
         model.compile(loss=loss_function_, optimizer=optimizer_, metrics=[metrics_])
-        history = model.fit(X_train, y_train, batch_size=batch_size_, epochs=n_epochs_, verbose=1, validation_data=(X_test, y_test), callbacks=[earlyStopping, mcp_save])
+        history = model.fit(X_train, y_train, batch_size=self._batch_size, epochs=self._n_epochs, verbose=1, validation_data=(X_test, y_test), callbacks=[earlyStopping, mcp_save])
 
         plt.plot(history.history['loss'])
         plt.plot(history.history['val_loss'])
