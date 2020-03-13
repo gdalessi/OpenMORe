@@ -47,11 +47,52 @@ class lpca:
     criterion is that the variation of the global mean reconstruction error between two consecutive
     iterations must be below a fixed threshold.
     '''
-    def __init__(self, X, k, n_eigs, method):
+    def __init__(self, X):
         self.X = np.array(X)
-        self.k = k
-        self.nPCs = n_eigs
-        self.method = method
+        
+        self._k = 2
+        self._nPCs = 2
+        self._method = 'KMEANS'
+
+
+    @property
+    def clusters(self):
+        return self._k
+    
+    @clusters.setter
+    def clusters(self, new_number):
+        self._k = new_number
+
+        if self._k <= 0:
+            raise Exception("The number of clusters in input must be a positive integer. Exiting..")
+            exit()
+        elif isinstance(self._k, int) != True: 
+            raise Exception("The number of clusters must be an integer. Exiting..")
+            exit()
+
+    @property
+    def eigens(self):
+        return self._nPCs
+    
+    @eigens.setter
+    def eigens(self, new_number):
+        self._nPCs = new_number
+
+        if self._nPCs <= 0:
+            raise Exception("The number of eigenvectors in input must be a positive integer. Exiting..")
+            exit()
+        elif isinstance(self._nPCs, int) != True: 
+            raise Exception("The number of eigenvectors must be an integer. Exiting..")
+            exit()
+
+    @property
+    def initialization(self):
+        return self._method
+    
+    @eigens.setter
+    def initialization(self, new_method):
+        self._method = new_method
+
     
 
     @staticmethod
@@ -60,9 +101,9 @@ class lpca:
         The clustering solution must be initialized. Two methods are available,
         a random allocation (RANDOM) or a previous clustering solution (KMEANS).
         '''
-        if method == 'RANDOM' or method == 'random' or method == 'Random':
+        if method.lower() == 'random':
             idx = np.random.random_integers(0, k, size=(X.shape[0], 1))
-        elif method == 'KMEANS' or method == 'kmeans' or method == 'Kmeans':
+        elif method.lower() == 'kmeans':
             kmeans = KMeans(n_clusters=k, random_state=0).fit(X)
             idx = kmeans.labels_
         else:
@@ -127,16 +168,16 @@ class lpca:
         iteration, eps_rec, residuals, iter_max, eps_tol = lpca.initialize_parameters()
         rows, cols = np.shape(self.X)
         # Initialize solution
-        idx = lpca.initialize_clusters(self.X, self.k, self.method)
+        idx = lpca.initialize_clusters(self.X, self._k, self._method)
         residuals = np.array(0)
         # Iterate
         while(iteration < iter_max):
             sq_rec_oss = np.zeros((rows, cols), dtype=float)
-            sq_rec_err = np.zeros((rows, self.k), dtype=float)
-            for ii in range(0, self.k):
+            sq_rec_err = np.zeros((rows, self._k), dtype=float)
+            for ii in range(0, self._k):
                 cluster = get_cluster(self.X, idx, ii)
                 centroids = get_centroids(cluster)
-                modes = PCA_fit(cluster, self.nPCs)
+                modes = PCA_fit(cluster, self._nPCs)
                 C_mat = np.matlib.repmat(centroids, rows, 1)
                 rec_err_os = (self.X - C_mat) - (self.X - C_mat) @ modes[0] @ modes[0].T
                 sq_rec_oss = np.power(rec_err_os, 2)
@@ -161,7 +202,7 @@ class lpca:
             iteration += 1
             # Consider only statistical meaningful groups of points
             idx = lpca.merge_clusters(self.X, idx)
-            self.k = max(idx)+1
+            self._k = max(idx)+1
         print("Convergence reached in {} iterations.".format(iteration))
         lpca.plot_residuals(iteration, residuals)
         return idx
