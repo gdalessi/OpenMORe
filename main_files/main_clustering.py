@@ -1,8 +1,8 @@
 '''
-PROGRAM: main.py
+PROGRAM: main_clustering.py
 
 @Authors:
-    G. D'Alessio [1,2], G. Aversano [1], A. Parente[1]
+    G. D'Alessio [1,2]
     [1]: Université Libre de Bruxelles, Aero-Thermo-Mechanics Laboratory, Bruxelles, Belgium
     [2]: CRECK Modeling Lab, Department of Chemistry, Materials and Chemical Engineering, Politecnico di Milano
 
@@ -56,7 +56,7 @@ try:
     print("Reading training matrix..")
     X = np.genfromtxt(file_options["path_to_file"] + "/" + file_options["input_file_name"], delimiter= ',')
 except OSError:
-    print("Could not open/read the selected file: " + "/" + file_options["input_file_name"])
+    print("Could not open/read the selected file: " + file_options["input_file_name"])
     exit()
 check_dummy(X, settings["number_of_clusters"], settings["number_of_eigenvectors"])
 
@@ -64,7 +64,12 @@ check_dummy(X, settings["number_of_clusters"], settings["number_of_eigenvectors"
 X_tilde = center_scale(X, center(X, method=settings["centering_method"]), scale(X, method=settings["scaling_method"]))
 
 
-model = clustering.lpca(X_tilde, check_sanity_int(settings["number_of_clusters"]), check_sanity_int(settings["number_of_eigenvectors"]), settings["initialization_method"])
+model = clustering.lpca(X_tilde)
+
+model.clusters = settings["number_of_clusters"]
+model.eigens = settings["number_of_eigenvectors"]
+model.initialization = settings["initialization_method"]
+
 index = model.fit()
 
 if settings["write_on_txt"]:
@@ -74,13 +79,15 @@ if settings["write_on_txt"]:
 if settings["plot_on_mesh"]:
     mesh = np.genfromtxt(mesh_options["path_to_file"] + "/" + mesh_options["mesh_file_name"], delimiter= ',')
     plt.scatter(mesh[:,0], mesh[:,1], c=index,alpha=0.5)
+    plt.xlabel("X [m]")
+    plt.ylabel("Y [m]")
     plt.show()
 
 
 if settings["classify"]:
 
     file_options_classifier = {
-        "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data/",
+        "path_to_file"              : "/home/peppe/Dropbox/GitHub/data",
         "test_file_name"            : "thermoC_timestep.csv",
     }
 
@@ -92,7 +99,11 @@ if settings["classify"]:
         exit()
 
     # Input to the classifier: X = training matrix, Y = test matrix
-    classifier = clustering.VQclassifier(X, settings["centering_method"], settings["scaling_method"], index, Y)
+    classifier = clustering.VQclassifier(X, index, Y)
+
+    classifier.centering = settings["centering_method"]
+    classifier.scaling = settings["scaling_method"]
+
     classification_vector = classifier.fit()
 
     if settings["write_on_txt"]:

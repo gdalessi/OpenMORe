@@ -1,8 +1,8 @@
 '''
-PROGRAM: main.py
+PROGRAM: main_clustering.py
 
 @Authors:
-    G. D'Alessio [1,2], G. Aversano [1], A. Parente[1]
+    G. D'Alessio [1,2]
     [1]: Université Libre de Bruxelles, Aero-Thermo-Mechanics Laboratory, Bruxelles, Belgium
     [2]: CRECK Modeling Lab, Department of Chemistry, Materials and Chemical Engineering, Politecnico di Milano
 
@@ -103,7 +103,7 @@ if settings["classify"]:
 
     classifier.centering = settings["centering_method"]
     classifier.scaling = settings["scaling_method"]
-    
+
     classification_vector = classifier.fit()
 
     if settings["write_on_txt"]:

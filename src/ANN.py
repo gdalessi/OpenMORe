@@ -11,9 +11,9 @@ MODULE: ANN.py
 
 @Details:
     This module contains a set of functions/classes which are based on ANN. The following architectures are implemented:
-    1) Single-layer MLP for classification tasks.
+    1) ANN for classification tasks.
     2) Autoencoder for non-linear dimensionality reduction.
-    3) Single-layer MLP for regression tasks.
+    3) ANN for regression tasks.
 
 @Additional notes:
     This code is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
@@ -37,7 +37,6 @@ class MLP_classifier:
     def __init__(self, X, Y, save=False):
         self.X = X
         self.Y = Y
-        #self.neurons = n_neurons
         
         self._activation = 'relu'
         self._batch_size = 64
@@ -127,6 +126,10 @@ class MLP_classifier:
 
     @staticmethod
     def set_hard_parameters():
+        '''
+        This function sets all the parameters for the neural network which should not
+        be changed during the tuning.
+        '''
         activation_output = 'softmax'
         path_ = os.getcwd()
         monitor_early_stop= 'val_loss'
@@ -154,6 +157,10 @@ class MLP_classifier:
 
     @staticmethod
     def set_environment():
+        '''
+        This function creates a new folder where all the produced files
+        will be saved.
+        '''
         import datetime
         import sys
         import os
@@ -166,6 +173,11 @@ class MLP_classifier:
 
     @staticmethod
     def write_recap_text(neuro_number, lay_number, number_batches, activation_specification):
+        '''
+        This function writes a txt with all the hyperparameters
+        recaped, to not forget the settings if several trainings are
+        launched all together.
+        '''
         text_file = open("recap_training.txt", "wt")
         neurons_number = text_file.write("The number of neurons in the implemented architecture is equal to: {} \n".format(neuro_number))
         layers_number = text_file.write("The number of hidden layers in the implemented architecture is equal to: {} \n".format(lay_number))
@@ -224,17 +236,19 @@ class MLP_classifier:
         plt.savefig('loss_history.eps')
         plt.show()
 
+        counter_saver = 0
+
         if self.save_txt:
 
-            first_layer_weights = classifier.layers[0].get_weights()[0]
-            first_layer_biases  = classifier.layers[0].get_weights()[1]
-            class_layer_weights = classifier.layers[1].get_weights()[0]
-            class_layer_biases = classifier.layers[1].get_weights()[1]
-            
-            np.savetxt(path_+ '/weightsHL1.txt', first_layer_weights)
-            np.savetxt(path_+ '/biasHL1.txt', first_layer_biases)
-            np.savetxt(path_+ '/weightsCL.txt', class_layer_weights)
-            np.savetxt(path_+ '/biasCL.txt', class_layer_biases)
+            while counter_saver < self._layers:
+                layer_weights = classifier.layers[counter_saver].get_weights()[0]
+                layer_biases = classifier.layers[counter_saver].get_weights()[1]
+                name_weights = "Weights_HL{}.txt".format(counter_saver)
+                name_biases = "Biases_HL{}.txt".format(counter_saver)
+                np.savetxt(name_weights, layer_weights)
+                np.savetxt(name_biases, layer_biases)
+
+                counter_saver +=1
         
         test = classifier.predict(self.X)
         return test
@@ -313,6 +327,10 @@ class Autoencoder:
 
     @staticmethod
     def set_hard_parameters():
+        '''
+        This function sets all the parameters for the neural network which should not
+        be changed during the tuning.
+        '''
         activation_output = 'linear'
         path_ = os.getcwd()
         monitor_early_stop= 'val_loss'
@@ -326,6 +344,10 @@ class Autoencoder:
 
     @staticmethod
     def set_environment():
+        '''
+        This function creates a new folder where all the produced files
+        will be saved.
+        '''
         import datetime
         import sys
         import os
@@ -338,6 +360,11 @@ class Autoencoder:
 
     @staticmethod
     def write_recap_text(neuro_number, number_batches, activation_specification):
+        '''
+        This function writes a txt with all the hyperparameters
+        recaped, to not forget the settings if several trainings are
+        launched all together.
+        '''
         text_file = open("recap_training.txt", "wt")
         neurons_number = text_file.write("The number of neurons in the implemented architecture is equal to: {} \n".format(neuro_number))
         batches_number = text_file.write("The batch size is equal to: {} \n".format(number_batches))
@@ -443,7 +470,6 @@ class MLP_regressor:
             exit()
 
 
-
     @property
     def activation(self):
         return self._activation
@@ -492,6 +518,10 @@ class MLP_regressor:
 
     @staticmethod
     def set_hard_parameters():
+        '''
+        This function sets all the parameters for the neural network which should not
+        be changed during the tuning.
+        '''
         activation_output = 'linear'
         path_ = os.getcwd()
         monitor_early_stop= 'mean_squared_error'
@@ -505,6 +535,10 @@ class MLP_regressor:
 
     @staticmethod
     def set_environment():
+        '''
+        This function creates a new folder where all the produced files
+        will be saved.
+        '''
         import datetime
         import sys
         import os
@@ -517,6 +551,11 @@ class MLP_regressor:
 
     @staticmethod
     def write_recap_text(neuro_number, lay_number, number_batches, activation_specification):
+        '''
+        This function writes a txt with all the hyperparameters
+        recaped, to not forget the settings if several trainings are
+        launched all together.
+        '''
         text_file = open("recap_training.txt", "wt")
         neurons_number = text_file.write("The number of neurons in the implemented architecture is equal to: {} \n".format(neuro_number))
         layers_number = text_file.write("The number of hidden layers in the implemented architecture is equal to: {} \n".format(lay_number))
@@ -564,16 +603,18 @@ class MLP_regressor:
 
         test = model.predict(self.X)
 
+        counter_saver = 0
+
         if self.save_txt:
 
-            first_layer_weights = model.layers[0].get_weights()[0]
-            first_layer_biases  = model.layers[0].get_weights()[1]
-            out_layer_weights = model.layers[1].get_weights()[0]
-            out_layer_biases = model.layers[1].get_weights()[1]
+            while counter_saver < self._layers:
+                layer_weights = classifier.layers[counter_saver].get_weights()[0]
+                layer_biases = classifier.layers[counter_saver].get_weights()[1]
+                name_weights = "Weights_HL{}.txt".format(counter_saver)
+                name_biases = "Biases_HL{}.txt".format(counter_saver)
+                np.savetxt(name_weights, layer_weights)
+                np.savetxt(name_biases, layer_biases)
 
-            np.savetxt(path_+ '/weightsHL1.txt', first_layer_weights)
-            np.savetxt(path_+ '/biasHL1.txt', first_layer_biases)
-            np.savetxt(path_+ '/weightsCL.txt', out_layer_weights)
-            np.savetxt(path_+ '/biasCL.txt', out_layer_biases)
+                counter_saver +=1
 
         return test
