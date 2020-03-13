@@ -30,8 +30,8 @@ except OSError:
 ### CLASSIFICATION ###
 model = ANN.MLP_classifier(X,Y)
 model.neurons = 50
+model.layers = 5
 model.activation = 'relu'
-print(model.activation)
 model.n_epochs = 100
 #model.batch_size = 1
 index = model.fit_network()

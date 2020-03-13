@@ -43,6 +43,7 @@ class MLP_classifier:
         self._batch_size = 64
         self._n_epochs = 1000
         self._n_neurons = 2
+        self._layers = 1
         
         self.save_txt = save
 
@@ -63,6 +64,21 @@ class MLP_classifier:
             exit()
         elif isinstance(self._n_neurons, int) != True: 
             raise Exception("The number of neurons in the hidden layer must be an integer. Exiting..")
+            exit()
+
+    @property
+    def layers(self):
+        return self._layers
+    
+    @layers.setter
+    def layers(self, new_number_layers):
+        self._layers = new_number_layers
+
+        if self._layers <= 0:
+            raise Exception("The number hidden layers must be a positive integer. Exiting..")
+            exit()
+        elif isinstance(self._layers, int) != True: 
+            raise Exception("The hidden layers must be an integer. Exiting..")
             exit()
 
     @property
@@ -149,12 +165,14 @@ class MLP_classifier:
 
 
     @staticmethod
-    def write_recap_text(neuro_number, number_batches, activation_specification):
+    def write_recap_text(neuro_number, lay_number, number_batches, activation_specification):
         text_file = open("recap_training.txt", "wt")
         neurons_number = text_file.write("The number of neurons in the implemented architecture is equal to: {} \n".format(neuro_number))
+        layers_number = text_file.write("The number of hidden layers in the implemented architecture is equal to: {} \n".format(lay_number))
         batches_number = text_file.write("The batch size is equal to: {} \n".format(number_batches))
         activation_used = text_file.write("The activation function which was used was: "+ activation_specification + ". \n")
         text_file.close()
+
 
     def fit_network(self):
 
@@ -163,15 +181,20 @@ class MLP_classifier:
             self.Y = MLP_classifier.idx_to_labels(self.Y)
 
         MLP_classifier.set_environment()
-        MLP_classifier.write_recap_text(self._n_neurons, self._batch_size, self._activation)
+        MLP_classifier.write_recap_text(self._n_neurons, self._layers, self._batch_size, self._activation)
 
         X_train, X_test, y_train, y_test = train_test_split(self.X, self.Y, test_size=0.3)
         input_dimension = self.X.shape[1]
         number_of_classes = self.Y.shape[1]
         activation_output, path_, monitor_early_stop, optimizer_, patience_, loss_classification_, metrics_classification_ = MLP_classifier.set_hard_parameters()
 
+        counter = 1
+
         classifier = Sequential()
         classifier.add(Dense(self._n_neurons, activation=self._activation, kernel_initializer='random_normal', input_dim=input_dimension))
+        while counter < self._layers:
+            classifier.add(Dense(self._n_neurons, activation=self._activation)) 
+            counter +=1
         classifier.add(Dense(number_of_classes, activation=activation_output, kernel_initializer='random_normal'))
         classifier.summary()
 
@@ -374,6 +397,7 @@ class MLP_regressor:
         self.Y = Y
 
         self._n_neurons = 2
+        self._layers = 1
         self._activation = 'relu'
         self._batch_size = 64
         self._n_epochs = 1000
@@ -399,6 +423,22 @@ class MLP_regressor:
         elif isinstance(self._n_neurons, int) != True: 
             raise Exception("The number of neurons in the hidden layer must be an integer. Exiting..")
             exit()
+
+    @property
+    def layers(self):
+        return self._layers
+    
+    @layers.setter
+    def layers(self, new_number_layers):
+        self._layers = new_number_layers
+
+        if self._layers <= 0:
+            raise Exception("The number hidden layers must be a positive integer. Exiting..")
+            exit()
+        elif isinstance(self._layers, int) != True: 
+            raise Exception("The hidden layers must be an integer. Exiting..")
+            exit()
+
 
 
     @property
@@ -473,9 +513,10 @@ class MLP_regressor:
 
 
     @staticmethod
-    def write_recap_text(neuro_number, number_batches, activation_specification):
+    def write_recap_text(neuro_number, lay_number, number_batches, activation_specification):
         text_file = open("recap_training.txt", "wt")
         neurons_number = text_file.write("The number of neurons in the implemented architecture is equal to: {} \n".format(neuro_number))
+        layers_number = text_file.write("The number of hidden layers in the implemented architecture is equal to: {} \n".format(lay_number))
         batches_number = text_file.write("The batch size is equal to: {} \n".format(number_batches))
         activation_used = text_file.write("The activation function which was used was: "+ activation_specification + ". \n")
         text_file.close()
@@ -486,14 +527,19 @@ class MLP_regressor:
         output_dimension = self.Y.shape[1]
 
         MLP_regressor.set_environment()
-        MLP_regressor.write_recap_text(self._n_neurons, self._batch_size, self._activation)
+        MLP_regressor.write_recap_text(self._n_neurons, self._layers, self._batch_size, self._activation)
 
         X_train, X_test, y_train, y_test = train_test_split(self.X, self.Y, test_size=0.3)
 
         activation_output, path_, monitor_early_stop, optimizer_, patience_, loss_function_, metrics_ = MLP_regressor.set_hard_parameters()
 
+        counter = 1
+
         model = Sequential()
         model.add(Dense(self._n_neurons, input_dim=input_dimension, kernel_initializer='normal', activation=self._activation)) 
+        while counter < self._layers:
+            classifier.add(Dense(self._n_neurons, activation=self._activation)) 
+            counter +=1
         model.add(Dense(output_dimension, activation=activation_output))
         model.summary()
 
