@@ -211,6 +211,7 @@ class MLP_classifier:
         plt.ylabel('Accuracy')
         plt.xlabel('Epoch number')
         plt.legend(['Train', 'Test'], loc='lower right')
+        plt.savefig('accuracy_history.eps')
         plt.show()
 
         # Summarize history for loss
@@ -220,6 +221,7 @@ class MLP_classifier:
         plt.ylabel('Loss')
         plt.xlabel('Epoch')
         plt.legend(['Train', 'Test'], loc='upper right')
+        plt.savefig('loss_history.eps')
         plt.show()
 
         if self.save_txt:
@@ -377,6 +379,7 @@ class Autoencoder:
         plt.ylabel('Loss')
         plt.xlabel('Epoch')
         plt.legend(['Train', 'Test'], loc='upper right')
+        plt.savefig('loss_history.eps')
         plt.show()
 
         encoded_X = encoder.predict(self.X)
@@ -554,6 +557,7 @@ class MLP_regressor:
         plt.ylabel('Loss')
         plt.xlabel('Epoch')
         plt.legend(['Train', 'Test'], loc='upper right')
+        plt.savefig('loss_history.eps')
         plt.show()
 
         model.load_weights(path_+ '/best_weights2c.h5')
