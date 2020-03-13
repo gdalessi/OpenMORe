@@ -216,14 +216,32 @@ class VQclassifier:
     1. For each cluster of the training matrix, computes the Principal Components.
     2. Assign each observation y \in Y to the cluster which minimizes the local reconstruction error.
     '''
-    def __init__(self, X, cent_crit, scal_crit, idx, Y):
+    def __init__(self, X, idx, Y):
         self.X = X
-        self.cent_crit = cent_crit
-        self.scal_crit = scal_crit
+        self._cent_crit = 'mean'
+        self._scal_crit = 'auto'
         self.idx = idx
-        self.k = max(self.idx)
+        self.k = max(self.idx) +1
         self.Y = Y
         self.nPCs = round(self.Y.shape[1] - (self.Y.shape[1]) /5) #Use a very high number of PCs to classify,removing only the last 20% which contains noise
+
+    @property
+    def centering(self):
+        return self._cent_crit
+    
+    @centering.setter
+    def centering(self, new_centering):
+        self._cent_crit = new_centering
+
+    @property
+    def scaling(self):
+        return self._scal_crit
+    
+    @scaling.setter
+    def scaling(self, new_scaling):
+        self._scal_crit = new_scaling
+
+
     
     def fit(self):
         '''
@@ -232,8 +250,8 @@ class VQclassifier:
         '''
         print("Classifying the new observations...")
         # Compute the centering/scaling factors of the training matrix
-        mu = center(self.X, self.cent_crit)
-        sigma = scale(self.X, self.scal_crit)
+        mu = center(self.X, self._cent_crit)
+        sigma = scale(self.X, self._scal_crit)
         # Scale the new matrix with these factors
         Y_tilde = center_scale(self.Y, mu, sigma)
         # Initialize arrays

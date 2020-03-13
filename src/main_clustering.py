@@ -99,7 +99,11 @@ if settings["classify"]:
         exit()
 
     # Input to the classifier: X = training matrix, Y = test matrix
-    classifier = clustering.VQclassifier(X, settings["centering_method"], settings["scaling_method"], index, Y)
+    classifier = clustering.VQclassifier(X, index, Y)
+
+    classifier.centering = settings["centering_method"]
+    classifier.scaling = settings["scaling_method"]
+    
     classification_vector = classifier.fit()
 
     if settings["write_on_txt"]:
