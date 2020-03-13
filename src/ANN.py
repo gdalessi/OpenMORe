@@ -108,6 +108,7 @@ class MLP_classifier:
             raise Exception("The number of epochs must be an integer. Exiting..")
             exit()
 
+
     @staticmethod
     def set_hard_parameters():
         activation_output = 'softmax'
@@ -133,13 +134,36 @@ class MLP_classifier:
                     labels[ii,jj] = 1
         
         return labels
-    
+
+
+    @staticmethod
+    def set_environment():
+        import datetime
+        import sys
+        import os
+        
+        now = datetime.datetime.now()
+        newDirName = "Train MLP class - " + now.strftime("%Y_%m_%d-%H%M")
+        os.mkdir(newDirName)
+        os.chdir(newDirName)
+
+
+    @staticmethod
+    def write_recap_text(neuro_number, number_batches, activation_specification):
+        text_file = open("recap_training.txt", "wt")
+        neurons_number = text_file.write("The number of neurons in the implemented architecture is equal to: {} \n".format(neuro_number))
+        batches_number = text_file.write("The batch size is equal to: {} \n".format(number_batches))
+        activation_used = text_file.write("The activation function which was used was: "+ activation_specification + ". \n")
+        text_file.close()
 
     def fit_network(self):
 
         if self.Y.shape[1] == 1:        # check if the Y matrix is in the correct form
             print("Changing idx shape in the correct format: [n x k]..")
             self.Y = MLP_classifier.idx_to_labels(self.Y)
+
+        MLP_classifier.set_environment()
+        MLP_classifier.write_recap_text(self._n_neurons, self._batch_size, self._activation)
 
         X_train, X_test, y_train, y_test = train_test_split(self.X, self.Y, test_size=0.3)
         input_dimension = self.X.shape[1]
@@ -274,10 +298,34 @@ class Autoencoder:
 
         return activation_output, path_, monitor_early_stop, optimizer_, patience_, loss_function_, metrics_
 
+
+    @staticmethod
+    def set_environment():
+        import datetime
+        import sys
+        import os
+        
+        now = datetime.datetime.now()
+        newDirName = "Train Autoencoder - " + now.strftime("%Y_%m_%d-%H%M")
+        os.mkdir(newDirName)
+        os.chdir(newDirName)
+
+
+    @staticmethod
+    def write_recap_text(neuro_number, number_batches, activation_specification):
+        text_file = open("recap_training.txt", "wt")
+        neurons_number = text_file.write("The number of neurons in the implemented architecture is equal to: {} \n".format(neuro_number))
+        batches_number = text_file.write("The batch size is equal to: {} \n".format(number_batches))
+        activation_used = text_file.write("The activation function which was used was: "+ activation_specification + ". \n")
+        text_file.close()
+
     
     def fit(self):
         from keras.layers import Input, Dense
         from keras.models import Model
+
+        Autoencoder.set_environment()
+        Autoencoder.write_recap_text(self._n_neurons, self._batch_size, self._activation)
         
         input_dimension = self.X.shape[1]
         X_train, X_test, y_train, y_test = train_test_split(self.X, self.X, test_size=0.3)
@@ -336,6 +384,7 @@ class MLP_regressor:
             raise Exception("The number of observations (Input and Output) does not match: please check again your Input/Output. Exiting...")
             exit()
     
+
     @property
     def neurons(self):
         return self._n_neurons
@@ -351,6 +400,7 @@ class MLP_regressor:
             raise Exception("The number of neurons in the hidden layer must be an integer. Exiting..")
             exit()
 
+
     @property
     def activation(self):
         return self._activation
@@ -363,6 +413,7 @@ class MLP_regressor:
             self._activation= LR
         else:
             self._activation = new_activation
+
 
     @property
     def batch_size(self):
@@ -378,6 +429,7 @@ class MLP_regressor:
         elif isinstance(self._batch_size, int) != True: 
             raise Exception("The batch size must be an integer. Exiting..")
             exit()
+
 
     @property
     def n_epochs(self):
@@ -408,9 +460,33 @@ class MLP_regressor:
         return activation_output, path_, monitor_early_stop, optimizer_, patience_, loss_function_, metrics_
 
 
+    @staticmethod
+    def set_environment():
+        import datetime
+        import sys
+        import os
+        
+        now = datetime.datetime.now()
+        newDirName = "Train MLP regressor - " + now.strftime("%Y_%m_%d-%H%M")
+        os.mkdir(newDirName)
+        os.chdir(newDirName)
+
+
+    @staticmethod
+    def write_recap_text(neuro_number, number_batches, activation_specification):
+        text_file = open("recap_training.txt", "wt")
+        neurons_number = text_file.write("The number of neurons in the implemented architecture is equal to: {} \n".format(neuro_number))
+        batches_number = text_file.write("The batch size is equal to: {} \n".format(number_batches))
+        activation_used = text_file.write("The activation function which was used was: "+ activation_specification + ". \n")
+        text_file.close()
+
+
     def fit_network(self):
         input_dimension = self.X.shape[1]
         output_dimension = self.Y.shape[1]
+
+        MLP_regressor.set_environment()
+        MLP_regressor.write_recap_text(self._n_neurons, self._batch_size, self._activation)
 
         X_train, X_test, y_train, y_test = train_test_split(self.X, self.Y, test_size=0.3)
 
