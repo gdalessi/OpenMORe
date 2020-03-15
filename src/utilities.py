@@ -26,7 +26,7 @@ from reduced_order_modelling import *
 
 import matplotlib
 import matplotlib.pyplot as plt
-__all__ = ["check_sanity_int", "check_sanity_NaN", "unscale", "uncenter", "center", "scale", "center_scale", "PHC_index", "check_dummy"]
+__all__ = ["check_sanity_int", "check_sanity_NaN", "unscale", "uncenter", "center", "scale", "center_scale", "PHC_index", "check_dummy", "get_centroids", "get_cluster", "get_all_clusters", "explained_variance"]
 
 
 # ------------------------------
@@ -122,6 +122,92 @@ def check_dummy(X, k, n_eigs):
         raise Exception("It is not possible to have more cluster than observations. Please consider to use a lower number of clusters.")
     elif n_eigs > X.shape[1]:
         raise Exception("It is not possible to have more Principal Components than variables. Please consider to use a lower number of PCs.")
+
+
+def explained_variance(X, n_eigs, plot=False):
+    '''
+    Assess the variance explained by the first 'n_eigs' retained
+    Principal Components. This is important to know if the percentage
+    of explained variance is enough, or additional PCs must be retained.
+    Usually, it is considered accepted a percentage of explained variable
+    above 95%.
+    - Input:
+    X = CENTERED/SCALED data matrix -- dim: (observations x variables)
+    n_eigs = number of components to retain -- dim: (scalar)
+    plot = choose if you want to plot the cumulative variance --dim: (boolean), false is default
+    - Output:
+    explained: percentage of explained variance -- dim: (scalar)
+    '''
+    PCs, eigens = PCA_fit(X, n_eigs)
+    explained_variance = np.cumsum(eigens)/sum(eigens)
+    explained = explained_variance[n_eigs]
+
+    if plot:
+        matplotlib.rcParams.update({'font.size' : 18, 'text.usetex' : True})
+        fig = plt.figure()
+        axes = fig.add_axes([0.15,0.15,0.7,0.7], frameon=True)
+        axes.plot(np.linspace(1, X.shape[1]+1, X.shape[1]), explained_variance, color='b', marker='s', linestyle='-', linewidth=2, markersize=4, markerfacecolor='b', label='Cumulative explained')
+        axes.plot([n_eigs, n_eigs], [explained_variance[0], explained_variance[n_eigs]], color='r', marker='s', linestyle='-', linewidth=2, markersize=4, markerfacecolor='r', label='Explained by {} PCs'.format(n_eigs))
+        axes.set_xlabel('Number of PCs [-]')
+        axes.set_ylabel('Explained variance [-]')
+        axes.set_title('Variance explained by {} PCs: {}'.format(n_eigs, round(explained,3)))
+        axes.legend()
+    plt.show()
+
+    return explained
+
+
+def get_centroids(X):
+    '''
+    Given a matrix (or a cluster), calculate its
+    centroid.
+    - Input:
+    X = data matrix -- dim: (observations x variables)
+    - Output:
+    centroid = centroid vector -- dim: (1 x variables)
+    '''
+    centroid = np.mean(X, axis = 0)
+    return centroid
+
+
+def get_cluster(X, idx, index, write=False):
+    ''' 
+    Given an index, group all the observations
+    of the matrix X given their membership vector idx.
+    - Input:
+    X = data matrix -- dim: (observations x variables)
+    idx = class membership vector -- dim: (obs x 1)
+    index = index of the requested group -- dim (scalar)
+    - Output:
+    cluster: matrix with the grouped observations -- dim: (p x var)
+    '''
+    positions = np.where(idx == index)
+    cluster = X[positions]
+
+    if write:
+        np.savetxt("Observations in cluster number{}.txt".format(index))
+
+    return cluster
+
+
+def get_all_clusters(X, idx):
+    ''' 
+    Group all the observations of the matrix X given their membership vector idx,
+    and collect the different groups into a list.
+    - Input:
+    X = data matrix -- dim: (observations x variables)
+    idx = class membership vector -- dim: (obs x 1)
+    - Output:
+    clusters: list with the clusters from 0 to k -- dim: (k)
+    '''
+    k = max(idx) +1
+    clusters = [None] *k
+
+    for ii in range (0,k):
+        clusters[ii] = get_cluster(X, idx, ii)
+
+    return clusters
+
 
 
 def PHC_index(X, idx):

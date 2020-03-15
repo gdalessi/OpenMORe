@@ -18,7 +18,7 @@ MODULE: reduced_order_modelling.py
     Please report any bug to: giuseppe.dalessio@ulb.ac.be
 
 '''
-__all__ = ["recover_from_PCA", "PCA_fit", "explained_variance", "plot_parity", "lpca", "recover_from_LPCA", "plot_PCs", "get_centroids", "get_cluster", "get_all_clusters", "kpca", "plot_scores"]
+__all__ = ["recover_from_PCA", "PCA_fit", "plot_parity", "lpca", "recover_from_LPCA", "plot_PCs", "kpca", "plot_scores"]
 
 import numpy as np
 from numpy import linalg as LA
@@ -30,90 +30,6 @@ import matplotlib.pyplot as plt
 # ------------------------------
 # Functions (alphabetical order)
 # ------------------------------
-
-def explained_variance(X, n_eigs, plot=False):
-    '''
-    Assess the variance explained by the first 'n_eigs' retained
-    Principal Components. This is important to know if the percentage
-    of explained variance is enough, or additional PCs must be retained.
-    Usually, it is considered accepted a percentage of explained variable
-    above 95%.
-    - Input:
-    X = CENTERED/SCALED data matrix -- dim: (observations x variables)
-    n_eigs = number of components to retain -- dim: (scalar)
-    plot = choose if you want to plot the cumulative variance --dim: (boolean), false is default
-    - Output:
-    explained: percentage of explained variance -- dim: (scalar)
-    '''
-    PCs, eigens = PCA_fit(X, n_eigs)
-    explained_variance = np.cumsum(eigens)/sum(eigens)
-    explained = explained_variance[n_eigs]
-
-    if plot:
-        matplotlib.rcParams.update({'font.size' : 18, 'text.usetex' : True})
-        fig = plt.figure()
-        axes = fig.add_axes([0.15,0.15,0.7,0.7], frameon=True)
-        axes.plot(np.linspace(1, X.shape[1]+1, X.shape[1]), explained_variance, color='b', marker='s', linestyle='-', linewidth=2, markersize=4, markerfacecolor='b', label='Cumulative explained')
-        axes.plot([n_eigs, n_eigs], [explained_variance[0], explained_variance[n_eigs]], color='r', marker='s', linestyle='-', linewidth=2, markersize=4, markerfacecolor='r', label='Explained by {} PCs'.format(n_eigs))
-        axes.set_xlabel('Number of PCs [-]')
-        axes.set_ylabel('Explained variance [-]')
-        axes.set_title('Variance explained by {} PCs: {}'.format(n_eigs, round(explained,3)))
-        axes.legend()
-    plt.show()
-
-    return explained
-
-
-def get_centroids(X):
-    '''
-    Given a matrix (or a cluster), calculate its
-    centroid.
-    - Input:
-    X = data matrix -- dim: (observations x variables)
-    - Output:
-    centroid = centroid vector -- dim: (1 x variables)
-    '''
-    centroid = np.mean(X, axis = 0)
-    return centroid
-
-
-def get_cluster(X, idx, index, write=False):
-    ''' 
-    Given an index, group all the observations
-    of the matrix X given their membership vector idx.
-    - Input:
-    X = data matrix -- dim: (observations x variables)
-    idx = class membership vector -- dim: (obs x 1)
-    index = index of the requested group -- dim (scalar)
-    - Output:
-    cluster: matrix with the grouped observations -- dim: (p x var)
-    '''
-    positions = np.where(idx == index)
-    cluster = X[positions]
-
-    if write:
-        np.savetxt("Observations in cluster number{}.txt".format(index))
-
-    return cluster
-
-
-def get_all_clusters(X, idx):
-    ''' 
-    Group all the observations of the matrix X given their membership vector idx,
-    and collect the different groups into a list.
-    - Input:
-    X = data matrix -- dim: (observations x variables)
-    idx = class membership vector -- dim: (obs x 1)
-    - Output:
-    clusters: list with the clusters from 0 to k -- dim: (k)
-    '''
-    k = max(idx) +1
-    clusters = [None] *k
-
-    for ii in range (0,k):
-        clusters[ii] = get_cluster(X, idx, ii)
-
-    return clusters
 
 
 def kpca(X, n_eigs, sigma=False):
@@ -361,7 +277,7 @@ def recover_from_LPCA(X, idx, n_eigs, cent_crit, scal_crit):
     return X_rec
 
 
-class PCA_Procustes:
+class variables_selection:
     '''
     In many applications, rather than reducing the dimensionality considering a new set of coordinates 
     which are linear combination of the original ones, the main interest is to achieve a dimensionality 
@@ -382,26 +298,70 @@ class PCA_Procustes:
     [b] Ian Jolliffe. Principal component analysis. Springer, 2011.
     
     '''
-    def __init__(self, X, labels, n_ret, n_eig):
+    def __init__(self, X, labels):
         self.X = X
         self.labels = labels
-        self.n_ret = n_ret
-        self.n_eig = n_eig
+        
+        self._n_ret = 1
+        self._n_eig = 1
+
+
+    @property
+    def retained(self):
+        return self._n_neurons
+    
+    @retained.setter
+    def retained(self, new_number):
+        self._n_ret = new_number
+
+        if self._n_ret <= 0:
+            raise Exception("The number of retained variables must be a positive integer. Exiting..")
+            exit()
+        elif isinstance(self._n_ret, int) != True: 
+            raise Exception("The number of retained variables must be an integer. Exiting..")
+            exit()
+
+    @property
+    def eigens(self):
+        return self._n_eig
+    
+    @eigens.setter
+    def eigens(self, new_number):
+        self._n_eig = new_number
+
+        if self._n_eig <= 0:
+            raise Exception("The number of eigenvectors must be a positive integer. Exiting..")
+            exit()
+        elif isinstance(self._n_eig, int) != True: 
+            raise Exception("The number of eigenvectors must be an integer. Exiting..")
+            exit()
+
+    @staticmethod
+    def check_sanity_input(X, labels, retained):
+        if X.shape[1] != labels.shape[1]:
+            print("Variables number: {}, Labels length: {}".format(X.shape[1], labels.shape[1]))
+            raise Exception("The number of variables does not match the labels.")
+            exit()
+        elif retained >= X.shape[1]:
+            raise Exception("The number of retained variables must be lower than the number of original variables.")
+            exit()
+
     
     def fit(self):
         print("Selecting global variables via PCA and Procustes Analysis...")
+        variables_selection.check_sanity_input(self.X, self.labels, self._n_ret)
 
-        eigenvec = PCA_fit(self.X, self.n_eig)
+        eigenvec = PCA_fit(self.X, self._n_eig)
         Z = self.X @ eigenvec[0]
 
-        while self.X.shape[1] > self.n_ret:
+        while self.X.shape[1] > self._n_ret:
             M2 = 1E12
             M2_tmp = 0
             var_tmp = 0
 
             for ii in range(0,self.X.shape[1]):
                 X_cut = np.delete(self.X, ii, axis=1)
-                eigenvec = PCA_fit(X_cut, self.n_eig)
+                eigenvec = PCA_fit(X_cut, self._n_eig)
                 Z_tilde = X_cut @ eigenvec[0]
 
                 covZZ = np.transpose(Z_tilde) @ Z
