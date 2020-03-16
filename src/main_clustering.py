@@ -69,6 +69,7 @@ model = clustering.lpca(X_tilde)
 model.clusters = settings["number_of_clusters"]
 model.eigens = settings["number_of_eigenvectors"]
 model.initialization = settings["initialization_method"]
+model.correction = "mean"
 
 index = model.fit()
 
