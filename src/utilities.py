@@ -165,8 +165,7 @@ def evaluate_clustering_DB(X, idx):
     """
     from scipy.spatial.distance import euclidean, cdist
 
-    #k = np.max(idx) +1
-    k = 8
+    k = int(np.max(idx) +1)
     centroids_list = [None] *k
     S_i = [None] *k
     M_ij = np.zeros((k,k), dtype=float)
