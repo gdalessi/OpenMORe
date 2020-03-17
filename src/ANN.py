@@ -43,6 +43,7 @@ class MLP_classifier:
         self._n_epochs = 1000
         self._n_neurons = 2
         self._layers = 1
+        self._dropout = 0
         
         self.save_txt = save
 
@@ -121,6 +122,24 @@ class MLP_classifier:
             exit()
         elif isinstance(self._n_epochs, int) != True: 
             raise Exception("The number of epochs must be an integer. Exiting..")
+            exit()
+
+    @property
+    def dropout(self):
+        return self._dropout
+    
+    @dropout.setter
+    def dropout(self, new_value):
+        self._dropout = new_value
+
+        if self._dropout < 0:
+            raise Exception("The dropout percentage must be a positive integer. Exiting..")
+            exit()
+        elif not isinstance(self._dropout, float) and not isinstance(self._dropout, int): 
+            raise Exception("The dropout percentage must be a number (float or int). Exiting..")
+            exit()
+        elif self._dropout >= 1:
+            raise Exception("The dropout percentage must be lower than 1. Exiting..")
             exit()
 
 
@@ -204,8 +223,14 @@ class MLP_classifier:
 
         classifier = Sequential()
         classifier.add(Dense(self._n_neurons, activation=self._activation, kernel_initializer='random_normal', input_dim=input_dimension))
+        if self._dropout != 0:
+            from tensorflow.python.keras.layers import Dropout
+            classifier.add(Dropout(self._dropout))
+            print("Dropping out some neurons...")
         while counter < self._layers:
             classifier.add(Dense(self._n_neurons, activation=self._activation)) 
+            if self._dropout != 0:
+                classifier.add(Dropout(self._dropout))
             counter +=1
         classifier.add(Dense(number_of_classes, activation=activation_output, kernel_initializer='random_normal'))
         classifier.summary()
@@ -431,6 +456,7 @@ class MLP_regressor:
         self._activation = 'relu'
         self._batch_size = 64
         self._n_epochs = 1000
+        self._dropout = 0
         
         self.save_txt = save
 
@@ -516,6 +542,25 @@ class MLP_regressor:
             exit()
 
 
+    @property
+    def dropout(self):
+        return self._dropout
+    
+    @dropout.setter
+    def dropout(self, new_value):
+        self._dropout = new_value
+
+        if self._dropout < 0:
+            raise Exception("The dropout percentage must be a positive integer. Exiting..")
+            exit()
+        elif not isinstance(self._dropout, float) and not isinstance(self._dropout, int): 
+            raise Exception("The dropout percentage must be a number (float or int). Exiting..")
+            exit()
+        elif self._dropout >= 1:
+            raise Exception("The dropout percentage must be lower than 1. Exiting..")
+            exit()
+
+
     @staticmethod
     def set_hard_parameters():
         '''
@@ -579,8 +624,13 @@ class MLP_regressor:
 
         model = Sequential()
         model.add(Dense(self._n_neurons, input_dim=input_dimension, kernel_initializer='normal', activation=self._activation)) 
+        if self._dropout != 0:
+            from tensorflow.python.keras.layers import Dropout
+            model.add(Dropout(self._dropout))
+            print("Dropping out some neurons...")
         while counter < self._layers:
-            classifier.add(Dense(self._n_neurons, activation=self._activation)) 
+            model.add(Dense(self._n_neurons, activation=self._activation)) 
+            model.add(Dropout(self._dropout))
             counter +=1
         model.add(Dense(output_dimension, activation=activation_output))
         model.summary()

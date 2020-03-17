@@ -56,15 +56,16 @@ except OSError:
     exit()
 
 ### CLASSIFICATION ###
-model = ANN.MLP_classifier(X,Y, True)
+'''model = ANN.MLP_classifier(X,Y, True)
 
 model.neurons = training_options["number_of_neurons"]
 model.layers = training_options["number_of_layers"]
 model.activation = training_options["activation_function"]
 model.n_epochs = training_options["number_of_epochs"]
 model.batch_size = training_options["batch_size"]
+model.dropout = 0.2
 
-index = model.fit_network()
+index = model.fit_network()'''
 
 ### DIMENSIONALITY REDUCTION ###
 '''
@@ -79,7 +80,7 @@ model.fit()
 '''
 
 ### REGRESSION ###
-'''
+
 model = ANN.MLP_regressor(X,Y)
 
 model.neurons = training_options["number_of_neurons"]
@@ -87,6 +88,6 @@ model.layers = training_options["number_of_layers"]
 model.activation_function = training_options["activation_function"]
 model.n_epochs = training_options["number_of_epochs"]
 model.batch_size = training_options["batch_size"]
+model.dropout = 0.2
 
 yo = model.fit_network()
-'''

@@ -31,7 +31,7 @@ import clustering
 
 file_options = {
     "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data",
-    "input_file_name"           : "laminar2D.csv",
+    "input_file_name"           : "cfdf.csv",
 }
 
 mesh_options = {
@@ -44,11 +44,11 @@ settings = {
     "centering_method"          : "MEAN",
     "scaling_method"            : "AUTO",
     "initialization_method"     : "KMEANS",
-    "number_of_clusters"        : 16,
-    "number_of_eigenvectors"    : 15,
+    "number_of_clusters"        : 8,
+    "number_of_eigenvectors"    : 5,
     "classify"                  : False,
     "write_on_txt"              : True,
-    "plot_on_mesh"              : True,
+    "plot_on_mesh"              : False,
 }
 
 
@@ -72,6 +72,9 @@ model.initialization = settings["initialization_method"]
 model.correction = "mean"
 
 index = model.fit()
+
+DB = evaluate_clustering_DB(X_tilde, index) #evaluate the clustering solutions by means of the Davies-Bouldin algorithm
+print(DB)
 
 if settings["write_on_txt"]:
     np.savetxt("idx_training.txt", index)

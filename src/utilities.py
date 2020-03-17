@@ -26,7 +26,7 @@ from reduced_order_modelling import *
 
 import matplotlib
 import matplotlib.pyplot as plt
-__all__ = ["check_sanity_int", "check_sanity_NaN", "unscale", "uncenter", "center", "scale", "center_scale", "PHC_index", "check_dummy", "get_centroids", "get_cluster", "get_all_clusters", "explained_variance"]
+__all__ = ["check_sanity_int", "check_sanity_NaN", "unscale", "uncenter", "center", "scale", "center_scale", "PHC_index", "check_dummy", "get_centroids", "get_cluster", "get_all_clusters", "explained_variance", "evaluate_clustering_DB"]
 
 
 # ------------------------------
@@ -155,6 +155,53 @@ def explained_variance(X, n_eigs, plot=False):
     plt.show()
 
     return explained
+
+
+def evaluate_clustering_DB(X, idx): 
+    """
+    Davies-Bouldin index a coefficient to evaluate the goodness of a 
+    clustering solution. The more it approaches to zero, the better
+    the clustering solution is. -- Tested OK with comparison Matlab
+    """
+    from scipy.spatial.distance import euclidean, cdist
+
+    #k = np.max(idx) +1
+    k = 8
+    centroids_list = [None] *k
+    S_i = [None] *k
+    M_ij = np.zeros((k,k), dtype=float)
+    TOL = 1E-16
+    
+
+    for ii in range(0,k):
+        cluster_ = get_cluster(X, idx, ii)
+        centroids_list[ii] = get_centroids(cluster_)
+        S_i[ii] = np.mean(cdist(cluster_, centroids_list[ii].reshape((1,-1))))  #reshape centroids_list[ii] from (n,) to (1,n)
+
+    for ii in range(0,k):
+        for jj in range(0,k):
+            if ii != jj:
+                M_ij[ii,jj] = euclidean(centroids_list[ii], centroids_list[jj])
+            else:
+                M_ij[ii,jj] = 1
+
+    R_ij = np.empty((k,k),dtype=float)
+
+    for ii in range(0,k):
+        for jj in range(0,k):
+            if ii != jj:
+                R_ij[ii,jj] = (S_i[ii] + S_i[jj])/M_ij[ii,jj] +TOL
+            else:
+                R_ij[ii,jj] = 0
+
+    D_i = [None] *k
+
+    for ii in range(0,k):
+        D_i[ii] = np.max(R_ij[ii], axis=0)
+
+    DB = np.mean(D_i)
+
+    return DB
 
 
 def get_centroids(X):
