@@ -22,11 +22,11 @@ MODULE: utilities.py
 
 import numpy as np
 from numpy import linalg as LA
-from reduced_order_modelling import *
+
 
 import matplotlib
 import matplotlib.pyplot as plt
-__all__ = ["check_sanity_int", "check_sanity_NaN", "unscale", "uncenter", "center", "scale", "center_scale", "PHC_index", "check_dummy", "get_centroids", "get_cluster", "get_all_clusters", "explained_variance", "evaluate_clustering_DB"]
+__all__ = ["check_sanity_int", "check_sanity_NaN", "unscale", "uncenter", "center", "scale", "center_scale", "PHC_index", "check_dummy", "get_centroids", "get_cluster", "get_all_clusters", "explained_variance", "evaluate_clustering_DB", "NRMSE", "PCA_fit"]
 
 
 # ------------------------------
@@ -254,6 +254,49 @@ def get_all_clusters(X, idx):
 
     return clusters
 
+
+def NRMSE (X_true, X_pred):
+    n_obs, n_var = X_true.shape
+    NRMSE = [None] *n_var
+
+    for ii in range(0, n_var):
+        NRMSE[ii] = np.sqrt(np.mean((X_true[:,ii] - X_pred[:,ii])**2)) / np.sqrt(np.mean(X_true**2))
+
+    return NRMSE
+
+
+def PCA_fit(X, n_eig):
+    '''
+    Perform Principal Component Analysis on the dataset X, 
+    and retain 'n_eig' Principal Components.
+    The covariance matrix is firstly calculated, then it is
+    decomposed in eigenvalues and eigenvectors.
+    Lastly, the eigenvalues are ordered depending on their 
+    magnitude and the associated eigenvectors (the PCs) are retained.
+    - Input:
+    X = CENTERED/SCALED data matrix -- dim: (observations x variables)
+    n_eig = number of principal components to retain -- dim: (scalar)
+    - Output:
+    evecs: eigenvectors from the covariance matrix decomposition (PCs)
+    evals: eigenvalues from the covariance matrix decomposition (lambda)
+
+    !!! WARNING !!! the PCs are already ordered (decreasing, for importance)
+    because the eigenvalues are also ordered in terms of magnitude.
+    '''
+    if n_eig < X.shape[1]:
+        C = np.cov(X, rowvar=False) #rowvar=False because the X matrix is (observations x variables)
+
+        evals, evecs = LA.eig(C)
+        mask = np.argsort(evals)[::-1]
+        evecs = evecs[:,mask]
+        evals = evals[mask]
+
+        evecs = evecs[:, 0:n_eig]
+
+        return evecs, evals
+    
+    else:
+        raise Exception("The number of PCs exceeds the number of variables in the data-set.")
 
 
 def PHC_index(X, idx):

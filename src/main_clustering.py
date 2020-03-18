@@ -24,8 +24,6 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 from utilities import *
-from reduced_order_modelling import *
-
 import clustering
 
 

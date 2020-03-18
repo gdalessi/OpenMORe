@@ -22,7 +22,7 @@ MODULE: clustering.py
 
 
 from utilities import *
-from reduced_order_modelling import *
+
 import numpy as np
 import numpy.matlib
 from sklearn.cluster import KMeans
