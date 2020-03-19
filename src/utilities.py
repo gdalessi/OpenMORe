@@ -28,7 +28,7 @@ import time
 
 import matplotlib
 import matplotlib.pyplot as plt
-__all__ = ["check_sanity_int", "check_sanity_NaN", "unscale", "uncenter", "center", "scale", "center_scale", "PHC_index", "check_dummy", "get_centroids", "get_cluster", "get_all_clusters", "explained_variance", "evaluate_clustering_DB", "NRMSE", "PCA_fit", "accepts"]
+__all__ = ["check_sanity_int", "check_sanity_NaN", "unscale", "uncenter", "center", "scale", "center_scale", "PHC_index", "check_dummy", "get_centroids", "get_cluster", "get_all_clusters", "explained_variance", "evaluate_clustering_DB", "NRMSE", "PCA_fit", "accepts", "readCSV", "allowed_centering","allowed_scaling"]
 
 
 # ------------------------------
@@ -334,6 +334,16 @@ def PHC_index(X, idx):
         
     return PHC_coeff, PHC_deviations
 
+def readCSV(path, name):
+    try:
+        print("Reading training matrix..")
+        X = np.genfromtxt(path + "/" + name, delimiter= ',')
+    except OSError:
+        print("Could not open/read the selected file: " + name)
+        exit()
+    
+    return X
+
 
 def scale(X, method, return_scaled_matrix=False):
     '''
@@ -432,12 +442,6 @@ def unscale(X_tilde, sigma):
 def accepts(*types):
     """
     Checks argument types.
-    Usage (example):
-        @accepts(int, (int,float)) # arg2 can be either int or float
-        def func(arg1, arg2):
-            return arg1 * arg2
-        func(3, 2) # -> 6
-        func('3', 2) # -> AssertionError: arg '3' must be of <type 'int'>
     """
     def decorator(f):
         assert len(types) == f.__code__.co_argcount
@@ -449,3 +453,30 @@ def accepts(*types):
         wrapper.__name__ = f.__name__
         return wrapper
     return decorator
+
+def allowed_centering(func):
+    '''
+    Checks the user input for centering criterion.
+    Exit with error if the centering is not allowed.
+    '''
+    def func_check(dummy, x):
+        if x.lower() != 'mean' and x.lower() != 'min':
+            raise Exception("Centering criterion not allowed. Supported options: 'mean', 'min'. Exiting with error..")
+            exit()
+        res = func(dummy, x)
+        return res
+    return func_check
+
+
+def allowed_scaling(func):
+    '''
+    Checks the user input for scaling criterion.
+    Exit with error if the scaling is not allowed.
+    '''
+    def func_check(dummy, x):
+        if x.lower() != 'auto' and x.lower() != 'pareto' and x.lower() != 'range' and x.lower() != 'vast':
+            raise Exception("Scaling criterion not allowed. Supported options: 'auto', 'vast', 'pareto' or 'range'. Exiting with error..")
+            exit()
+        res = func(dummy, x)
+        return res
+    return func_check

@@ -39,19 +39,9 @@ training_options = {
     "number_of_epochs"          : 200,
 }
 
-try:
-    print("Reading training input..")
-    X = np.genfromtxt(file_options["path_to_file"] + "/" + file_options["input_file_name"], delimiter= ',')
-except OSError:
-    print("Could not open/read the selected file: " + "/" + file_options["input_file_name"])
-    exit()
+X = readCSV(file_options["path_to_file"], file_options["input_file_name"])
+Y = readCSV(file_options["path_to_file"], file_options["output_file_name"])
 
-try:
-    print("Reading training output..")
-    Y = np.genfromtxt(file_options["path_to_file"] + "/" + file_options["output_file_name"], delimiter= ',')
-except OSError:
-    print("Could not open/read the selected file: " + "/" + file_options["output_file_name"])
-    exit()
 
 ### CLASSIFICATION ###
 '''model = ANN.MLP_classifier(X,Y, True)

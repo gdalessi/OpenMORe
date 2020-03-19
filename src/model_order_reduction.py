@@ -67,9 +67,6 @@ class PCA:
         if self._nPCs <= 0:
             raise Exception("The number of Principal Components must be a positive integer. Exiting..")
             exit()
-            '''elif isinstance(self._nPCs, int) != True: 
-            raise Exception("The number of Principal Components must be an integer. Exiting..")
-            exit()'''
         elif self._nPCs >= self.n_var:
             raise Exception("The number of PCs exceeds (or is equal to) the number of variables in the data-set. Exiting..")
             exit()
@@ -89,11 +86,9 @@ class PCA:
         return self._centering
     
     @centering.setter
+    @allowed_centering
     def centering(self, new_string):
         self._centering = new_string
-
-        if self._centering != 'mean' and self._centering != 'min':
-            raise Exception("Unsupported centering option. Supported options: 'mean' or 'min'. ")
 
     
     @property
@@ -101,24 +96,20 @@ class PCA:
         return self._scale
     
     @to_scale.setter
+    @accepts(object, bool)
     def to_scale(self, new_bool):
         self._scale = new_bool
 
-        if isinstance(self._scale, bool) != True: 
-            raise Exception("The instruction to center (or not) must be a boolean . Exiting..")
-            exit()
 
     @property
     def scaling(self):
         return self._scaling
     
     @scaling.setter
+    @allowed_scaling
     def scaling(self, new_string):
         self._scaling = new_string
-
-        if self._scaling != 'auto' and self.scaling != 'pareto' and self.scaling != 'range' and self.scaling != 'vast':
-            raise Exception("Unsupported scaling option. Supported options: 'auto', 'vast', 'pareto' or 'range'. ")
-
+       
     @property
     def plot_explained_variance(self):
         return self._plot_explained_variance
@@ -393,12 +384,9 @@ class LPCA:
         return self._centering
     
     @centering.setter
+    @allowed_centering
     def centering(self, new_string):
         self._centering = new_string
-
-        if self._centering != 'mean' and self._centering != 'min':
-            raise Exception("Unsupported centering option. Supported options: 'mean' or 'min'. ")
-
     
     @property
     def to_scale(self):
@@ -414,12 +402,9 @@ class LPCA:
         return self._scaling
     
     @scaling.setter
+    @allowed_scaling
     def scaling(self, new_string):
         self._scaling = new_string
-
-        if self._scaling != 'auto' and self.scaling != 'pareto' and self.scaling != 'range' and self.scaling != 'vast':
-            raise Exception("Unsupported scaling option. Supported options: 'auto', 'vast', 'pareto' or 'range'. ")
-
     
     @property
     def path_to_idx(self):
@@ -642,37 +627,29 @@ class KPCA:
         return self._centering
     
     @centering.setter
+    @allowed_centering
     def centering(self, new_string):
         self._centering = new_string
-
-        if self._centering != 'mean' and self._centering != 'min':
-            raise Exception("Unsupported centering option. Supported options: 'mean' or 'min'. ")
-
     
     @property
     def to_scale(self):
         return self._scale
     
     @to_scale.setter
+    @accepts(object, bool)
     def to_scale(self, new_bool):
         self._scale = new_bool
-
-        if isinstance(self._scale, bool) != True: 
-            raise Exception("The instruction to center (or not) must be a boolean . Exiting..")
-            exit()
 
     @property
     def scaling(self):
         return self._scaling
     
     @scaling.setter
+    @allowed_scaling
     def scaling(self, new_string):
         self._scaling = new_string
 
-        if self._scaling != 'auto' and self.scaling != 'pareto' and self.scaling != 'range' and self.scaling != 'vast':
-            raise Exception("Unsupported scaling option. Supported options: 'auto', 'vast', 'pareto' or 'range'. ")
 
-    
     @staticmethod
     def preprocess_training(X, centering_decision, scaling_decision, centering_method, scaling_method):
 
@@ -744,6 +721,9 @@ class variables_selection:
     @Cite:
     [a] Wojtek J Krzanowski. Journal of the Royal Statistical Society: Series C (Applied Statistics), 36(1):22{33, 1987.
     [b] Ian Jolliffe. Principal component analysis. Springer, 2011.
+
+    WARNING --> the input matrix must be the original (uncentered, unscaled) one. The code centers and scales
+                automatically.
     
     '''
     def __init__(self, X, labels):
@@ -752,6 +732,14 @@ class variables_selection:
         #Initialize the number of variables to select and the PCs to retain
         self._n_ret = 1
         self._n_eig = 1
+        #Decide if the input matrix must be centered:
+        self._center = True
+        #Set the centering method:
+        self._centering = 'mean'                                                                    #'mean' or 'min' are available
+        #Decide if the input matrix must be scaled:
+        self._scale = True          
+        #Set the scaling method:
+        self._scaling = 'auto'      
 
 
     @property
@@ -780,6 +768,58 @@ class variables_selection:
             raise Exception("The number of eigenvectors must be a positive integer. Exiting..")
             exit()
 
+    @property
+    def to_center(self):
+        return self._center
+    
+    @to_center.setter
+    @accepts(object, bool)
+    def to_center(self, new_bool):
+        self._center = new_bool
+
+    @property
+    def centering(self):
+        return self._centering
+    
+    @centering.setter
+    @allowed_centering
+    def centering(self, new_string):
+        self._centering = new_string
+    
+    @property
+    def to_scale(self):
+        return self._scale
+    
+    @to_scale.setter
+    @accepts(object, bool)
+    def to_scale(self, new_bool):
+        self._scale = new_bool
+
+    @property
+    def scaling(self):
+        return self._scaling
+    
+    @scaling.setter
+    @allowed_scaling
+    def scaling(self, new_string):
+        self._scaling = new_string
+
+
+    @staticmethod
+    def preprocess_training(X, centering_decision, scaling_decision, centering_method, scaling_method):
+
+        if centering_decision and scaling_decision:
+            mu, X_ = center(X, centering_method, True)
+            sigma, X_tilde = scale(X_, scaling_method, True)
+        elif centering_decision and not scaling_decision:
+            mu, X_tilde = center(X, centering_method, True)
+        elif scaling_decision and not centering_decision:
+            sigma, X_tilde = scale(X, scaling_method, True)
+        else:
+            X_tilde = X
+
+        return X_tilde
+
 
     @staticmethod
     def check_sanity_input(X, labels, retained):
@@ -796,16 +836,18 @@ class variables_selection:
         print("Selecting global variables via PCA and Procustes Analysis...")
         variables_selection.check_sanity_input(self.X, self.labels, self._n_ret)
 
-        eigenvec = PCA_fit(self.X, self._n_eig)
-        Z = self.X @ eigenvec[0]
+        self.X_tilde = variables_selection.preprocess_training(self.X, self.to_center, self.to_scale, self.centering, self.scaling)
+
+        eigenvec = PCA_fit(self.X_tilde, self._n_eig)
+        Z = self.X_tilde @ eigenvec[0]
         #Start the backward elimination
-        while self.X.shape[1] > self._n_ret:
+        while self.X_tilde.shape[1] > self._n_ret:
             M2 = 1E12
             M2_tmp = 0
             var_tmp = 0
 
-            for ii in range(0,self.X.shape[1]):
-                X_cut = np.delete(self.X, ii, axis=1)
+            for ii in range(0,self.X_tilde.shape[1]):
+                X_cut = np.delete(self.X_tilde, ii, axis=1)
                 eigenvec = PCA_fit(X_cut, self._n_eig)
                 Z_tilde = X_cut @ eigenvec[0]
 
@@ -818,8 +860,8 @@ class variables_selection:
                     M2 = M2_tmp
                     var_tmp = ii
 
-            self.X = np.delete(self.X, var_tmp, axis=1)
+            self.X_tilde = np.delete(self.X_tilde, var_tmp, axis=1)
             self.labels = np.delete(self.labels, var_tmp, axis=1)
-            print("Current number of variables: {}".format(self.X.shape[1]))
+            print("Current number of variables: {}".format(self.X_tilde.shape[1]))
 
         return self.labels

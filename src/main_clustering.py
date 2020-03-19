@@ -37,7 +37,6 @@ mesh_options = {
     "mesh_file_name"           : "mesh.csv",
 }
 
-
 settings = {
     "centering_method"          : "MEAN",
     "scaling_method"            : "AUTO",
@@ -51,15 +50,7 @@ settings = {
 }
 
 
-try:
-    print("Reading training matrix..")
-    X = np.genfromtxt(file_options["path_to_file"] + "/" + file_options["input_file_name"], delimiter= ',')
-except OSError:
-    print("Could not open/read the selected file: " + file_options["input_file_name"])
-    exit()
-check_dummy(X, settings["number_of_clusters"], settings["number_of_eigenvectors"])
-
-
+X = readCSV(file_options["path_to_file"], file_options["input_file_name"])
 X_tilde = center_scale(X, center(X, method=settings["centering_method"]), scale(X, method=settings["scaling_method"]))
 
 
