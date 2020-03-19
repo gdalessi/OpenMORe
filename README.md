@@ -17,14 +17,14 @@ Three main classes are available for clustering/classification tasks:
 - Spectral clustering.
 
 
-# Module: reduced_order_modelling.py
+# Module: model_order_reduction.py
 A wide range of PCA-based functions for reduced-order-modelling are available in this module:
 
 - Principal Component Analysis (PCA)
 - Kernel Principal Component Analysis (KPCA)
 - Local Principal Component Analysis (LPCA)
 
-Moreover, a class for a PCA-based variable selection (coupled with Procustes Analysis) is also available.
+Moreover, a class for a PCA-based variable selection (with Procustes Analysis) is also available.
 
 
 # Module: utilities.py
@@ -33,9 +33,9 @@ A wide range of preprocessing functions (to center, scale etc.) and other tools 
 
 # Module: ANN.py
 This module contains a set of functions/classes which are based on ANN. The following architectures are implemented:
-    1) Single-layer MLP for classification tasks.
+    1) ANN architecture implementation for classification tasks.
     2) Autoencoder for non-linear dimensionality reduction.
-    3) Single-layer MLP for regression tasks.
+    3) ANN architecture implementation for regression tasks.
 
 # Cite:
 If you use these scripts for research purposes, these are few reference you can cite, depending on your application.
