@@ -63,7 +63,7 @@ local_model.eigens = 10
 local_model.centering = 'mean'
 local_model.scaling = 'auto'
 local_model.path_to_idx = '/Users/giuseppedalessio/Dropbox/GitHub/Clustering_and_Red_Ord_Modelling/src'
-local_model._num_to_plot = 7
+local_model.set_num_to_plot = 7
 LPCs, u_scores, Leigen, centroids = local_model.fit()
 X_rec_lpca = local_model.recover()
 

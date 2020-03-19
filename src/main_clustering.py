@@ -29,7 +29,7 @@ import clustering
 
 file_options = {
     "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data",
-    "input_file_name"           : "cfdf.csv",
+    "input_file_name"           : "concentrations.csv",
 }
 
 mesh_options = {
@@ -43,10 +43,11 @@ settings = {
     "scaling_method"            : "AUTO",
     "initialization_method"     : "KMEANS",
     "number_of_clusters"        : 8,
-    "number_of_eigenvectors"    : 5,
+    "number_of_eigenvectors"    : 15,
+    "adaptive_PCs"              : False,
     "classify"                  : False,
     "write_on_txt"              : True,
-    "plot_on_mesh"              : False,
+    "plot_on_mesh"              : True,
 }
 
 
@@ -67,7 +68,8 @@ model = clustering.lpca(X_tilde)
 model.clusters = settings["number_of_clusters"]
 model.eigens = settings["number_of_eigenvectors"]
 model.initialization = settings["initialization_method"]
-model.correction = "mean"
+model.correction = "off"
+model.adaptivePCs = settings["adaptive_PCs"]
 
 index = model.fit()
 

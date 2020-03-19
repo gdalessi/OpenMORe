@@ -22,6 +22,7 @@ MODULE: clustering.py
 
 
 from utilities import *
+import model_order_reduction
 
 import numpy as np
 import numpy.matlib
@@ -49,11 +50,16 @@ class lpca:
     '''
     def __init__(self, X):
         self.X = np.array(X)
-        
+        #Initialize the number of clusters:
         self._k = 2
+        #Initialize the number of PCs to retain in each cluster:
         self._nPCs = 2
-        self._method = 'KMEANS'
-        self._correction = "off" #options: off, mean, max, std, var
+        #Set the initialization method:
+        self._method = 'KMEANS'                                             #Available options: 'KMEANS' or 'RANDOM'
+        #Set the (eventual) corrector for the rec error computation:
+        self._correction = "off"                                            #Available options: 'off', 'mean', 'max', 'std', 'var'
+        #Adaptive PCs per cluster:
+        self._adaptive = False                                              #Available options: True or False (boolean)
 
 
     @property
@@ -61,14 +67,12 @@ class lpca:
         return self._k
     
     @clusters.setter
+    @accepts(object, int)
     def clusters(self, new_number):
         self._k = new_number
 
         if self._k <= 0:
             raise Exception("The number of clusters in input must be a positive integer. Exiting..")
-            exit()
-        elif isinstance(self._k, int) != True: 
-            raise Exception("The number of clusters must be an integer. Exiting..")
             exit()
 
     @property
@@ -76,14 +80,12 @@ class lpca:
         return self._nPCs
     
     @eigens.setter
+    @accepts(object, int)
     def eigens(self, new_number):
         self._nPCs = new_number
 
         if self._nPCs <= 0:
             raise Exception("The number of eigenvectors in input must be a positive integer. Exiting..")
-            exit()
-        elif isinstance(self._nPCs, int) != True: 
-            raise Exception("The number of eigenvectors must be an integer. Exiting..")
             exit()
 
     @property
@@ -102,6 +104,15 @@ class lpca:
     @correction.setter
     def correction(self, new_method):
         self._correction = new_method
+
+    @property
+    def adaptivePCs(self):
+        return self._adaptive
+    
+    @adaptivePCs.setter
+    @accepts(object, bool)
+    def adaptivePCs(self, new_bool):
+        self._adaptive = new_bool
 
 
     @staticmethod
@@ -199,6 +210,7 @@ class lpca:
         scores_corr = text_file.write("The scores correction is: "+ correction_yn + ". \n")
         text_file.close()
 
+    
     @staticmethod
     def write_final_stats(iterations_conv, final_error):
         '''
@@ -235,7 +247,14 @@ class lpca:
             for ii in range(0, self._k):
                 cluster = get_cluster(self.X, idx, ii)
                 centroids = get_centroids(cluster)
-                modes = PCA_fit(cluster, self._nPCs)
+                local_model = model_order_reduction.PCA(cluster)
+                local_model.to_center = False
+                local_model.to_scale = False
+                if not self._adaptive:
+                    local_model.eigens = self._nPCs
+                else:
+                    local_model.set_PCs()
+                modes = local_model.fit()
                 C_mat = np.matlib.repmat(centroids, rows, 1)
                 rec_err_os = (self.X - C_mat) - (self.X - C_mat) @ modes[0] @ modes[0].T
                 sq_rec_oss = np.power(rec_err_os, 2)

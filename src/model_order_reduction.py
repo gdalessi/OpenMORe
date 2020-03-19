@@ -267,7 +267,7 @@ class PCA:
         if self._assessPCs != False:
             self.plot_explained_variance = False
             for ii in range(1, self.n_var):
-                print("Assessing the optimal number of PCs by means of: " + self._assessPCs + " criterion. Now using: {} Principal Component(s).".format(ii))
+                #print("Assessing the optimal number of PCs by means of: " + self._assessPCs + " criterion. Now using: {} Principal Component(s).".format(ii))
                 
                 self.eigens = ii
                 self.fit()
@@ -276,8 +276,8 @@ class PCA:
                     explained = self.get_explained()
 
                     if explained >= self._threshold_var:
-                        print("With {} PCs, the following percentage of variance is explained: {}".format(self.eigens, explained))
-                        print("The variance is larger than the given fixed threshold: {}. Thus, {} PCs will be retained.".format(self._threshold_var, self.eigens))
+                        #print("With {} PCs, the following percentage of variance is explained: {}".format(self.eigens, explained))
+                        #print("The variance is larger than the given fixed threshold: {}. Thus, {} PCs will be retained.".format(self._threshold_var, self.eigens))
                         self.plot_explained_variance = True
                         break
                 #Otherwise with the nrmse of the reconstructed matrix, which has to be below a specific threshold (<= 10% error is the default setting)
