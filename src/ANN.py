@@ -32,6 +32,8 @@ from keras.callbacks import EarlyStopping
 from keras.callbacks import ModelCheckpoint 
 from keras.layers import LeakyReLU
 
+from utilities import *
+
 
 class MLP_classifier:
     def __init__(self, X, Y, save=False):
@@ -56,14 +58,12 @@ class MLP_classifier:
         return self._n_neurons
     
     @neurons.setter
+    @accepts(object, int)
     def neurons(self, new_number):
         self._n_neurons = new_number
 
         if self._n_neurons <= 0:
             raise Exception("The number of neurons in the hidden layer must be a positive integer. Exiting..")
-            exit()
-        elif isinstance(self._n_neurons, int) != True: 
-            raise Exception("The number of neurons in the hidden layer must be an integer. Exiting..")
             exit()
 
     @property
@@ -71,14 +71,12 @@ class MLP_classifier:
         return self._layers
     
     @layers.setter
+    @accepts(object, int)
     def layers(self, new_number_layers):
         self._layers = new_number_layers
 
         if self._layers <= 0:
             raise Exception("The number hidden layers must be a positive integer. Exiting..")
-            exit()
-        elif isinstance(self._layers, int) != True: 
-            raise Exception("The hidden layers must be an integer. Exiting..")
             exit()
 
     @property
@@ -99,14 +97,12 @@ class MLP_classifier:
         return self._batch_size
     
     @batch_size.setter
+    @accepts(object, int)
     def batch_size(self, new_batchsize):
         self._batch_size = new_batchsize
 
         if self._batch_size <= 0:
             raise Exception("The batch size must be a positive integer. Exiting..")
-            exit()
-        elif isinstance(self._batch_size, int) != True: 
-            raise Exception("The batch size must be an integer. Exiting..")
             exit()
 
     @property
@@ -114,14 +110,12 @@ class MLP_classifier:
         return self._n_epochs
     
     @n_epochs.setter
+    @accepts(object, int)
     def n_epochs(self, new_epochs):
         self._n_epochs = new_epochs
 
         if self._n_epochs <= 0:
             raise Exception("The number of epochs must be a positive integer. Exiting..")
-            exit()
-        elif isinstance(self._n_epochs, int) != True: 
-            raise Exception("The number of epochs must be an integer. Exiting..")
             exit()
 
     @property
@@ -129,14 +123,12 @@ class MLP_classifier:
         return self._dropout
     
     @dropout.setter
+    @accepts(object, float)
     def dropout(self, new_value):
         self._dropout = new_value
 
         if self._dropout < 0:
             raise Exception("The dropout percentage must be a positive integer. Exiting..")
-            exit()
-        elif not isinstance(self._dropout, float) and not isinstance(self._dropout, int): 
-            raise Exception("The dropout percentage must be a number (float or int). Exiting..")
             exit()
         elif self._dropout >= 1:
             raise Exception("The dropout percentage must be lower than 1. Exiting..")
@@ -293,14 +285,12 @@ class Autoencoder:
         return self._n_neurons
     
     @neurons.setter
+    @accepts(object, int)
     def neurons(self, new_number):
         self._n_neurons = new_number
 
         if self._n_neurons <= 0:
             raise Exception("The number of neurons in the hidden layer must be a positive integer. Exiting..")
-            exit()
-        elif isinstance(self._n_neurons, int) != True: 
-            raise Exception("The number of neurons in the hidden layer must be an integer. Exiting..")
             exit()
         elif self._n_neurons >= self.X.shape[1]:
             raise Exception("The reduced dimensionality cannot be larger than the original number of variables. Exiting..")
@@ -324,14 +314,12 @@ class Autoencoder:
         return self._batch_size
     
     @batch_size.setter
+    @accepts(object, int)
     def batch_size(self, new_batchsize):
         self._batch_size = new_batchsize
 
         if self._batch_size <= 0:
             raise Exception("The batch size must be a positive integer. Exiting..")
-            exit()
-        elif isinstance(self._batch_size, int) != True: 
-            raise Exception("The batch size must be an integer. Exiting..")
             exit()
 
     @property
@@ -339,15 +327,14 @@ class Autoencoder:
         return self._n_epochs
     
     @n_epochs.setter
+    @accepts(object, int)
     def n_epochs(self, new_epochs):
         self._n_epochs = new_epochs
 
         if self._n_epochs <= 0:
             raise Exception("The number of epochs must be a positive integer. Exiting..")
             exit()
-        elif isinstance(self._n_epochs, int) != True: 
-            raise Exception("The number of epochs must be an integer. Exiting..")
-            exit()
+
 
 
     @staticmethod
@@ -470,14 +457,12 @@ class MLP_regressor:
         return self._n_neurons
     
     @neurons.setter
+    @accepts(object, int)
     def neurons(self, new_number):
         self._n_neurons = new_number
 
         if self._n_neurons <= 0:
             raise Exception("The number of neurons in the hidden layer must be a positive integer. Exiting..")
-            exit()
-        elif isinstance(self._n_neurons, int) != True: 
-            raise Exception("The number of neurons in the hidden layer must be an integer. Exiting..")
             exit()
 
     @property
@@ -485,16 +470,13 @@ class MLP_regressor:
         return self._layers
     
     @layers.setter
+    @accepts(object, int)
     def layers(self, new_number_layers):
         self._layers = new_number_layers
 
         if self._layers <= 0:
             raise Exception("The number hidden layers must be a positive integer. Exiting..")
             exit()
-        elif isinstance(self._layers, int) != True: 
-            raise Exception("The hidden layers must be an integer. Exiting..")
-            exit()
-
 
     @property
     def activation(self):
@@ -515,46 +497,38 @@ class MLP_regressor:
         return self._batch_size
     
     @batch_size.setter
+    @accepts(object, int)
     def batch_size(self, new_batchsize):
         self._batch_size = new_batchsize
 
         if self._batch_size <= 0:
             raise Exception("The batch size must be a positive integer. Exiting..")
             exit()
-        elif isinstance(self._batch_size, int) != True: 
-            raise Exception("The batch size must be an integer. Exiting..")
-            exit()
-
 
     @property
     def n_epochs(self):
         return self._n_epochs
     
     @n_epochs.setter
+    @accepts(object, int)
     def n_epochs(self, new_epochs):
         self._n_epochs = new_epochs
 
         if self._n_epochs <= 0:
             raise Exception("The number of epochs must be a positive integer. Exiting..")
             exit()
-        elif isinstance(self._n_epochs, int) != True: 
-            raise Exception("The number of epochs must be an integer. Exiting..")
-            exit()
-
 
     @property
     def dropout(self):
         return self._dropout
     
     @dropout.setter
+    @accepts(object, float)
     def dropout(self, new_value):
         self._dropout = new_value
 
         if self._dropout < 0:
             raise Exception("The dropout percentage must be a positive integer. Exiting..")
-            exit()
-        elif not isinstance(self._dropout, float) and not isinstance(self._dropout, int): 
-            raise Exception("The dropout percentage must be a number (float or int). Exiting..")
             exit()
         elif self._dropout >= 1:
             raise Exception("The dropout percentage must be lower than 1. Exiting..")

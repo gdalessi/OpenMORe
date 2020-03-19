@@ -22,11 +22,13 @@ MODULE: utilities.py
 
 import numpy as np
 from numpy import linalg as LA
+import functools
+import time
 
 
 import matplotlib
 import matplotlib.pyplot as plt
-__all__ = ["check_sanity_int", "check_sanity_NaN", "unscale", "uncenter", "center", "scale", "center_scale", "PHC_index", "check_dummy", "get_centroids", "get_cluster", "get_all_clusters", "explained_variance", "evaluate_clustering_DB", "NRMSE", "PCA_fit"]
+__all__ = ["check_sanity_int", "check_sanity_NaN", "unscale", "uncenter", "center", "scale", "center_scale", "PHC_index", "check_dummy", "get_centroids", "get_cluster", "get_all_clusters", "explained_variance", "evaluate_clustering_DB", "NRMSE", "PCA_fit", "accepts"]
 
 
 # ------------------------------
@@ -422,3 +424,28 @@ def unscale(X_tilde, sigma):
     else:
         raise Exception("The matrix to be unscaled and the scaling vector must have the same dimensionality.")
         exit()
+
+# ------------------------------
+# Decorators (alphabetical order)
+# ------------------------------
+
+def accepts(*types):
+    """
+    Checks argument types.
+    Usage (example):
+        @accepts(int, (int,float)) # arg2 can be either int or float
+        def func(arg1, arg2):
+            return arg1 * arg2
+        func(3, 2) # -> 6
+        func('3', 2) # -> AssertionError: arg '3' must be of <type 'int'>
+    """
+    def decorator(f):
+        assert len(types) == f.__code__.co_argcount
+        @functools.wraps(f)
+        def wrapper(*args, **kwds):
+            for (a, t) in zip(args, types):
+                assert isinstance(a, t), "The input argument %r must be of type <%s>" % (a,t)
+            return f(*args, **kwds)
+        wrapper.__name__ = f.__name__
+        return wrapper
+    return decorator

@@ -60,15 +60,16 @@ class PCA:
         return self._nPCs
     
     @eigens.setter
+    @accepts(object, int)
     def eigens(self, new_value):
         self._nPCs = new_value
 
         if self._nPCs <= 0:
             raise Exception("The number of Principal Components must be a positive integer. Exiting..")
             exit()
-        elif isinstance(self._nPCs, int) != True: 
+            '''elif isinstance(self._nPCs, int) != True: 
             raise Exception("The number of Principal Components must be an integer. Exiting..")
-            exit()
+            exit()'''
         elif self._nPCs >= self.n_var:
             raise Exception("The number of PCs exceeds (or is equal to) the number of variables in the data-set. Exiting..")
             exit()
@@ -78,12 +79,10 @@ class PCA:
         return self._center
     
     @to_center.setter
+    @accepts(object, bool)
     def to_center(self, new_bool):
         self._center = new_bool
 
-        if isinstance(self._center, bool) != True: 
-            raise Exception("The instruction to center (or not) must be a boolean . Exiting..")
-            exit()
 
     @property
     def centering(self):
@@ -125,24 +124,18 @@ class PCA:
         return self._plot_explained_variance
     
     @plot_explained_variance.setter
+    @accepts(object, bool)
     def plot_explained_variance(self, new_bool):
         self._plot_explained_variance = new_bool
-
-        if isinstance(self._scale, bool) != True: 
-            raise Exception("The instruction to plot (or not) must be a boolean . Exiting..")
-            exit()
     
     @property
     def set_explained_variance_perc(self):
         return self._explained_variance
     
     @set_explained_variance_perc.setter
+    @accepts(object, float)
     def set_explained_variance_perc(self, new_value):
         self._explained_variance = new_value
-
-        if isinstance(self._nPCs, int) != True and isinstance(self._nPCs, float) != True: 
-            raise Exception("The percentage of variance to be explained must be a number. Exiting..")
-            exit()
 
     @property
     def set_PCs_method(self):
@@ -157,14 +150,11 @@ class PCA:
         return self._assessPCs
     
     @set_num_to_plot.setter
+    @accepts(object, int)
     def set_num_to_plot(self, new_number):
         self._assessPCs = new_number
 
-        if isinstance(self._assessPCs, int) != True: 
-            raise Exception("The number of PC or the variable to plot must be an integer. Exiting..")
-            exit()
 
-    
     @staticmethod
     def preprocess_training(X, centering_decision, scaling_decision, centering_method, scaling_method):
 
@@ -375,14 +365,12 @@ class LPCA:
         return self._nPCs
     
     @eigens.setter
+    @accepts(object, int)
     def eigens(self, new_value):
         self._nPCs = new_value
 
         if self._nPCs <= 0:
             raise Exception("The number of Principal Components must be a positive integer. Exiting..")
-            exit()
-        elif isinstance(self._nPCs, int) != True: 
-            raise Exception("The number of Principal Components must be an integer. Exiting..")
             exit()
         elif self._nPCs >= self.n_var:
             raise Exception("The number of PCs exceeds (or is equal to) the number of variables in the data-set. Exiting..")
@@ -417,12 +405,9 @@ class LPCA:
         return self._scale
     
     @to_scale.setter
+    @accepts(object, bool)
     def to_scale(self, new_bool):
         self._scale = new_bool
-
-        if isinstance(self._scale, bool) != True: 
-            raise Exception("The instruction to center (or not) must be a boolean . Exiting..")
-            exit()
 
     @property
     def scaling(self):
@@ -444,32 +429,23 @@ class LPCA:
     def path_to_idx(self, new_string):
         self._path_to_idx = new_string     
 
-
     @property
     def set_num_to_plot(self):
         return self._num_to_plot
     
     @set_num_to_plot.setter
+    @accepts(object, int)
     def set_num_to_plot(self, new_number):
         self._num_to_plot = new_number
-
-        if isinstance(self._num_to_plot, int) != True: 
-            raise Exception("The number of PC or the variable to plot must be an integer. Exiting..")
-            exit()
-
     
     @property
     def clust_to_plot(self):
         return self._clust_to_plot
     
     @clust_to_plot.setter
+    @accepts(object, int)
     def clust_to_plot(self, new_number):
         self._clust_to_plot = new_number
-
-        if isinstance(self._clust_to_plot, int) != True: 
-            raise Exception("The number of PC or the variable to plot must be an integer. Exiting..")
-            exit()
-
 
     @staticmethod
     def get_idx(path):
@@ -579,9 +555,7 @@ class LPCA:
         Print the parity plot of the reconstructed profile from the PCA 
         manifold. The more the scatter plot (black dots) is in line with the
         red line, the better it is the reconstruction.
-
         '''
-
 
         reconstructed_ = self.recover()
 
@@ -643,14 +617,12 @@ class KPCA:
         return self._nPCs
     
     @eigens.setter
+    @accepts(object, int)
     def eigens(self, new_value):
         self._nPCs = new_value
 
         if self._nPCs <= 0:
             raise Exception("The number of Principal Components must be a positive integer. Exiting..")
-            exit()
-        elif isinstance(self._nPCs, int) != True: 
-            raise Exception("The number of Principal Components must be an integer. Exiting..")
             exit()
         elif self._nPCs >= self.n_var:
             raise Exception("The number of PCs exceeds (or is equal to) the number of variables in the data-set. Exiting..")
@@ -661,12 +633,9 @@ class KPCA:
         return self._center
     
     @to_center.setter
+    @accepts(object, bool)
     def to_center(self, new_bool):
         self._center = new_bool
-
-        if isinstance(self._center, bool) != True: 
-            raise Exception("The instruction to center (or not) must be a boolean . Exiting..")
-            exit()
 
     @property
     def centering(self):
@@ -790,14 +759,12 @@ class variables_selection:
         return self._n_neurons
     
     @retained.setter
+    @accepts(object, int)
     def retained(self, new_number):
         self._n_ret = new_number
 
         if self._n_ret <= 0:
             raise Exception("The number of retained variables must be a positive integer. Exiting..")
-            exit()
-        elif isinstance(self._n_ret, int) != True: 
-            raise Exception("The number of retained variables must be an integer. Exiting..")
             exit()
 
     @property
@@ -805,15 +772,14 @@ class variables_selection:
         return self._n_eig
     
     @eigens.setter
+    @accepts(object, int)
     def eigens(self, new_number):
         self._n_eig = new_number
 
         if self._n_eig <= 0:
             raise Exception("The number of eigenvectors must be a positive integer. Exiting..")
             exit()
-        elif isinstance(self._n_eig, int) != True: 
-            raise Exception("The number of eigenvectors must be an integer. Exiting..")
-            exit()
+
 
     @staticmethod
     def check_sanity_input(X, labels, retained):
