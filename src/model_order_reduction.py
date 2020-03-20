@@ -326,23 +326,8 @@ class PCA:
         plt.show()
 
 
-class LPCA:
-    def __init__(self, X):
-        self.X = X
-
-        self.n_obs = X.shape[0]
-        self.n_var = X.shape[1]
-        #Set the number of PCs - to be modified later, obviously
-        self._nPCs = X.shape[1]
-
-        #Decide if the input matrix must be centered:
-        self._center = True
-        #Set the centering method:
-        self._centering = 'mean'                                                                    #'mean' or 'min' are available
-        #Decide if the input matrix must be scaled:
-        self._scale = True          
-        #Set the scaling method:
-        self._scaling = 'auto'                                                                      #'auto';'vast';'range';'pareto' are available
+class LPCA(PCA):
+    def __init__(self,X):
         #Set the path where the file 'idx.txt' (containing the partitioning solution) is located
         self._path_to_idx = 'path'
         #Set the PC number to plot or the variable's number to plot
@@ -350,61 +335,7 @@ class LPCA:
         #Set the cluster number where plot the PC
         self._clust_to_plot = 1
 
-    
-    @property
-    def eigens(self):
-        return self._nPCs
-    
-    @eigens.setter
-    @accepts(object, int)
-    def eigens(self, new_value):
-        self._nPCs = new_value
-
-        if self._nPCs <= 0:
-            raise Exception("The number of Principal Components must be a positive integer. Exiting..")
-            exit()
-        elif self._nPCs >= self.n_var:
-            raise Exception("The number of PCs exceeds (or is equal to) the number of variables in the data-set. Exiting..")
-            exit()
-
-    @property
-    def to_center(self):
-        return self._center
-    
-    @to_center.setter
-    def to_center(self, new_bool):
-        self._center = new_bool
-
-        if isinstance(self._center, bool) != True: 
-            raise Exception("The instruction to center (or not) must be a boolean . Exiting..")
-            exit()
-
-    @property
-    def centering(self):
-        return self._centering
-    
-    @centering.setter
-    @allowed_centering
-    def centering(self, new_string):
-        self._centering = new_string
-    
-    @property
-    def to_scale(self):
-        return self._scale
-    
-    @to_scale.setter
-    @accepts(object, bool)
-    def to_scale(self, new_bool):
-        self._scale = new_bool
-
-    @property
-    def scaling(self):
-        return self._scaling
-    
-    @scaling.setter
-    @allowed_scaling
-    def scaling(self, new_string):
-        self._scaling = new_string
+        super().__init__(X)
     
     @property
     def path_to_idx(self):
@@ -413,16 +344,7 @@ class LPCA:
     @path_to_idx.setter
     def path_to_idx(self, new_string):
         self._path_to_idx = new_string     
-
-    @property
-    def set_num_to_plot(self):
-        return self._num_to_plot
-    
-    @set_num_to_plot.setter
-    @accepts(object, int)
-    def set_num_to_plot(self, new_number):
-        self._num_to_plot = new_number
-    
+   
     @property
     def clust_to_plot(self):
         return self._clust_to_plot
@@ -443,22 +365,6 @@ class LPCA:
             exit()
         
         return idx
-
-    
-    @staticmethod
-    def preprocess_training(X, centering_decision, scaling_decision, centering_method, scaling_method):
-
-        if centering_decision and scaling_decision:
-            mu, X_ = center(X, centering_method, True)
-            sigma, X_tilde = scale(X_, scaling_method, True)
-        elif centering_decision and not scaling_decision:
-            mu, X_tilde = center(X, centering_method, True)
-        elif scaling_decision and not centering_decision:
-            sigma, X_tilde = scale(X, scaling_method, True)
-        else:
-            X_tilde = X
-
-        return X_tilde
 
 
     def fit(self):
@@ -577,95 +483,15 @@ class LPCA:
         plt.show()
 
 
-class KPCA:
+class KPCA(PCA):
     def __init__(self, X):
-        self.X = X
-        self.n_obs = X.shape[0]
-        self.n_var = X.shape[1]
 
-        #Decide if the input matrix must be centered:
-        self._center = True
-        #Set the centering method:
-        self._centering = 'mean'                                                                    #'mean' or 'min' are available
-        #Decide if the input matrix must be scaled:
-        self._scale = True          
-        #Set the scaling method:
-        self._scaling = 'auto'      
         #Set the sigma - the coefficient for the kernel construction
         self.sigma = 10
-        #Initialize a number of PCs to retain
-        self._nPCs = self.n_var
+
+        super().__init__(X)
 
      
-    @property
-    def eigens(self):
-        return self._nPCs
-    
-    @eigens.setter
-    @accepts(object, int)
-    def eigens(self, new_value):
-        self._nPCs = new_value
-
-        if self._nPCs <= 0:
-            raise Exception("The number of Principal Components must be a positive integer. Exiting..")
-            exit()
-        elif self._nPCs >= self.n_var:
-            raise Exception("The number of PCs exceeds (or is equal to) the number of variables in the data-set. Exiting..")
-            exit()
-
-    @property
-    def to_center(self):
-        return self._center
-    
-    @to_center.setter
-    @accepts(object, bool)
-    def to_center(self, new_bool):
-        self._center = new_bool
-
-    @property
-    def centering(self):
-        return self._centering
-    
-    @centering.setter
-    @allowed_centering
-    def centering(self, new_string):
-        self._centering = new_string
-    
-    @property
-    def to_scale(self):
-        return self._scale
-    
-    @to_scale.setter
-    @accepts(object, bool)
-    def to_scale(self, new_bool):
-        self._scale = new_bool
-
-    @property
-    def scaling(self):
-        return self._scaling
-    
-    @scaling.setter
-    @allowed_scaling
-    def scaling(self, new_string):
-        self._scaling = new_string
-
-
-    @staticmethod
-    def preprocess_training(X, centering_decision, scaling_decision, centering_method, scaling_method):
-
-        if centering_decision and scaling_decision:
-            mu, X_ = center(X, centering_method, True)
-            sigma, X_tilde = scale(X_, scaling_method, True)
-        elif centering_decision and not scaling_decision:
-            mu, X_tilde = center(X, centering_method, True)
-        elif scaling_decision and not centering_decision:
-            sigma, X_tilde = scale(X, scaling_method, True)
-        else:
-            X_tilde = X
-
-        return X_tilde
-
-
     def fit(self):
         '''
         Compute the Kernel Principal Component Analysis for a dataset X, using
@@ -865,3 +691,61 @@ class variables_selection:
             print("Current number of variables: {}".format(self.X_tilde.shape[1]))
 
         return self.labels
+
+
+
+if __name__ =='__main__':
+
+    import numpy as np
+    import matplotlib
+    import matplotlib.pyplot as plt
+
+    from utilities import *
+
+
+
+    file_options = {
+        "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data",
+        "input_file_name"           : "cfdf.csv",
+    }
+
+
+
+    X = readCSV(file_options["path_to_file"], file_options["input_file_name"])
+
+
+    model = PCA(X)
+    model.eigens = 15
+
+    PCs = model.fit()                                      # OK
+
+
+    X_recovered = model.recover()                          # OK
+
+
+    model.set_PCs_method = False
+    model.set_PCs()                                        # OK     
+    model.get_explained()                                  # OK
+    model.set_num_to_plot = 5
+    model.plot_PCs()                                       # OK
+    model.plot_parity()                                    # OK
+
+    local_model = LPCA(X)
+
+    local_model.eigens = 10
+    local_model.centering = 'mean'
+    local_model.scaling = 'auto'
+    local_model.path_to_idx = '/Users/giuseppedalessio/Dropbox/GitHub/Clustering_and_Red_Ord_Modelling/src'
+    local_model.set_num_to_plot = 7
+    LPCs, u_scores, Leigen, centroids = local_model.fit()
+    X_rec_lpca = local_model.recover()
+
+    recon_local = NRMSE(X, X_rec_lpca)
+
+    print(np.mean(recon_local))
+
+    local_model.plot_parity()
+    local_model.clust_to_plot = 3
+    local_model.plot_PCs()
+
+    print("done")
