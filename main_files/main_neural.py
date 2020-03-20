@@ -23,8 +23,6 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 from utilities import *
-from reduced_order_modelling import *
-
 import ANN
 
 file_options = {
@@ -41,30 +39,21 @@ training_options = {
     "number_of_epochs"          : 200,
 }
 
-try:
-    print("Reading training input..")
-    X = np.genfromtxt(file_options["path_to_file"] + "/" + file_options["input_file_name"], delimiter= ',')
-except OSError:
-    print("Could not open/read the selected file: " + "/" + file_options["input_file_name"])
-    exit()
+X = readCSV(file_options["path_to_file"], file_options["input_file_name"])
+Y = readCSV(file_options["path_to_file"], file_options["output_file_name"])
 
-try:
-    print("Reading training output..")
-    Y = np.genfromtxt(file_options["path_to_file"] + "/" + file_options["output_file_name"], delimiter= ',')
-except OSError:
-    print("Could not open/read the selected file: " + "/" + file_options["output_file_name"])
-    exit()
 
 ### CLASSIFICATION ###
-model = ANN.MLP_classifier(X,Y, True)
+'''model = ANN.MLP_classifier(X,Y, True)
 
 model.neurons = training_options["number_of_neurons"]
 model.layers = training_options["number_of_layers"]
 model.activation = training_options["activation_function"]
 model.n_epochs = training_options["number_of_epochs"]
 model.batch_size = training_options["batch_size"]
+model.dropout = 0.2
 
-index = model.fit_network()
+index = model.fit_network()'''
 
 ### DIMENSIONALITY REDUCTION ###
 '''
@@ -79,7 +68,7 @@ model.fit()
 '''
 
 ### REGRESSION ###
-'''
+
 model = ANN.MLP_regressor(X,Y)
 
 model.neurons = training_options["number_of_neurons"]
@@ -87,6 +76,6 @@ model.layers = training_options["number_of_layers"]
 model.activation_function = training_options["activation_function"]
 model.n_epochs = training_options["number_of_epochs"]
 model.batch_size = training_options["batch_size"]
+model.dropout = 0.2
 
 yo = model.fit_network()
-'''

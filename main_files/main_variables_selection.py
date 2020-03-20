@@ -71,7 +71,7 @@ settings = {
 }
 
 settings_local = {
-    "Local_algorithm"           : True,
+    "Local_algorithm"           : False,
     "initialization_method"     : "KMEANS",
     "number_of_clusters"        : 16,
 }
@@ -92,29 +92,32 @@ except OSError:
     exit()
 
 
-
-if X.shape[1] != labels.shape[1]:
-    print("Variables number: {}, Labels length: {}".format(X.shape[1], labels.shape[1]))
-    raise Exception("The number of variables does not match the labels.")
-    exit()
-elif settings["n_variables_retained"] >= X.shape[1]:
-    raise Exception("The number of retained variables must be lower than the number of original variables.")
-    exit()
-
-
 X_tilde = np.array(center_scale(X, center(X, method=settings["centering_method"]), scale(X, method=settings["scaling_method"])))
 
 if not settings_local["Local_algorithm"]:
-    model_reduction = reduced_order_modelling.PCA_Procustes(X_tilde, labels, settings["n_variables_retained"], settings["number_of_eigenvectors"])
+    model_reduction = reduced_order_modelling.variables_selection(X_tilde, labels)
+
+    model_reduction.eigens = settings["number_of_eigenvectors"]
+    model_reduction.retained = settings["n_variables_retained"]
+
     retained_variables = model_reduction.fit()
     print(retained_variables)
 
 elif settings_local["Local_algorithm"]:
-    model_cluster = clustering.lpca(X_tilde, check_sanity_int(settings_local["number_of_clusters"]), check_sanity_int(settings["number_of_eigenvectors"]), settings_local["initialization_method"])
+    model_cluster = clustering.lpca(X_tilde)
+
+    model_cluster.clusters = settings_local["number_of_clusters"]
+    model_cluster.eigens = settings["number_of_eigenvectors"]
+    model_cluster.initialization = settings_local["initialization_method"]
+
     index = model_cluster.fit()
     for ii in range (0, settings_local["number_of_clusters"]):
         cluster_X = get_cluster(X_tilde, index, ii)
-        model_reduction = reduced_order_modelling.PCA_Procustes(cluster_X, labels, check_sanity_int(settings["n_variables_retained"]), check_sanity_int(settings["number_of_eigenvectors"]))
+        model_reduction = reduced_order_modelling.variables_selection(cluster_X, labels)
+        
+        model_reduction.eigens = settings["number_of_eigenvectors"]
+        model_reduction.retained = settings["n_variables_retained"]
+        
         retained_variables = model_reduction.fit()
 
         print("Cluster number {}".format(ii))

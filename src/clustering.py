@@ -407,3 +407,91 @@ class spectral:
         centroids = kmeans.cluster_centers_
 
         return idx, centroids, eigvec
+
+
+if __name__ == '__main__':
+    
+    import numpy as np
+    import matplotlib
+    import matplotlib.pyplot as plt
+
+    from utilities import *
+    import clustering
+
+
+    file_options = {
+        "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data",
+        "input_file_name"           : "concentrations.csv",
+    }
+
+    mesh_options = {
+        "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data",
+        "mesh_file_name"           : "mesh.csv",
+    }
+
+    settings = {
+        "centering_method"          : "MEAN",
+        "scaling_method"            : "AUTO",
+        "initialization_method"     : "KMEANS",
+        "number_of_clusters"        : 8,
+        "number_of_eigenvectors"    : 15,
+        "adaptive_PCs"              : False,
+        "classify"                  : False,
+        "write_on_txt"              : True,
+        "plot_on_mesh"              : True,
+    }
+
+
+    X = readCSV(file_options["path_to_file"], file_options["input_file_name"])
+    X_tilde = center_scale(X, center(X, method=settings["centering_method"]), scale(X, method=settings["scaling_method"]))
+
+
+    model = clustering.lpca(X_tilde)
+
+    model.clusters = settings["number_of_clusters"]
+    model.eigens = settings["number_of_eigenvectors"]
+    model.initialization = settings["initialization_method"]
+    model.correction = "off"
+    model.adaptivePCs = settings["adaptive_PCs"]
+
+    index = model.fit()
+
+    DB = evaluate_clustering_DB(X_tilde, index) #evaluate the clustering solutions by means of the Davies-Bouldin algorithm
+    print(DB)
+
+    if settings["write_on_txt"]:
+        np.savetxt("idx_training.txt", index)
+
+
+    if settings["plot_on_mesh"]:
+        mesh = np.genfromtxt(mesh_options["path_to_file"] + "/" + mesh_options["mesh_file_name"], delimiter= ',')
+        plt.scatter(mesh[:,0], mesh[:,1], c=index,alpha=0.5)
+        plt.xlabel("X [m]")
+        plt.ylabel("Y [m]")
+        plt.show()
+
+
+    if settings["classify"]:
+
+        file_options_classifier = {
+            "path_to_file"              : "/home/peppe/Dropbox/GitHub/data",
+            "test_file_name"            : "thermoC_timestep.csv",
+        }
+
+        try:
+            print("Reading test matrix..")
+            Y = np.genfromtxt(file_options_classifier["path_to_file"] + "/" + file_options_classifier["test_file_name"], delimiter= ',')
+        except OSError:
+            print("Could not open/read the selected file: " + "/" + file_options["test_file_name"])
+            exit()
+
+        # Input to the classifier: X = training matrix, Y = test matrix
+        classifier = clustering.VQclassifier(X, index, Y)
+
+        classifier.centering = settings["centering_method"]
+        classifier.scaling = settings["scaling_method"]
+
+        classification_vector = classifier.fit()
+
+        if settings["write_on_txt"]:
+            np.savetxt("idx_test.txt", classification_vector)

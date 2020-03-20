@@ -24,14 +24,12 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 from utilities import *
-from reduced_order_modelling import *
-
 import clustering
 
 
 file_options = {
     "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data",
-    "input_file_name"           : "laminar2D.csv",
+    "input_file_name"           : "concentrations.csv",
 }
 
 mesh_options = {
@@ -39,28 +37,20 @@ mesh_options = {
     "mesh_file_name"           : "mesh.csv",
 }
 
-
 settings = {
     "centering_method"          : "MEAN",
     "scaling_method"            : "AUTO",
     "initialization_method"     : "KMEANS",
-    "number_of_clusters"        : 16,
+    "number_of_clusters"        : 8,
     "number_of_eigenvectors"    : 15,
+    "adaptive_PCs"              : False,
     "classify"                  : False,
     "write_on_txt"              : True,
     "plot_on_mesh"              : True,
 }
 
 
-try:
-    print("Reading training matrix..")
-    X = np.genfromtxt(file_options["path_to_file"] + "/" + file_options["input_file_name"], delimiter= ',')
-except OSError:
-    print("Could not open/read the selected file: " + file_options["input_file_name"])
-    exit()
-check_dummy(X, settings["number_of_clusters"], settings["number_of_eigenvectors"])
-
-
+X = readCSV(file_options["path_to_file"], file_options["input_file_name"])
 X_tilde = center_scale(X, center(X, method=settings["centering_method"]), scale(X, method=settings["scaling_method"]))
 
 
@@ -69,8 +59,13 @@ model = clustering.lpca(X_tilde)
 model.clusters = settings["number_of_clusters"]
 model.eigens = settings["number_of_eigenvectors"]
 model.initialization = settings["initialization_method"]
+model.correction = "off"
+model.adaptivePCs = settings["adaptive_PCs"]
 
 index = model.fit()
+
+DB = evaluate_clustering_DB(X_tilde, index) #evaluate the clustering solutions by means of the Davies-Bouldin algorithm
+print(DB)
 
 if settings["write_on_txt"]:
     np.savetxt("idx_training.txt", index)
