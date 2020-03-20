@@ -528,7 +528,7 @@ class KPCA(PCA):
         return evecs
 
 
-class variables_selection:
+class variables_selection(PCA):
     '''
     In many applications, rather than reducing the dimensionality considering a new set of coordinates 
     which are linear combination of the original ones, the main interest is to achieve a dimensionality 
@@ -557,20 +557,11 @@ class variables_selection:
         self.labels = labels
         #Initialize the number of variables to select and the PCs to retain
         self._n_ret = 1
-        self._n_eig = 1
-        #Decide if the input matrix must be centered:
-        self._center = True
-        #Set the centering method:
-        self._centering = 'mean'                                                                    #'mean' or 'min' are available
-        #Decide if the input matrix must be scaled:
-        self._scale = True          
-        #Set the scaling method:
-        self._scaling = 'auto'      
-
-
+        
+        
     @property
     def retained(self):
-        return self._n_neurons
+        return self._n_ret
     
     @retained.setter
     @accepts(object, int)
@@ -581,72 +572,7 @@ class variables_selection:
             raise Exception("The number of retained variables must be a positive integer. Exiting..")
             exit()
 
-    @property
-    def eigens(self):
-        return self._n_eig
-    
-    @eigens.setter
-    @accepts(object, int)
-    def eigens(self, new_number):
-        self._n_eig = new_number
-
-        if self._n_eig <= 0:
-            raise Exception("The number of eigenvectors must be a positive integer. Exiting..")
-            exit()
-
-    @property
-    def to_center(self):
-        return self._center
-    
-    @to_center.setter
-    @accepts(object, bool)
-    def to_center(self, new_bool):
-        self._center = new_bool
-
-    @property
-    def centering(self):
-        return self._centering
-    
-    @centering.setter
-    @allowed_centering
-    def centering(self, new_string):
-        self._centering = new_string
-    
-    @property
-    def to_scale(self):
-        return self._scale
-    
-    @to_scale.setter
-    @accepts(object, bool)
-    def to_scale(self, new_bool):
-        self._scale = new_bool
-
-    @property
-    def scaling(self):
-        return self._scaling
-    
-    @scaling.setter
-    @allowed_scaling
-    def scaling(self, new_string):
-        self._scaling = new_string
-
-
-    @staticmethod
-    def preprocess_training(X, centering_decision, scaling_decision, centering_method, scaling_method):
-
-        if centering_decision and scaling_decision:
-            mu, X_ = center(X, centering_method, True)
-            sigma, X_tilde = scale(X_, scaling_method, True)
-        elif centering_decision and not scaling_decision:
-            mu, X_tilde = center(X, centering_method, True)
-        elif scaling_decision and not centering_decision:
-            sigma, X_tilde = scale(X, scaling_method, True)
-        else:
-            X_tilde = X
-
-        return X_tilde
-
-
+   
     @staticmethod
     def check_sanity_input(X, labels, retained):
         if X.shape[1] != labels.shape[1]:
@@ -662,7 +588,7 @@ class variables_selection:
         print("Selecting global variables via PCA and Procustes Analysis...")
         variables_selection.check_sanity_input(self.X, self.labels, self._n_ret)
 
-        self.X_tilde = variables_selection.preprocess_training(self.X, self.to_center, self.to_scale, self.centering, self.scaling)
+        self.X_tilde = PCA.preprocess_training(self.X, self.to_center, self.to_scale, self.centering, self.scaling)
 
         eigenvec = PCA_fit(self.X_tilde, self._n_eig)
         Z = self.X_tilde @ eigenvec[0]

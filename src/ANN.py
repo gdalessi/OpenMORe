@@ -35,11 +35,11 @@ from keras.layers import LeakyReLU
 from utilities import *
 
 
-class MLP_classifier:
-    def __init__(self, X, Y, save=False):
+class Architecture:
+    def __init__(self, X, Y):
         self.X = X
         self.Y = Y
-        
+
         self._activation = 'relu'
         self._batch_size = 64
         self._n_epochs = 1000
@@ -47,9 +47,9 @@ class MLP_classifier:
         self._layers = 1
         self._dropout = 0
         
-        self.save_txt = save
+        self.save_txt = True
 
-        
+    
     @property
     def neurons(self):
         return self._n_neurons
@@ -131,38 +131,7 @@ class MLP_classifier:
             raise Exception("The dropout percentage must be lower than 1. Exiting..")
             exit()
 
-
-    @staticmethod
-    def set_hard_parameters():
-        '''
-        This function sets all the parameters for the neural network which should not
-        be changed during the tuning.
-        '''
-        activation_output = 'softmax'
-        path_ = os.getcwd()
-        monitor_early_stop= 'val_loss'
-        optimizer_= 'adam'
-        patience_= 5
-        loss_classification_= 'categorical_crossentropy'
-        metrics_classification_= 'accuracy'
-
-        return activation_output, path_, monitor_early_stop, optimizer_, patience_, loss_classification_, metrics_classification_
-
     
-    @staticmethod
-    def idx_to_labels(idx):
-        k = max(idx) +1
-        n_observations = idx.shape[0]
-        labels = np.zeros(n_observations, k)
-
-        for ii in range(0,n_observations):
-            for jj in range(0,k):
-                if idx[ii] == jj:
-                    labels[ii,jj] = 1
-        
-        return labels
-
-
     @staticmethod
     def set_environment():
         '''
@@ -198,19 +167,55 @@ class MLP_classifier:
         text_file.close()
 
 
+
+class classifier(Architecture):
+    def __init__(self, X, Y):
+        self.X = X
+        self.Y = Y
+        super().__init__(self.X, self.Y)
+
+
+    def __set_hard_parameters(self):
+        '''
+        This function sets all the parameters for the neural network which should not
+        be changed during the tuning.
+        '''
+        self.__activation_output = 'softmax'
+        self.__path = os.getcwd()
+        self.__monitor_early_stop= 'val_loss'
+        self.__optimizer= 'adam'
+        self.__patience= 5
+        self.__loss_classification= 'categorical_crossentropy'
+        self.__metrics_classification= 'accuracy'
+
+
+    @staticmethod
+    def idx_to_labels(idx):
+        k = max(idx) +1
+        n_observations = idx.shape[0]
+        labels = np.zeros(n_observations, k)
+
+        for ii in range(0,n_observations):
+            for jj in range(0,k):
+                if idx[ii] == jj:
+                    labels[ii,jj] = 1
+        
+        return labels
+
+
     def fit_network(self):
 
         if self.Y.shape[1] == 1:        # check if the Y matrix is in the correct form
             print("Changing idx shape in the correct format: [n x k]..")
             self.Y = MLP_classifier.idx_to_labels(self.Y)
 
-        MLP_classifier.set_environment()
-        MLP_classifier.write_recap_text(self._n_neurons, self._layers, self._batch_size, self._activation)
+        Architecture.set_environment()
+        Architecture.write_recap_text(self._n_neurons, self._layers, self._batch_size, self._activation)
 
         X_train, X_test, y_train, y_test = train_test_split(self.X, self.Y, test_size=0.3)
         input_dimension = self.X.shape[1]
         number_of_classes = self.Y.shape[1]
-        activation_output, path_, monitor_early_stop, optimizer_, patience_, loss_classification_, metrics_classification_ = MLP_classifier.set_hard_parameters()
+        self.__set_hard_parameters()
 
         counter = 1
 
@@ -225,13 +230,13 @@ class MLP_classifier:
             if self._dropout != 0:
                 classifier.add(Dropout(self._dropout))
             counter +=1
-        classifier.add(Dense(number_of_classes, activation=activation_output, kernel_initializer='random_normal'))
+        classifier.add(Dense(number_of_classes, activation=self.__activation_output, kernel_initializer='random_normal'))
         classifier.summary()
 
-        earlyStopping = EarlyStopping(monitor=monitor_early_stop, patience=patience_, verbose=1, mode='min')
-        mcp_save = ModelCheckpoint(filepath=path_ + '/best_weights.h5', verbose=1, save_best_only=True, monitor=monitor_early_stop, mode='min')
+        earlyStopping = EarlyStopping(monitor=self.__monitor_early_stop, patience=self.__patience, verbose=1, mode='min')
+        mcp_save = ModelCheckpoint(filepath=self.__path + '/best_weights.h5', verbose=1, save_best_only=True, monitor=self.__monitor_early_stop, mode='min')
 
-        classifier.compile(optimizer =optimizer_,loss=loss_classification_, metrics =[metrics_classification_])
+        classifier.compile(optimizer =self.__optimizer,loss=self.__loss_classification, metrics =[self.__metrics_classification])
         history = classifier.fit(X_train, y_train, validation_data=(X_test, y_test), batch_size=self._batch_size, epochs=self._n_epochs, callbacks=[earlyStopping, mcp_save])
 
         # Summarize history for accuracy
@@ -272,8 +277,90 @@ class MLP_classifier:
         return test
 
 
+class regressor(Architecture):
+    def __init__(self, X, Y):
+        self.X = X
+        self.Y = Y
+
+        super().__init__(self.X, self.Y)
+
+       
+    def __set_hard_parameters(self):
+        '''
+        This function sets all the parameters for the neural network which should not
+        be changed during the tuning.
+        '''
+        self.__activation_output = 'linear'
+        self.__path = os.getcwd()
+        self.__monitor_early_stop= 'mean_squared_error'
+        self.__optimizer= 'adam'
+        self.__patience= 5
+        self.__loss_function= 'mean_squared_error'
+        self.__metrics= 'mse'
+
+
+    def fit_network(self):
+        input_dimension = self.X.shape[1]
+        output_dimension = self.Y.shape[1]
+
+        Architecture.set_environment()
+        Architecture.write_recap_text(self._n_neurons, self._layers, self._batch_size, self._activation)
+        self.__set_hard_parameters()
+
+        X_train, X_test, y_train, y_test = train_test_split(self.X, self.Y, test_size=0.3)
+
+        counter = 1
+
+        model = Sequential()
+        model.add(Dense(self._n_neurons, input_dim=input_dimension, kernel_initializer='normal', activation=self._activation)) 
+        if self._dropout != 0:
+            from tensorflow.python.keras.layers import Dropout
+            model.add(Dropout(self._dropout))
+            print("Dropping out some neurons...")
+        while counter < self._layers:
+            model.add(Dense(self._n_neurons, activation=self._activation)) 
+            model.add(Dropout(self._dropout))
+            counter +=1
+        model.add(Dense(output_dimension, activation=self.__activation_output))
+        model.summary()
+
+        earlyStopping = EarlyStopping(monitor=self.__monitor_early_stop, patience=self.__patience, verbose=0, mode='min')
+        mcp_save = ModelCheckpoint(filepath=self.__path+ '/best_weights2c.h5', verbose=1, save_best_only=True, monitor=self.__monitor_early_stop, mode='min')
+        model.compile(loss=self.__loss_function, optimizer=self.__optimizer, metrics=[self.__metrics])
+        history = model.fit(X_train, y_train, batch_size=self._batch_size, epochs=self._n_epochs, verbose=1, validation_data=(X_test, y_test), callbacks=[earlyStopping, mcp_save])
+
+        plt.plot(history.history['loss'])
+        plt.plot(history.history['val_loss'])
+        plt.title('Model loss')
+        plt.ylabel('Loss')
+        plt.xlabel('Epoch')
+        plt.legend(['Train', 'Test'], loc='upper right')
+        plt.savefig('loss_history.eps')
+        plt.show()
+
+        model.load_weights(self.__path + '/best_weights2c.h5')
+
+        test = model.predict(self.X)
+
+        counter_saver = 0
+
+        if self.save_txt:
+
+            while counter_saver < self._layers:
+                layer_weights = classifier.layers[counter_saver].get_weights()[0]
+                layer_biases = classifier.layers[counter_saver].get_weights()[1]
+                name_weights = "Weights_HL{}.txt".format(counter_saver)
+                name_biases = "Biases_HL{}.txt".format(counter_saver)
+                np.savetxt(name_weights, layer_weights)
+                np.savetxt(name_biases, layer_biases)
+
+                counter_saver +=1
+
+        return test
+
+
 class Autoencoder:
-    def __init__(self, X, save=False):
+    def __init__(self, X):
         self.X = X
         
         self._n_neurons = 1
@@ -337,22 +424,18 @@ class Autoencoder:
             exit()
 
 
-
-    @staticmethod
-    def set_hard_parameters():
+    def __set_hard_parameters(self):
         '''
         This function sets all the parameters for the neural network which should not
         be changed during the tuning.
         '''
-        activation_output = 'linear'
-        path_ = os.getcwd()
-        monitor_early_stop= 'val_loss'
-        optimizer_= 'adam'
-        patience_= 5
-        loss_function_= 'mse'
-        metrics_= 'accuracy'
-
-        return activation_output, path_, monitor_early_stop, optimizer_, patience_, loss_function_, metrics_
+        self.__activation_output = 'linear'
+        self.__path = os.getcwd()
+        self.__monitor_early_stop= 'val_loss'
+        self.__optimizer= 'adam'
+        self.__patience= 5
+        self.__loss_function= 'mse'
+        self.__metrics= 'accuracy'
 
 
     @staticmethod
@@ -399,11 +482,12 @@ class Autoencoder:
         input_dimension = self.X.shape[1]
         X_train, X_test, y_train, y_test = train_test_split(self.X, self.X, test_size=0.3)
         
-        activation_output, path_, monitor_early_stop, optimizer_, patience_, loss_function_, metrics_ = Autoencoder.set_hard_parameters()
+
+        self.__set_hard_parameters()
 
         input_data = Input(shape=(input_dimension,))
         encoded = Dense(self._n_neurons, activation=self._activation)(input_data)
-        decoded = Dense(input_dimension, activation=activation_output)(encoded)
+        decoded = Dense(input_dimension, activation=self.__activation_output)(encoded)
         
         autoencoder = Model(input_data, decoded)
 
@@ -412,9 +496,9 @@ class Autoencoder:
         decoder_layer = autoencoder.layers[-1]
         decoder = Model(encoded_input, decoder_layer(encoded_input))
 
-        autoencoder.compile(optimizer=optimizer_, loss=loss_function_)
+        autoencoder.compile(optimizer=self.__optimizer, loss=self.__loss_function)
 
-        earlyStopping = EarlyStopping(monitor=monitor_early_stop, patience=patience_, verbose=1, mode='min')
+        earlyStopping = EarlyStopping(monitor=self.__monitor_early_stop, patience=self.__patience, verbose=1, mode='min')
         history = autoencoder.fit(X_train, X_train, validation_data=(X_test, X_test), epochs=self._n_epochs, batch_size=self._batch_size, shuffle=True, callbacks=[earlyStopping])
 
         plt.plot(history.history['loss'])
@@ -432,225 +516,13 @@ class Autoencoder:
             first_layer_weights = encoder.get_weights()[0]
             first_layer_biases  = encoder.get_weights()[1]
 
-            np.savetxt(path_+ 'AEweightsHL1.txt', first_layer_weights)
-            np.savetxt(path_+ 'AEbiasHL1.txt', first_layer_biases)
+            np.savetxt(self.__path + 'AEweightsHL1.txt', first_layer_weights)
+            np.savetxt(self.__path + 'AEbiasHL1.txt', first_layer_biases)
 
-            np.savetxt(path_+ 'Encoded_matrix.txt', encoded_X)
-
-
-class MLP_regressor:
-    def __init__(self, X, Y, save=False):
-        self.X = X
-        self.Y = Y
-
-        self._n_neurons = 2
-        self._layers = 1
-        self._activation = 'relu'
-        self._batch_size = 64
-        self._n_epochs = 1000
-        self._dropout = 0
-        
-        self.save_txt = save
-
-        if self.X.shape[0] != self.Y.shape[0]:
-            raise Exception("The number of observations (Input and Output) does not match: please check again your Input/Output. Exiting...")
-            exit()
-    
-
-    @property
-    def neurons(self):
-        return self._n_neurons
-    
-    @neurons.setter
-    @accepts(object, int)
-    def neurons(self, new_number):
-        self._n_neurons = new_number
-
-        if self._n_neurons <= 0:
-            raise Exception("The number of neurons in the hidden layer must be a positive integer. Exiting..")
-            exit()
-
-    @property
-    def layers(self):
-        return self._layers
-    
-    @layers.setter
-    @accepts(object, int)
-    def layers(self, new_number_layers):
-        self._layers = new_number_layers
-
-        if self._layers <= 0:
-            raise Exception("The number hidden layers must be a positive integer. Exiting..")
-            exit()
-
-    @property
-    def activation(self):
-        return self._activation
-    
-    @activation.setter
-    def activation(self, new_activation):
-        if new_activation == 'leaky_relu':
-            LR = LeakyReLU(alpha=0.0001)
-            LR.__name__= 'relu'
-            self._activation= LR
-        else:
-            self._activation = new_activation
+            np.savetxt(self.__path + 'Encoded_matrix.txt', encoded_X)
 
 
-    @property
-    def batch_size(self):
-        return self._batch_size
-    
-    @batch_size.setter
-    @accepts(object, int)
-    def batch_size(self, new_batchsize):
-        self._batch_size = new_batchsize
 
-        if self._batch_size <= 0:
-            raise Exception("The batch size must be a positive integer. Exiting..")
-            exit()
-
-    @property
-    def n_epochs(self):
-        return self._n_epochs
-    
-    @n_epochs.setter
-    @accepts(object, int)
-    def n_epochs(self, new_epochs):
-        self._n_epochs = new_epochs
-
-        if self._n_epochs <= 0:
-            raise Exception("The number of epochs must be a positive integer. Exiting..")
-            exit()
-
-    @property
-    def dropout(self):
-        return self._dropout
-    
-    @dropout.setter
-    @accepts(object, float)
-    def dropout(self, new_value):
-        self._dropout = new_value
-
-        if self._dropout < 0:
-            raise Exception("The dropout percentage must be a positive integer. Exiting..")
-            exit()
-        elif self._dropout >= 1:
-            raise Exception("The dropout percentage must be lower than 1. Exiting..")
-            exit()
-
-
-    @staticmethod
-    def set_hard_parameters():
-        '''
-        This function sets all the parameters for the neural network which should not
-        be changed during the tuning.
-        '''
-        activation_output = 'linear'
-        path_ = os.getcwd()
-        monitor_early_stop= 'mean_squared_error'
-        optimizer_= 'adam'
-        patience_= 5
-        loss_function_= 'mean_squared_error'
-        metrics_= 'mse'
-
-        return activation_output, path_, monitor_early_stop, optimizer_, patience_, loss_function_, metrics_
-
-
-    @staticmethod
-    def set_environment():
-        '''
-        This function creates a new folder where all the produced files
-        will be saved.
-        '''
-        import datetime
-        import sys
-        import os
-        
-        now = datetime.datetime.now()
-        newDirName = "Train MLP regressor - " + now.strftime("%Y_%m_%d-%H%M")
-        
-        try:
-            os.mkdir(newDirName)
-            os.chdir(newDirName)
-        except FileExistsError:
-            pass
-
-
-    @staticmethod
-    def write_recap_text(neuro_number, lay_number, number_batches, activation_specification):
-        '''
-        This function writes a txt with all the hyperparameters
-        recaped, to not forget the settings if several trainings are
-        launched all together.
-        '''
-        text_file = open("recap_training.txt", "wt")
-        neurons_number = text_file.write("The number of neurons in the implemented architecture is equal to: {} \n".format(neuro_number))
-        layers_number = text_file.write("The number of hidden layers in the implemented architecture is equal to: {} \n".format(lay_number))
-        batches_number = text_file.write("The batch size is equal to: {} \n".format(number_batches))
-        activation_used = text_file.write("The activation function which was used was: "+ activation_specification + ". \n")
-        text_file.close()
-
-
-    def fit_network(self):
-        input_dimension = self.X.shape[1]
-        output_dimension = self.Y.shape[1]
-
-        MLP_regressor.set_environment()
-        MLP_regressor.write_recap_text(self._n_neurons, self._layers, self._batch_size, self._activation)
-
-        X_train, X_test, y_train, y_test = train_test_split(self.X, self.Y, test_size=0.3)
-
-        activation_output, path_, monitor_early_stop, optimizer_, patience_, loss_function_, metrics_ = MLP_regressor.set_hard_parameters()
-
-        counter = 1
-
-        model = Sequential()
-        model.add(Dense(self._n_neurons, input_dim=input_dimension, kernel_initializer='normal', activation=self._activation)) 
-        if self._dropout != 0:
-            from tensorflow.python.keras.layers import Dropout
-            model.add(Dropout(self._dropout))
-            print("Dropping out some neurons...")
-        while counter < self._layers:
-            model.add(Dense(self._n_neurons, activation=self._activation)) 
-            model.add(Dropout(self._dropout))
-            counter +=1
-        model.add(Dense(output_dimension, activation=activation_output))
-        model.summary()
-
-        earlyStopping = EarlyStopping(monitor=monitor_early_stop, patience=patience_, verbose=0, mode='min')
-        mcp_save = ModelCheckpoint(filepath=path_+ '/best_weights2c.h5', verbose=1, save_best_only=True, monitor=monitor_early_stop, mode='min')
-        model.compile(loss=loss_function_, optimizer=optimizer_, metrics=[metrics_])
-        history = model.fit(X_train, y_train, batch_size=self._batch_size, epochs=self._n_epochs, verbose=1, validation_data=(X_test, y_test), callbacks=[earlyStopping, mcp_save])
-
-        plt.plot(history.history['loss'])
-        plt.plot(history.history['val_loss'])
-        plt.title('Model loss')
-        plt.ylabel('Loss')
-        plt.xlabel('Epoch')
-        plt.legend(['Train', 'Test'], loc='upper right')
-        plt.savefig('loss_history.eps')
-        plt.show()
-
-        model.load_weights(path_+ '/best_weights2c.h5')
-
-        test = model.predict(self.X)
-
-        counter_saver = 0
-
-        if self.save_txt:
-
-            while counter_saver < self._layers:
-                layer_weights = classifier.layers[counter_saver].get_weights()[0]
-                layer_biases = classifier.layers[counter_saver].get_weights()[1]
-                name_weights = "Weights_HL{}.txt".format(counter_saver)
-                name_biases = "Biases_HL{}.txt".format(counter_saver)
-                np.savetxt(name_weights, layer_weights)
-                np.savetxt(name_biases, layer_biases)
-
-                counter_saver +=1
-
-        return test
 
 if __name__ == '__main__':
     
@@ -678,9 +550,10 @@ if __name__ == '__main__':
     X = readCSV(file_options["path_to_file"], file_options["input_file_name"])
     Y = readCSV(file_options["path_to_file"], file_options["output_file_name"])
 
-
-    ### CLASSIFICATION ###
-    model = ANN.MLP_classifier(X,Y, True)
+    
+    ### CLASSIFICATION ###                                                      --> RUNNING, OK -- TO TEST
+    
+    model = ANN.classifier(X,Y)
 
     model.neurons = training_options["number_of_neurons"]
     model.layers = training_options["number_of_layers"]
@@ -690,6 +563,23 @@ if __name__ == '__main__':
     model.dropout = 0.2
 
     index = model.fit_network()
+    
+    
+
+    ### REGRESSION ###
+    '''
+    model = ANN.regressor(X,Y)
+
+    model.neurons = training_options["number_of_neurons"]
+    model.layers = training_options["number_of_layers"]
+    model.activation_function = training_options["activation_function"]
+    model.n_epochs = training_options["number_of_epochs"]
+    model.batch_size = training_options["batch_size"]
+    model.dropout = 0.2
+
+    yo = model.fit_network()
+    '''
+    
 
     ### DIMENSIONALITY REDUCTION ###
     '''
@@ -701,18 +591,4 @@ if __name__ == '__main__':
     #model.batch_size = training_options["batch_size"]
 
     model.fit()
-    '''
-
-    ### REGRESSION ###
-    '''
-    model = ANN.MLP_regressor(X,Y)
-
-    model.neurons = training_options["number_of_neurons"]
-    model.layers = training_options["number_of_layers"]
-    model.activation_function = training_options["activation_function"]
-    model.n_epochs = training_options["number_of_epochs"]
-    model.batch_size = training_options["batch_size"]
-    model.dropout = 0.2
-
-    yo = model.fit_network()
     '''
