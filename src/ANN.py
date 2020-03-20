@@ -49,10 +49,7 @@ class MLP_classifier:
         
         self.save_txt = save
 
-        if self.X.shape[0] != self.Y.shape[0]:
-            raise Exception("The number of observations (Input and Output) does not match: please check again your Input/Output. Exiting...")
-            exit()
-
+        
     @property
     def neurons(self):
         return self._n_neurons
@@ -61,11 +58,11 @@ class MLP_classifier:
     @accepts(object, int)
     def neurons(self, new_number):
         self._n_neurons = new_number
-
+        
         if self._n_neurons <= 0:
             raise Exception("The number of neurons in the hidden layer must be a positive integer. Exiting..")
             exit()
-
+        
     @property
     def layers(self):
         return self._layers
@@ -178,8 +175,12 @@ class MLP_classifier:
         
         now = datetime.datetime.now()
         newDirName = "Train MLP class - " + now.strftime("%Y_%m_%d-%H%M")
-        os.mkdir(newDirName)
-        os.chdir(newDirName)
+
+        try:
+            os.mkdir(newDirName)
+            os.chdir(newDirName)
+        except FileExistsError:
+            pass
 
 
     @staticmethod
@@ -366,8 +367,12 @@ class Autoencoder:
         
         now = datetime.datetime.now()
         newDirName = "Train Autoencoder - " + now.strftime("%Y_%m_%d-%H%M")
-        os.mkdir(newDirName)
-        os.chdir(newDirName)
+        
+        try:
+            os.mkdir(newDirName)
+            os.chdir(newDirName)
+        except FileExistsError:
+            pass
 
 
     @staticmethod
@@ -564,8 +569,12 @@ class MLP_regressor:
         
         now = datetime.datetime.now()
         newDirName = "Train MLP regressor - " + now.strftime("%Y_%m_%d-%H%M")
-        os.mkdir(newDirName)
-        os.chdir(newDirName)
+        
+        try:
+            os.mkdir(newDirName)
+            os.chdir(newDirName)
+        except FileExistsError:
+            pass
 
 
     @staticmethod
@@ -655,7 +664,7 @@ if __name__ == '__main__':
     file_options = {
         "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data",
         "input_file_name"           : "CF_pasr_Z.csv",
-        "output_file_name"          : "idx_CFP.csv"
+        "output_file_name"          : "idx_CFP.csv" 
     }
 
     training_options = {
@@ -671,7 +680,7 @@ if __name__ == '__main__':
 
 
     ### CLASSIFICATION ###
-    '''model = ANN.MLP_classifier(X,Y, True)
+    model = ANN.MLP_classifier(X,Y, True)
 
     model.neurons = training_options["number_of_neurons"]
     model.layers = training_options["number_of_layers"]
@@ -680,7 +689,7 @@ if __name__ == '__main__':
     model.batch_size = training_options["batch_size"]
     model.dropout = 0.2
 
-    index = model.fit_network()'''
+    index = model.fit_network()
 
     ### DIMENSIONALITY REDUCTION ###
     '''
@@ -695,7 +704,7 @@ if __name__ == '__main__':
     '''
 
     ### REGRESSION ###
-
+    '''
     model = ANN.MLP_regressor(X,Y)
 
     model.neurons = training_options["number_of_neurons"]
@@ -706,3 +715,4 @@ if __name__ == '__main__':
     model.dropout = 0.2
 
     yo = model.fit_network()
+    '''
