@@ -552,11 +552,18 @@ class variables_selection(PCA):
                 automatically.
     
     '''
-    def __init__(self, X, labels):
+    def __init__(self, X):
         self.X = X
-        self.labels = labels
+        
+
         #Initialize the number of variables to select and the PCs to retain
+
         self._n_ret = 1
+
+        self._path = ' '
+        self._labels_name = ' '
+
+        super().__init__(self.X)
         
         
     @property
@@ -572,9 +579,36 @@ class variables_selection(PCA):
             raise Exception("The number of retained variables must be a positive integer. Exiting..")
             exit()
 
+    @property
+    def path_to_labels(self):
+        return self._path
+    
+    @path_to_labels.setter
+    def path_to_labels(self, new_string):
+        self._path = new_string
+
+    
+    @property
+    def labels_file_name(self):
+        return self._labels_name
+    
+    @labels_file_name.setter
+    def labels_file_name(self, new_string):
+        self._labels_name = new_string
+
+
+    def load_labels(self):
+        import pandas as pd
+        try:
+            self.labels= np.array(pd.read_csv(self._path + '/' + self._labels_name, sep = ',', header = None))
+        except OSError:
+            print("Could not open/read the selected file: " + self._labels_name)
+            exit()
+
    
     @staticmethod
     def check_sanity_input(X, labels, retained):
+        print(labels)
         if X.shape[1] != labels.shape[1]:
             print("Variables number: {}, Labels length: {}".format(X.shape[1], labels.shape[1]))
             raise Exception("The number of variables does not match the labels.")
@@ -586,11 +620,12 @@ class variables_selection(PCA):
     
     def fit(self):
         print("Selecting global variables via PCA and Procustes Analysis...")
+        self.load_labels()
         variables_selection.check_sanity_input(self.X, self.labels, self._n_ret)
 
         self.X_tilde = PCA.preprocess_training(self.X, self.to_center, self.to_scale, self.centering, self.scaling)
 
-        eigenvec = PCA_fit(self.X_tilde, self._n_eig)
+        eigenvec = PCA_fit(self.X_tilde, self._nPCs)
         Z = self.X_tilde @ eigenvec[0]
         #Start the backward elimination
         while self.X_tilde.shape[1] > self._n_ret:
@@ -600,7 +635,7 @@ class variables_selection(PCA):
 
             for ii in range(0,self.X_tilde.shape[1]):
                 X_cut = np.delete(self.X_tilde, ii, axis=1)
-                eigenvec = PCA_fit(X_cut, self._n_eig)
+                eigenvec = PCA_fit(X_cut, self._nPCs)
                 Z_tilde = X_cut @ eigenvec[0]
 
                 covZZ = np.transpose(Z_tilde) @ Z
@@ -632,7 +667,8 @@ if __name__ =='__main__':
 
     file_options = {
         "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data",
-        "input_file_name"           : "cfdf.csv",
+        "input_file_name"           : "concentrations.csv",
+        "labels_name"               : "labels_species.csv",
     }
 
 
@@ -673,5 +709,16 @@ if __name__ =='__main__':
     local_model.plot_parity()
     local_model.clust_to_plot = 3
     local_model.plot_PCs()
+
+    ##### VARIABLES SELECTION #####
+  
+    Procustes = variables_selection(X)
+
+    Procustes.path_to_labels = file_options["path_to_file"]
+    Procustes.labels_file_name = file_options["labels_name"]
+    Procustes.eigens = 5
+    Procustes.retained = 15
+    retained_variables = Procustes.fit()
+    print(retained_variables)
 
     print("done")

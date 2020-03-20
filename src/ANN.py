@@ -177,6 +177,7 @@ class classifier(Architecture):
 
     def __set_hard_parameters(self):
         '''
+        --- PRIVATE ---
         This function sets all the parameters for the neural network which should not
         be changed during the tuning.
         '''
@@ -287,6 +288,7 @@ class regressor(Architecture):
        
     def __set_hard_parameters(self):
         '''
+        --- PRIVATE ---
         This function sets all the parameters for the neural network which should not
         be changed during the tuning.
         '''
@@ -426,6 +428,7 @@ class Autoencoder:
 
     def __set_hard_parameters(self):
         '''
+        --- PRIVATE ---
         This function sets all the parameters for the neural network which should not
         be changed during the tuning.
         '''
@@ -566,7 +569,7 @@ if __name__ == '__main__':
     
     
 
-    ### REGRESSION ###
+    ### REGRESSION ###                                                          --> RUNNING, OK -- TO TEST
     '''
     model = ANN.regressor(X,Y)
 
@@ -581,7 +584,7 @@ if __name__ == '__main__':
     '''
     
 
-    ### DIMENSIONALITY REDUCTION ###
+    ### DIMENSIONALITY REDUCTION ###                                            --> RUNNING, OK -- TO TEST
     '''
     model = ANN.Autoencoder(X)
 
