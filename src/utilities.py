@@ -1,7 +1,7 @@
 '''
 MODULE: utilities.py
 
-@Author: 
+@Author:
     G. D'Alessio [1,2]
     [1]: Université Libre de Bruxelles, Aero-Thermo-Mechanics Laboratory, Bruxelles, Belgium
     [2]: CRECK Modeling Lab, Department of Chemistry, Materials and Chemical Engineering, Politecnico di Milano
@@ -14,7 +14,7 @@ MODULE: utilities.py
     A detailed description is available under the definition of each function.
 
 @Additional notes:
-    This code is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+    This code is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
     Please report any bug to: giuseppe.dalessio@ulb.ac.be
 
 '''
@@ -159,9 +159,9 @@ def explained_variance(X, n_eigs, plot=False):
     return explained
 
 
-def evaluate_clustering_DB(X, idx): 
+def evaluate_clustering_DB(X, idx):
     """
-    Davies-Bouldin index a coefficient to evaluate the goodness of a 
+    Davies-Bouldin index a coefficient to evaluate the goodness of a
     clustering solution. The more it approaches to zero, the better
     the clustering solution is. -- Tested OK with comparison Matlab
     """
@@ -172,7 +172,7 @@ def evaluate_clustering_DB(X, idx):
     S_i = [None] *k
     M_ij = np.zeros((k,k), dtype=float)
     TOL = 1E-16
-    
+
 
     for ii in range(0,k):
         cluster_ = get_cluster(X, idx, ii)
@@ -219,7 +219,7 @@ def get_centroids(X):
 
 
 def get_cluster(X, idx, index, write=False):
-    ''' 
+    '''
     Given an index, group all the observations
     of the matrix X given their membership vector idx.
     - Input:
@@ -239,7 +239,7 @@ def get_cluster(X, idx, index, write=False):
 
 
 def get_all_clusters(X, idx):
-    ''' 
+    '''
     Group all the observations of the matrix X given their membership vector idx,
     and collect the different groups into a list.
     - Input:
@@ -269,11 +269,11 @@ def NRMSE (X_true, X_pred):
 
 def PCA_fit(X, n_eig):
     '''
-    Perform Principal Component Analysis on the dataset X, 
+    Perform Principal Component Analysis on the dataset X,
     and retain 'n_eig' Principal Components.
     The covariance matrix is firstly calculated, then it is
     decomposed in eigenvalues and eigenvectors.
-    Lastly, the eigenvalues are ordered depending on their 
+    Lastly, the eigenvalues are ordered depending on their
     magnitude and the associated eigenvectors (the PCs) are retained.
     - Input:
     X = CENTERED/SCALED data matrix -- dim: (observations x variables)
@@ -296,7 +296,7 @@ def PCA_fit(X, n_eig):
         evecs = evecs[:, 0:n_eig]
 
         return evecs, evals
-    
+
     else:
         raise Exception("The number of PCs exceeds the number of variables in the data-set.")
 
@@ -304,9 +304,9 @@ def PCA_fit(X, n_eig):
 def PHC_index(X, idx):
     '''
     Computes the PHC (Physical Homogeneity of the Cluster) index.
-    For many applications, more than a pure mathematical tool to assess the quality of the clustering solution, 
-    such as the Silhouette Coefficient, a measure of the variables variation is more suitable. This coefficient 
-    assess the quality of the clustering solution measuring the variables variation in each cluster. The more the PHC 
+    For many applications, more than a pure mathematical tool to assess the quality of the clustering solution,
+    such as the Silhouette Coefficient, a measure of the variables variation is more suitable. This coefficient
+    assess the quality of the clustering solution measuring the variables variation in each cluster. The more the PHC
     approaches to zero, the better the clustering.
     - Input:
     X = UNCENTERED/UNSCALED data matrix -- dim: (observations x variables)
@@ -325,13 +325,13 @@ def PHC_index(X, idx):
 
         maxima = np.max(cluster_, axis = 0)
         minima = np.min(cluster_, axis = 0)
-        media = np.mean(cluster_, axis=0) 
+        media = np.mean(cluster_, axis=0)
 
         dev = np.std(cluster_, axis=0)
 
         PHC_coeff[ii] = np.mean((maxima-minima)/(media +TOL))
         PHC_deviations[ii] = np.mean(dev)
-        
+
     return PHC_coeff, PHC_deviations
 
 def readCSV(path, name):
@@ -341,7 +341,7 @@ def readCSV(path, name):
     except OSError:
         print("Could not open/read the selected file: " + name)
         exit()
-    
+
     return X
 
 
@@ -436,6 +436,66 @@ def unscale(X_tilde, sigma):
         exit()
 
 # ------------------------------
+# Classes (alphabetical order)
+# ------------------------------
+
+class Sample_dataset():
+    def __init__(self, X):
+        self.X = X #initial training dataset (raw data).
+        self.__nObs = self.X.shape[0]
+        self.__nVar = self.X.shape[1]
+
+        self._method = 'miniK' #choose the sampling strategy: cluster (miniK, localPCA), stratify or multistage.
+        self._dimensions = 1 #choose the dimensions of the sampled dataset.
+        self.__k = 64 #predefined number of clusters, if the 'cluster' option is chosen
+
+    @property
+    def sampling_strategy(self):
+        return self._method
+
+    @sampling_strategy.setter
+    def sampling_strategy(self, new_string):
+        self._method = new_string
+
+    @property
+    def set_size(self):
+        return self._dimensions
+
+    @set_size.setter
+    def set_size(self, new_value):
+        self._dimensions = new_value
+
+    def fit(self):
+            self.X_tilde = center_scale(X, center(X,'mean'), scale(X, 'auto')) #center and scale the matrix (auto preset)
+            if self._method == 'miniK':
+                from sklearn.cluster import MiniBatchKMeans
+                self.__batchSize = int(self._dimensions / self.__k)
+                kmeans = MiniBatchKMeans(n_clusters=self.__k,random_state=0, batch_size=self.__batchSize, max_iter=10).fit(self.X_tilde)
+                id = kmeans.labels_
+                miniClust = [None] *self.__k
+                miniX = self.X[1:3,:]
+                print("YO! {}".format(miniX.shape[0]))
+                for ii in range(0, max(id)+1):
+                    cluster_ = get_cluster(self.X, id, ii)
+                    np.random.shuffle(cluster_)
+                    print("YO! miniClust dimensions: {}x{}".format(cluster_.shape[0], cluster_.shape[1]))
+                    miniX = np.concatenate((miniX, cluster_[:self.__batchSize,:]), axis=0)
+
+            #TO DO:
+
+            #add exceptions
+            #adjust size(rounding error from int(stuff) )
+            #check the sampled matrix
+            #add other methods
+            #put this stuff in MOR 
+
+            return miniX
+
+
+
+
+
+# ------------------------------
 # Decorators (alphabetical order)
 # ------------------------------
 
@@ -480,3 +540,45 @@ def allowed_scaling(func):
         res = func(dummy, x)
         return res
     return func_check
+
+
+if __name__ == '__main__':
+    import numpy as np
+    import matplotlib
+    import matplotlib.pyplot as plt
+
+    from utilities import *
+    import clustering
+
+
+    file_options = {
+        "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data",
+        "input_file_name"           : "cfdf.csv",
+    }
+
+    mesh_options = {
+        "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data",
+        "mesh_file_name"           : "mesh.csv",
+    }
+
+    settings = {
+        "centering_method"          : "MEAN",
+        "scaling_method"            : "AUTO",
+        "initialization_method"     : "KMEANS",
+        "number_of_clusters"        : 8,
+        "number_of_eigenvectors"    : 15,
+        "adaptive_PCs"              : False,
+        "classify"                  : False,
+        "write_on_txt"              : True,
+        "plot_on_mesh"              : True,
+    }
+
+
+    X = readCSV(file_options["path_to_file"], file_options["input_file_name"])
+    yo = Sample_dataset(X)
+    yo.set_size = 3000
+    miniX = yo.fit()
+    print("Training matrix sampled. New size: {}x{}".format(miniX.shape[0],miniX.shape[1]))
+    print("\tOriginal size: {}x{}".format(X.shape[0],X.shape[1]))
+    print(miniX)
+    print("END")
