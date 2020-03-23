@@ -1,7 +1,7 @@
 '''
 MODULE: model_order_reduction.py
 
-@Authors: 
+@Authors:
     G. D'Alessio [1,2]
     [1]: Université Libre de Bruxelles, Aero-Thermo-Mechanics Laboratory, Bruxelles, Belgium
     [2]: CRECK Modeling Lab, Department of Chemistry, Materials and Chemical Engineering, Politecnico di Milano
@@ -9,15 +9,15 @@ MODULE: model_order_reduction.py
 @Contacts:
     giuseppe.dalessio@ulb.ac.be
 
-@Brief: 
+@Brief:
     Class PCA: PCA-based (linear method) functions to get reduced-order models.
-    Class LPCA: LPCA-based (piecewise-linear method) functions to get ROMs. 
+    Class LPCA: LPCA-based (piecewise-linear method) functions to get ROMs.
     Class KPCA: Kernel-based PCA (non-linear method) function to get ROM.
-    
+
     More detailed descriptions are available under each function's declaration.
 
 @Additional notes:
-    This code is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+    This code is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
     Please report any bug to: giuseppe.dalessio@ulb.ac.be
 
 '''
@@ -41,7 +41,7 @@ class PCA:
         #Set the centering method:
         self._centering = 'mean'                                                                    #'mean' or 'min' are available
         #Decide if the input matrix must be scaled:
-        self._scale = True          
+        self._scale = True
         #Set the scaling method:
         self._scaling = 'auto'                                                                      #'auto';'vast';'range';'pareto' are available
         #Enable the plotting property to show the explained variance
@@ -58,7 +58,7 @@ class PCA:
     @property
     def eigens(self):
         return self._nPCs
-    
+
     @eigens.setter
     @accepts(object, int)
     def eigens(self, new_value):
@@ -74,7 +74,7 @@ class PCA:
     @property
     def to_center(self):
         return self._center
-    
+
     @to_center.setter
     @accepts(object, bool)
     def to_center(self, new_bool):
@@ -84,17 +84,17 @@ class PCA:
     @property
     def centering(self):
         return self._centering
-    
+
     @centering.setter
     @allowed_centering
     def centering(self, new_string):
         self._centering = new_string
 
-    
+
     @property
     def to_scale(self):
         return self._scale
-    
+
     @to_scale.setter
     @accepts(object, bool)
     def to_scale(self, new_bool):
@@ -104,25 +104,25 @@ class PCA:
     @property
     def scaling(self):
         return self._scaling
-    
+
     @scaling.setter
     @allowed_scaling
     def scaling(self, new_string):
         self._scaling = new_string
-       
+
     @property
     def plot_explained_variance(self):
         return self._plot_explained_variance
-    
+
     @plot_explained_variance.setter
     @accepts(object, bool)
     def plot_explained_variance(self, new_bool):
         self._plot_explained_variance = new_bool
-    
+
     @property
     def set_explained_variance_perc(self):
         return self._explained_variance
-    
+
     @set_explained_variance_perc.setter
     @accepts(object, float)
     def set_explained_variance_perc(self, new_value):
@@ -131,7 +131,7 @@ class PCA:
     @property
     def set_PCs_method(self):
         return self._assessPCs
-    
+
     @set_PCs_method.setter
     def set_PCs_method(self, new_method):
         self._assessPCs = new_method
@@ -139,7 +139,7 @@ class PCA:
     @property
     def set_num_to_plot(self):
         return self._assessPCs
-    
+
     @set_num_to_plot.setter
     @accepts(object, int)
     def set_num_to_plot(self, new_number):
@@ -161,16 +161,16 @@ class PCA:
 
         return X_tilde
 
-    
+
     def fit(self):
         '''
-        Perform Principal Component Analysis on the dataset X, 
-        and retain 'n' Principal Components. The covariance matrix 
-        is firstly calculated, then it is decomposed in eigenvalues 
-        and eigenvectors. Lastly, the eigenvalues are ordered depending 
-        on their magnitude and the associated eigenvectors (the PCs) 
+        Perform Principal Component Analysis on the dataset X,
+        and retain 'n' Principal Components. The covariance matrix
+        is firstly calculated, then it is decomposed in eigenvalues
+        and eigenvectors. Lastly, the eigenvalues are ordered depending
+        on their magnitude and the associated eigenvectors (the PCs)
         are retained.
-       
+
         - Output:
         evecs: eigenvectors from the covariance matrix decomposition (PCs)
         evals: eigenvalues from the covariance matrix decomposition (lambda)
@@ -193,7 +193,7 @@ class PCA:
 
         return self.evecs, self.evals
 
-    
+
     def recover(self):
         '''
         Reconstruct the original matrix from the reduced PCA-manifold.
@@ -201,19 +201,19 @@ class PCA:
         - Output:
         X_rec = uncentered and unscaled reconstructed matrix with PCA modes -- dim: (observations x variables)
         '''
-       
+
         #Compute the centering and the scaling factors. Later they will be useful.
         self.mu = center(self.X, self.centering)
         self.sigma = scale(self.X, self.scaling)
         #Reconstruct the original matrix
-        self.X_r = self.X_tilde @ self.evecs @ self.evecs.T 
+        self.X_r = self.X_tilde @ self.evecs @ self.evecs.T
         # Uncenter and unscale to get the reconstructed original matrix
         X_unsc = unscale(self.X_r, self.sigma)
         self.X_rec = uncenter(X_unsc, self.mu)
-        
+
         return self.X_rec
 
-    
+
     def get_explained(self):
         '''
         Assess the variance explained by the first 'n_eigs' retained
@@ -221,7 +221,7 @@ class PCA:
         of explained variance is enough, or additional PCs must be retained.
         Usually, it is considered accepted a percentage of explained variable
         above 95%.
-        
+
         - Output:
         explained: percentage of explained variance -- dim: (scalar)
         '''
@@ -242,7 +242,7 @@ class PCA:
 
         return explained
 
-    
+
     def get_scores(self):
         '''
         Project the original data matrix (cent and scaled) X_tilde
@@ -253,13 +253,14 @@ class PCA:
 
         return self.scores
 
-    
+
     def set_PCs(self):
+        optimalPCs = None
         if self._assessPCs != False:
             self.plot_explained_variance = False
             for ii in range(1, self.n_var):
                 #print("Assessing the optimal number of PCs by means of: " + self._assessPCs + " criterion. Now using: {} Principal Component(s).".format(ii))
-                
+
                 self.eigens = ii
                 self.fit()
                 #Assess the optimal number of PCs by means of the explained variance threshold (>= 99% explained is the default setting)
@@ -270,22 +271,25 @@ class PCA:
                         #print("With {} PCs, the following percentage of variance is explained: {}".format(self.eigens, explained))
                         #print("The variance is larger than the given fixed threshold: {}. Thus, {} PCs will be retained.".format(self._threshold_var, self.eigens))
                         self.plot_explained_variance = True
+                        optimalPCs = ii
                         break
                 #Otherwise with the nrmse of the reconstructed matrix, which has to be below a specific threshold (<= 10% error is the default setting)
                 elif self._assessPCs == 'nrmse':
                     reconstructed_ = self.recover()
                     variables_reconstruction = NRMSE(self.X, reconstructed_)
-                    
+
                     if np.mean(variables_reconstruction) <= self._threshold_nrmse:
                         print("With {} PCs, the following average error (NRMSE) for the variables reconstruction (from the PCA manifold) is obtained: {}".format(self.eigens, np.mean(variables_reconstruction)))
                         print("The error is lower than the given fixed threshold: {}. Thus, {} PCs will be retained.".format(self._threshold_nrmse, self.eigens))
+                        optimalPCs = ii
                         break
+        return optimalPCs
 
-    
+
     def plot_PCs(self):
         '''
-        Plot the variables' weights on a selected Principal Component (PC). 
-        The PCs are linear combination of the original variables: examining the 
+        Plot the variables' weights on a selected Principal Component (PC).
+        The PCs are linear combination of the original variables: examining the
         weights, especially for the PCs associated with the largest eigenvalues,
         can be important for data-analysis purposes.
 
@@ -294,7 +298,7 @@ class PCA:
         matplotlib.rcParams.update({'font.size' : 18, 'text.usetex' : True})
         fig = plt.figure()
         axes = fig.add_axes([0.15,0.15,0.7,0.7], frameon=True)
-        
+
         x = np.linspace(1, self.n_var, self.n_var)
         axes.bar(x, self.evecs[:,self._num_to_plot])
         axes.set_xlabel('Variables [-]')
@@ -304,7 +308,7 @@ class PCA:
 
     def plot_parity(self):
         '''
-        Print the parity plot of the reconstructed profile from the PCA 
+        Print the parity plot of the reconstructed profile from the PCA
         manifold. The more the scatter plot (black dots) is in line with the
         red line, the better it is the reconstruction.
 
@@ -336,19 +340,19 @@ class LPCA(PCA):
         self._clust_to_plot = 1
 
         super().__init__(X)
-    
+
     @property
     def path_to_idx(self):
         return self._path_to_idx
-    
+
     @path_to_idx.setter
     def path_to_idx(self, new_string):
-        self._path_to_idx = new_string     
-   
+        self._path_to_idx = new_string
+
     @property
     def clust_to_plot(self):
         return self._clust_to_plot
-    
+
     @clust_to_plot.setter
     @accepts(object, int)
     def clust_to_plot(self, new_number):
@@ -363,7 +367,7 @@ class LPCA(PCA):
         except OSError:
             print("Could not open/read the selected file: " + path + 'idx.txt')
             exit()
-        
+
         return idx
 
 
@@ -373,7 +377,7 @@ class LPCA(PCA):
         (the projection of the points on the local manifold), and the eigenvalues
         in each cluster found by the lpca iterative algorithm, given a previous clustering
         solution.
-        
+
         - Output:
         LPCs = list with the LPCs in each cluster -- dim: [k]
         u_scores = list with the scores in each cluster -- dim: [k]
@@ -383,8 +387,8 @@ class LPCA(PCA):
         self.idx = LPCA.get_idx(self.path_to_idx)
         self.k = int(max(self.idx) +1)
         self.X_tilde = LPCA.preprocess_training(self.X, self.to_center, self.to_scale, self.centering, self.scaling)
-        
-        
+
+
         self.centroids = [None] *self.k
         self.LPCs = [None] *self.k
         self.u_scores = [None] *self.k
@@ -402,9 +406,9 @@ class LPCA(PCA):
     def recover(self):
         '''
         Reconstruct the original matrix from the 'k' local reduced PCA-manifolds.
-        Given the idx vector, for each cluster the points are reconstructed from the 
+        Given the idx vector, for each cluster the points are reconstructed from the
         local manifolds spanned by the local PCs.
-        
+
         - Input:
         X = UNCENTERED/UNSCALED data matrix -- dim: (observations x variables)
         idx = class membership vector -- dim: (obs x 1)
@@ -415,13 +419,13 @@ class LPCA(PCA):
         X_rec = uncentered and unscaled reconstructed matrix with LPCA modes -- dim: (observations x variables)
         '''
 
-        
+
         self.X_rec = np.empty(self.X.shape, dtype=float)
         self.X_tilde = LPCA.preprocess_training(self.X, self.to_center, self.to_scale, self.centering, self.scaling)
 
         mu_global = center(self.X, self.centering)
         sigma_global = scale(self.X, self.scaling)
-        
+
 
         self.LPCs, self.u_scores, self.Leigen, self.centroids = self.fit()
 
@@ -429,12 +433,12 @@ class LPCA(PCA):
         for ii in range (0,self.k):
             cluster_ = get_cluster(self.X_tilde, self.idx, ii)
             centroid_ =self.centroids[ii]
-            C = np.empty(cluster_.shape, dtype=float) 
+            C = np.empty(cluster_.shape, dtype=float)
             C = (cluster_ - centroid_) @ self.LPCs[ii] @ self.LPCs[ii].T
             C_ = uncenter(C, centroid_)
             positions = np.where(self.idx == ii)
             self.X_rec[positions] = C_
-        
+
         self.X_rec = unscale(self.X_rec, sigma_global)
         self.X_rec = uncenter(self.X_rec, mu_global)
 
@@ -443,7 +447,7 @@ class LPCA(PCA):
 
     def plot_parity(self):
         '''
-        Print the parity plot of the reconstructed profile from the PCA 
+        Print the parity plot of the reconstructed profile from the PCA
         manifold. The more the scatter plot (black dots) is in line with the
         red line, the better it is the reconstruction.
         '''
@@ -465,8 +469,8 @@ class LPCA(PCA):
 
     def plot_PCs(self):
         '''
-        Plot the variables' weights on a selected Principal Component (PC). 
-        The PCs are linear combination of the original variables: examining the 
+        Plot the variables' weights on a selected Principal Component (PC).
+        The PCs are linear combination of the original variables: examining the
         weights, especially for the PCs associated with the largest eigenvalues,
         can be important for data-analysis purposes.
         '''
@@ -475,7 +479,7 @@ class LPCA(PCA):
         matplotlib.rcParams.update({'font.size' : 18, 'text.usetex' : True})
         fig = plt.figure()
         axes = fig.add_axes([0.15,0.15,0.7,0.7], frameon=True)
-        
+
         x = np.linspace(1, self.n_var, self.n_var)
         axes.bar(x, local_eigen[:,self.set_num_to_plot])
         axes.set_xlabel('Variables [-]')
@@ -491,7 +495,7 @@ class KPCA(PCA):
 
         super().__init__(X)
 
-     
+
     def fit(self):
         '''
         Compute the Kernel Principal Component Analysis for a dataset X, using
@@ -511,12 +515,12 @@ class KPCA(PCA):
         # compute the distances between all the observations:
         distances = pdist(self.X_tilde, 'sqeuclidean')
         square_distances = squareform(distances)
-        
+
         # build the first kernel, center it with the 1n matrix, then compute the centered kernel K:
         Kernel = np.exp(-sigma * square_distances)
         centering_k = np.ones((n_obs, n_obs))/n_obs
         K = Kernel - centering_k @ Kernel - Kernel @ centering_k + centering_k @ Kernel @ centering_k
-        
+
         print("Starting kernel decomposition..")
         # Compute the PCs from the kernel matrix, and retain the first 'n_eigs' PCs:
         evals, evecs = LA.eigh(K)
@@ -530,16 +534,16 @@ class KPCA(PCA):
 
 class variables_selection(PCA):
     '''
-    In many applications, rather than reducing the dimensionality considering a new set of coordinates 
-    which are linear combination of the original ones, the main interest is to achieve a dimensionality 
-    reduction selecting a subset of m variables from the original set of p variables. One of the possible 
+    In many applications, rather than reducing the dimensionality considering a new set of coordinates
+    which are linear combination of the original ones, the main interest is to achieve a dimensionality
+    reduction selecting a subset of m variables from the original set of p variables. One of the possible
     ways to accomplish this task is to couple the PCA dimensionality reduction with a Procustes Analysis.
 
     The iterative variable algorithm introduced by Krzanovski [a] is based on the following steps (1-3):
-    0. Preprocessing: The training matrix X is centered and scaled, after being loaded. 
+    0. Preprocessing: The training matrix X is centered and scaled, after being loaded.
     1. The dimensionality of m is initially set equal to p.
     2. Each variable is deleted from the matrix X, obtaining p ~X matrices. The
-    corresponding scores matrices are computed by means of PCA. For each of them, a Procustes Analysis 
+    corresponding scores matrices are computed by means of PCA. For each of them, a Procustes Analysis
     is performed with respect to the scores of the original matrix X, and the corresponding M2 coeffcient is computed.
     3. The variable which, once excluded, leads to the smallest M2 coefficient is deleted from the matrix.
     4. Steps 2 and 3 are repeated until m variables are left.
@@ -550,11 +554,11 @@ class variables_selection(PCA):
 
     WARNING --> the input matrix must be the original (uncentered, unscaled) one. The code centers and scales
                 automatically.
-    
+
     '''
     def __init__(self, X):
         self.X = X
-        
+
 
         #Initialize the number of variables to select and the PCs to retain
 
@@ -564,12 +568,12 @@ class variables_selection(PCA):
         self._labels_name = ' '
 
         super().__init__(self.X)
-        
-        
+
+
     @property
     def retained(self):
         return self._n_ret
-    
+
     @retained.setter
     @accepts(object, int)
     def retained(self, new_number):
@@ -582,16 +586,16 @@ class variables_selection(PCA):
     @property
     def path_to_labels(self):
         return self._path
-    
+
     @path_to_labels.setter
     def path_to_labels(self, new_string):
         self._path = new_string
 
-    
+
     @property
     def labels_file_name(self):
         return self._labels_name
-    
+
     @labels_file_name.setter
     def labels_file_name(self, new_string):
         self._labels_name = new_string
@@ -605,7 +609,7 @@ class variables_selection(PCA):
             print("Could not open/read the selected file: " + self._labels_name)
             exit()
 
-   
+
     @staticmethod
     def check_sanity_input(X, labels, retained):
         print(labels)
@@ -617,7 +621,7 @@ class variables_selection(PCA):
             raise Exception("The number of retained variables must be lower than the number of original variables.")
             exit()
 
-    
+
     def fit(self):
         print("Selecting global variables via PCA and Procustes Analysis...")
         self.load_labels()
@@ -653,17 +657,179 @@ class variables_selection(PCA):
 
         return self.labels
 
+class SamplePopulation():
+    '''
+    This class contains a set of methods to consider only a subset of the original training
+    matrix X. These methods should be used when the size of the training dataset is large, and
+    becomes impractical to train the model on the whole training population.
+    Three classes of sampling strategies are available:
+    i) Simple random sampling; ii) Clustered sampling; iii) Stratified sampling; iv) multistage.
+    The 'clustered' sampling can be accomplished either via miniBatchKMeans, or LPCA.
+
+    The simple random sampling just shuffle the data and takes the required amount of observations.
+    The clustered approach groups the observations in different clusters, and from each of them
+    a certain amount of samples are taken.
+    The multistage couples stratified (first stage) and clustered (second stage) sampling
+    '''
+    def __init__(self, X):
+        #Initial training dataset (raw data).
+        self.X = X
+        self.__nObs = self.X.shape[0]
+        self.__nVar = self.X.shape[1]
+        #Choose the sampling strategy: random, cluster (miniK, LPCA), stratifed or multistage.
+        self._method = 'miniK'
+        #Choose the dimensions of the sampled dataset.
+        self._dimensions = 1
+        #Predefined number of clusters, if 'cluster', 'stratified' or 'multistage' are chosen
+        self.__k = 64
+        #Variable to use for the matrix conditioning in case of stratified sampling
+        self._conditioning =0
+
+    @property
+    def sampling_strategy(self):
+        return self._method
+
+    @sampling_strategy.setter
+    def sampling_strategy(self, new_string):
+        self._method = new_string
+
+    @property
+    def set_size(self):
+        return self._dimensions
+
+    @set_size.setter
+    def set_size(self, new_value):
+        self._dimensions = new_value
+
+    @property
+    def set_conditioning(self):
+        return self._conditioning
+
+    @set_conditioning.setter
+    def set_conditioning(self, new_value):
+        self._conditioning = new_value
+
+    def fit(self):
+            #Center and scale the matrix (auto preset)
+            self.X_tilde = center_scale(self.X, center(self.X,'mean'), scale(self.X, 'auto'))
+            self.__batchSize = int(self._dimensions / self.__k)
+
+            if self._method == 'random':
+                #Randomly shuffle the observations and take the prescribed number
+                np.random.shuffle(self.X)
+                miniX = self.X[:self.__batchSize,:]
+            elif self._method == 'miniK':
+                #Perform miniBatchKMeans and take (randomly) from each cluster a certain batch to form the sampled matrix
+                from sklearn.cluster import MiniBatchKMeans
+                kmeans = MiniBatchKMeans(n_clusters=self.__k,random_state=0, batch_size=self.__batchSize, max_iter=10).fit(self.X_tilde)
+                id = kmeans.labels_
+                miniX = self.X[1:3,:]
+                for ii in range(0, max(id)+1):
+                    cluster_ = get_cluster(self.X, id, ii)
+                    if cluster_.shape[0] < self.__batchSize:
+                        miniX = np.concatenate((miniX, cluster_), axis=0)
+                    else:
+                        np.random.shuffle(cluster_)
+                        miniX = np.concatenate((miniX, cluster_[:self.__batchSize,:]), axis=0)
+                        if miniX.shape[0] < self._dimensions and ii == max(id):
+                            delta = self._dimensions - miniX.shape[0]
+                            miniX= np.concatenate((miniX, cluster_[(self.__batchSize+1):(self.__batchSize+1+delta),:]), axis=0)
+            elif self._method == 'LPCA':
+                #Do the exact same thing done in miniK, but using the LPCA clustering algorithm
+                import clustering
+                import model_order_reduction
+                global_model = model_order_reduction.PCA(self.X)
+                optimalPCs = global_model.set_PCs()
+                model = clustering.lpca(self.X_tilde)
+                model.clusters = self.__k
+                model.eigens = int(optimalPCs / 2)
+                id = model.fit()
+                miniX = self.X[1:3,:]
+                for ii in range(0, max(id)+1):
+                    cluster_ = get_cluster(self.X, id, ii)
+                    if cluster_.shape[0] < self.__batchSize:
+                        miniX = np.concatenate((miniX, cluster_), axis=0)
+                    else:
+                        np.random.shuffle(cluster_)
+                        miniX = np.concatenate((miniX, cluster_[:self.__batchSize,:]), axis=0)
+                        if miniX.shape[0] < self._dimensions and ii == max(id):
+                            delta = self._dimensions - miniX.shape[0]
+                            miniX= np.concatenate((miniX, cluster_[(self.__batchSize+1):(self.__batchSize+1+delta),:]), axis=0)
+            elif self._method == 'stratified':
+                #Condition the dataset dividing the interval of one variable in 'k' bins
+                #and sample from each bin. The default variable is '0'.
+                min_con = np.min(self.X[:,self._conditioning])
+                max_con = np.max(self.X[:,self._conditioning])
+                delta_step = int((max_con - min_con) / self.__k)
+                counter = 0
+                var_left = min_con
+                miniX = self.X[1:3,:]
+                while counter <= self.__k:
+                    var_right = var_left + delta_step
+                    mask = np.logical_and(self.X[:,self._conditioning] >= var_left, self.X[:,self._conditioning] < var_right)
+                    cluster_ = X[mask]
+                    if cluster_.shape[0] < self.__batchSize:
+                        miniX = np.concatenate((miniX, cluster_), axis=0)
+                        var_left += delta_step
+                        counter+=1
+                    else:
+                        np.random.shuffle(cluster_)
+                        miniX = np.concatenate((miniX, cluster_[:self.__batchSize,:]), axis=0)
+                        if miniX.shape[0] < self._dimensions and counter == self.__k:
+                            delta = self._dimensions - miniX.shape[0]
+                            miniX= np.concatenate((miniX, cluster_[(self.__batchSize+1):(self.__batchSize+1+delta),:]), axis=0)
+                        var_left += delta_step
+                        counter+=1
+            elif self._method == 'multistage':
+                #Stratified sampling step: build multiMiniX from X conditioning
+                self.__multiBatchSize = 2*self.__batchSize
+                min_con = np.min(self.X[:,self._conditioning])
+                max_con = np.max(self.X[:,self._conditioning])
+                delta_step = int((max_con - min_con) / self.__k)
+                counter = 0
+                var_left = min_con
+                multiMiniX = self.X[1:3,:]
+                while counter <= self.__k:
+                    var_right = var_left + delta_step
+                    mask = np.logical_and(self.X[:,self._conditioning] >= var_left, self.X[:,self._conditioning] < var_right)
+                    cluster_ = self.X[mask]
+                    if cluster_.shape[0] < self.__multiBatchSize:
+                        multiMiniX = np.concatenate((multiMiniX, cluster_), axis=0)
+                        var_left += delta_step
+                        counter+=1
+                    else:
+                        np.random.shuffle(cluster_)
+                        multiMiniX = np.concatenate((multiMiniX, cluster_[:self.__multiBatchSize,:]), axis=0)
+                        if multiMiniX.shape[0] < self._dimensions and counter == self.__k:
+                            delta = self._dimensions - multiMiniX.shape[0]
+                            multiMiniX= np.concatenate((multiMiniX, cluster_[(self.__multiBatchSize+1):(self.__multiBatchSize+1+delta),:]), axis=0)
+                        var_left += delta_step
+                        counter+=1
+                #Clustering sampling step: build miniX from multiMiniX via miniBatchKMeans
+                from sklearn.cluster import MiniBatchKMeans
+                multiMiniX_tilde = center_scale(multiMiniX, center(multiMiniX,'mean'), scale(multiMiniX, 'auto'))
+                multiK = int(self.__k / 2)
+                kmeans = MiniBatchKMeans(n_clusters=multiK,random_state=0, batch_size=self.__batchSize, max_iter=10).fit(multiMiniX_tilde)
+                id = kmeans.labels_
+                miniX = multiMiniX[1:3,:]
+                for ii in range(0, max(id)+1):
+                    cluster_ = get_cluster(multiMiniX, id, ii)
+                    if cluster_.shape[0] < self.__batchSize:
+                        miniX = np.concatenate((miniX, cluster_), axis=0)
+                    else:
+                        np.random.shuffle(cluster_)
+                        miniX = np.concatenate((miniX, cluster_[:self.__batchSize,:]), axis=0)
+                        if miniX.shape[0] < self._dimensions and ii == max(id):
+                            delta = self._dimensions - miniX.shape[0]
+                            miniX= np.concatenate((miniX, cluster_[(self.__batchSize+1):(self.__batchSize+1+delta),:]), axis=0)
+
+            #TO DO:
+            #add exceptions
+            return miniX
 
 
-if __name__ =='__main__':
 
-    import numpy as np
-    import matplotlib
-    import matplotlib.pyplot as plt
-
-    from utilities import *
-
-
+def main():
 
     file_options = {
         "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data",
@@ -686,7 +852,7 @@ if __name__ =='__main__':
 
 
     model.set_PCs_method = False
-    model.set_PCs()                                        # OK     
+    model.set_PCs()                                        # OK
     model.get_explained()                                  # OK
     model.set_num_to_plot = 5
     model.plot_PCs()                                       # OK
@@ -711,7 +877,7 @@ if __name__ =='__main__':
     local_model.plot_PCs()
 
     ##### VARIABLES SELECTION #####
-  
+
     Procustes = variables_selection(X)
 
     Procustes.path_to_labels = file_options["path_to_file"]
@@ -722,3 +888,29 @@ if __name__ =='__main__':
     print(retained_variables)
 
     print("done")
+
+
+def main_sample_dataset():
+
+        file_options = {
+            "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data",
+            "input_file_name"           : "cfdf.csv",
+        }
+
+
+        X = readCSV(file_options["path_to_file"], file_options["input_file_name"])
+        yo = SamplePopulation(X)
+        yo.set_size = 3000
+        yo.sampling_strategy = 'miniK'
+        miniX = yo.fit()
+        print("Training matrix sampled. New size: {}x{}".format(miniX.shape[0],miniX.shape[1]))
+        print("\tOriginal size: {}x{}".format(X.shape[0],X.shape[1]))
+        print(miniX)
+        print("END")
+
+
+
+
+
+if __name__ =='__main__':
+    main_sample_dataset()
