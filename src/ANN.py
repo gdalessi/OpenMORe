@@ -1,7 +1,7 @@
 '''
 MODULE: ANN.py
 
-@Author: 
+@Author:
     G. D'Alessio [1,2]
     [1]: Université Libre de Bruxelles, Aero-Thermo-Mechanics Laboratory, Bruxelles, Belgium
     [2]: CRECK Modeling Lab, Department of Chemistry, Materials and Chemical Engineering, Politecnico di Milano
@@ -16,7 +16,7 @@ MODULE: ANN.py
     3) ANN for regression tasks.
 
 @Additional notes:
-    This code is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+    This code is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
     Please report any bug to: giuseppe.dalessio@ulb.ac.be
 
 '''
@@ -26,10 +26,10 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from tensorflow.python.keras.models import Sequential
 from tensorflow.python.keras.layers import Dense
-import os 
+import os
 import os.path
-from keras.callbacks import EarlyStopping 
-from keras.callbacks import ModelCheckpoint 
+from keras.callbacks import EarlyStopping
+from keras.callbacks import ModelCheckpoint
 from keras.layers import LeakyReLU
 
 from utilities import *
@@ -46,27 +46,28 @@ class Architecture:
         self._n_neurons = 2
         self._layers = 1
         self._dropout = 0
-        
+        self._patience = 10
+
         self.save_txt = True
 
-    
+
     @property
     def neurons(self):
         return self._n_neurons
-    
+
     @neurons.setter
     @accepts(object, int)
     def neurons(self, new_number):
         self._n_neurons = new_number
-        
+
         if self._n_neurons <= 0:
             raise Exception("The number of neurons in the hidden layer must be a positive integer. Exiting..")
             exit()
-        
+
     @property
     def layers(self):
         return self._layers
-    
+
     @layers.setter
     @accepts(object, int)
     def layers(self, new_number_layers):
@@ -79,7 +80,7 @@ class Architecture:
     @property
     def activation(self):
         return self._activation
-    
+
     @activation.setter
     def activation(self, new_activation):
         if new_activation == 'leaky_relu':
@@ -92,7 +93,7 @@ class Architecture:
     @property
     def batch_size(self):
         return self._batch_size
-    
+
     @batch_size.setter
     @accepts(object, int)
     def batch_size(self, new_batchsize):
@@ -105,7 +106,7 @@ class Architecture:
     @property
     def n_epochs(self):
         return self._n_epochs
-    
+
     @n_epochs.setter
     @accepts(object, int)
     def n_epochs(self, new_epochs):
@@ -118,7 +119,7 @@ class Architecture:
     @property
     def dropout(self):
         return self._dropout
-    
+
     @dropout.setter
     @accepts(object, float)
     def dropout(self, new_value):
@@ -131,7 +132,19 @@ class Architecture:
             raise Exception("The dropout percentage must be lower than 1. Exiting..")
             exit()
 
-    
+    @property
+    def patience(self):
+        return self._patience
+
+    @patience.setter
+    @accepts(object, float)
+    def patience(self, new_value):
+        self._patience = new_value
+
+        if self._patience < 0:
+            raise Exception("Patience for early stopping must be a positive integer. Exiting..")
+            exit()
+
     @staticmethod
     def set_environment():
         '''
@@ -141,7 +154,7 @@ class Architecture:
         import datetime
         import sys
         import os
-        
+
         now = datetime.datetime.now()
         newDirName = "Train MLP class - " + now.strftime("%Y_%m_%d-%H%M")
 
@@ -185,7 +198,6 @@ class classifier(Architecture):
         self.__path = os.getcwd()
         self.__monitor_early_stop= 'val_loss'
         self.__optimizer= 'adam'
-        self.__patience= 5
         self.__loss_classification= 'categorical_crossentropy'
         self.__metrics_classification= 'accuracy'
 
@@ -200,7 +212,7 @@ class classifier(Architecture):
             for jj in range(0,k):
                 if idx[ii] == jj:
                     labels[ii,jj] = 1
-        
+
         return labels
 
 
@@ -227,14 +239,14 @@ class classifier(Architecture):
             classifier.add(Dropout(self._dropout))
             print("Dropping out some neurons...")
         while counter < self._layers:
-            classifier.add(Dense(self._n_neurons, activation=self._activation)) 
+            classifier.add(Dense(self._n_neurons, activation=self._activation))
             if self._dropout != 0:
                 classifier.add(Dropout(self._dropout))
             counter +=1
         classifier.add(Dense(number_of_classes, activation=self.__activation_output, kernel_initializer='random_normal'))
         classifier.summary()
 
-        earlyStopping = EarlyStopping(monitor=self.__monitor_early_stop, patience=self.__patience, verbose=1, mode='min')
+        earlyStopping = EarlyStopping(monitor=self.__monitor_early_stop, patience=self._patience, verbose=1, mode='min')
         mcp_save = ModelCheckpoint(filepath=self.__path + '/best_weights.h5', verbose=1, save_best_only=True, monitor=self.__monitor_early_stop, mode='min')
 
         classifier.compile(optimizer =self.__optimizer,loss=self.__loss_classification, metrics =[self.__metrics_classification])
@@ -273,7 +285,7 @@ class classifier(Architecture):
                 np.savetxt(name_biases, layer_biases)
 
                 counter_saver +=1
-        
+
         test = classifier.predict(self.X)
         return test
 
@@ -285,7 +297,7 @@ class regressor(Architecture):
 
         super().__init__(self.X, self.Y)
 
-       
+
     def __set_hard_parameters(self):
         '''
         --- PRIVATE ---
@@ -296,7 +308,6 @@ class regressor(Architecture):
         self.__path = os.getcwd()
         self.__monitor_early_stop= 'mean_squared_error'
         self.__optimizer= 'adam'
-        self.__patience= 5
         self.__loss_function= 'mean_squared_error'
         self.__metrics= 'mse'
 
@@ -314,19 +325,19 @@ class regressor(Architecture):
         counter = 1
 
         model = Sequential()
-        model.add(Dense(self._n_neurons, input_dim=input_dimension, kernel_initializer='normal', activation=self._activation)) 
+        model.add(Dense(self._n_neurons, input_dim=input_dimension, kernel_initializer='normal', activation=self._activation))
         if self._dropout != 0:
             from tensorflow.python.keras.layers import Dropout
             model.add(Dropout(self._dropout))
             print("Dropping out some neurons...")
         while counter < self._layers:
-            model.add(Dense(self._n_neurons, activation=self._activation)) 
+            model.add(Dense(self._n_neurons, activation=self._activation))
             model.add(Dropout(self._dropout))
             counter +=1
         model.add(Dense(output_dimension, activation=self.__activation_output))
         model.summary()
 
-        earlyStopping = EarlyStopping(monitor=self.__monitor_early_stop, patience=self.__patience, verbose=0, mode='min')
+        earlyStopping = EarlyStopping(monitor=self.__monitor_early_stop, patience=self._patience, verbose=0, mode='min')
         mcp_save = ModelCheckpoint(filepath=self.__path+ '/best_weights2c.h5', verbose=1, save_best_only=True, monitor=self.__monitor_early_stop, mode='min')
         model.compile(loss=self.__loss_function, optimizer=self.__optimizer, metrics=[self.__metrics])
         history = model.fit(X_train, y_train, batch_size=self._batch_size, epochs=self._n_epochs, verbose=1, validation_data=(X_test, y_test), callbacks=[earlyStopping, mcp_save])
@@ -364,7 +375,7 @@ class regressor(Architecture):
 class Autoencoder:
     def __init__(self, X):
         self.X = X
-        
+
         self._n_neurons = 1
         self._activation = 'relu'
         self._batch_size = 64
@@ -373,7 +384,7 @@ class Autoencoder:
     @property
     def neurons(self):
         return self._n_neurons
-    
+
     @neurons.setter
     @accepts(object, int)
     def neurons(self, new_number):
@@ -389,7 +400,7 @@ class Autoencoder:
     @property
     def activation(self):
         return self._activation
-    
+
     @activation.setter
     def activation(self, new_activation):
         if new_activation == 'leaky_relu':
@@ -402,7 +413,7 @@ class Autoencoder:
     @property
     def batch_size(self):
         return self._batch_size
-    
+
     @batch_size.setter
     @accepts(object, int)
     def batch_size(self, new_batchsize):
@@ -415,7 +426,7 @@ class Autoencoder:
     @property
     def n_epochs(self):
         return self._n_epochs
-    
+
     @n_epochs.setter
     @accepts(object, int)
     def n_epochs(self, new_epochs):
@@ -424,6 +435,15 @@ class Autoencoder:
         if self._n_epochs <= 0:
             raise Exception("The number of epochs must be a positive integer. Exiting..")
             exit()
+
+    @property
+    def patience(self):
+        return self._patience
+
+    @patience.setter
+    @accepts(object, float)
+    def patience(self, new_value):
+        self._patience = new_value
 
 
     def __set_hard_parameters(self):
@@ -436,7 +456,7 @@ class Autoencoder:
         self.__path = os.getcwd()
         self.__monitor_early_stop= 'val_loss'
         self.__optimizer= 'adam'
-        self.__patience= 5
+
         self.__loss_function= 'mse'
         self.__metrics= 'accuracy'
 
@@ -450,10 +470,10 @@ class Autoencoder:
         import datetime
         import sys
         import os
-        
+
         now = datetime.datetime.now()
         newDirName = "Train Autoencoder - " + now.strftime("%Y_%m_%d-%H%M")
-        
+
         try:
             os.mkdir(newDirName)
             os.chdir(newDirName)
@@ -474,24 +494,24 @@ class Autoencoder:
         activation_used = text_file.write("The activation function which was used was: "+ activation_specification + ". \n")
         text_file.close()
 
-    
+
     def fit(self):
         from keras.layers import Input, Dense
         from keras.models import Model
 
         Autoencoder.set_environment()
         Autoencoder.write_recap_text(self._n_neurons, self._batch_size, self._activation)
-        
+
         input_dimension = self.X.shape[1]
         X_train, X_test, y_train, y_test = train_test_split(self.X, self.X, test_size=0.3)
-        
+
 
         self.__set_hard_parameters()
 
         input_data = Input(shape=(input_dimension,))
         encoded = Dense(self._n_neurons, activation=self._activation)(input_data)
         decoded = Dense(input_dimension, activation=self.__activation_output)(encoded)
-        
+
         autoencoder = Model(input_data, decoded)
 
         encoder = Model(input_data, encoded)
@@ -501,7 +521,7 @@ class Autoencoder:
 
         autoencoder.compile(optimizer=self.__optimizer, loss=self.__loss_function)
 
-        earlyStopping = EarlyStopping(monitor=self.__monitor_early_stop, patience=self.__patience, verbose=1, mode='min')
+        earlyStopping = EarlyStopping(monitor=self.__monitor_early_stop, patience=self._patience, verbose=1, mode='min')
         history = autoencoder.fit(X_train, X_train, validation_data=(X_test, X_test), epochs=self._n_epochs, batch_size=self._batch_size, shuffle=True, callbacks=[earlyStopping])
 
         plt.plot(history.history['loss'])
@@ -528,7 +548,7 @@ class Autoencoder:
 
 
 if __name__ == '__main__':
-    
+
     import numpy as np
     import matplotlib
     import matplotlib.pyplot as plt
@@ -539,7 +559,7 @@ if __name__ == '__main__':
     file_options = {
         "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data",
         "input_file_name"           : "CF_pasr_Z.csv",
-        "output_file_name"          : "idx_CFP.csv" 
+        "output_file_name"          : "idx_CFP.csv"
     }
 
     training_options = {
@@ -553,9 +573,9 @@ if __name__ == '__main__':
     X = readCSV(file_options["path_to_file"], file_options["input_file_name"])
     Y = readCSV(file_options["path_to_file"], file_options["output_file_name"])
 
-    
+
     ### CLASSIFICATION ###                                                      --> RUNNING, OK -- TO TEST
-    
+
     model = ANN.classifier(X,Y)
 
     model.neurons = training_options["number_of_neurons"]
@@ -566,8 +586,8 @@ if __name__ == '__main__':
     model.dropout = 0.2
 
     index = model.fit_network()
-    
-    
+
+
 
     ### REGRESSION ###                                                          --> RUNNING, OK -- TO TEST
     '''
@@ -582,7 +602,7 @@ if __name__ == '__main__':
 
     yo = model.fit_network()
     '''
-    
+
 
     ### DIMENSIONALITY REDUCTION ###                                            --> RUNNING, OK -- TO TEST
     '''

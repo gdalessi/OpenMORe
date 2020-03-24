@@ -823,8 +823,6 @@ class SamplePopulation():
                             delta = self._dimensions - miniX.shape[0]
                             miniX= np.concatenate((miniX, cluster_[(self.__batchSize+1):(self.__batchSize+1+delta),:]), axis=0)
 
-            #TO DO:
-            #add exceptions
             return miniX
 
 
