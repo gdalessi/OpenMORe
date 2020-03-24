@@ -25,12 +25,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from tensorflow.python.keras.models import Sequential
-from tensorflow.python.keras.layers import Dense
+from tensorflow.python.keras.layers import Dense, BatchNormalization, Dropout
 import os
 import os.path
 from keras.callbacks import EarlyStopping
 from keras.callbacks import ModelCheckpoint
 from keras.layers import LeakyReLU
+
 
 from utilities import *
 
@@ -47,6 +48,7 @@ class Architecture:
         self._layers = 1
         self._dropout = 0
         self._patience = 10
+        self._batchNormalization = False
 
         self.save_txt = True
 
@@ -121,7 +123,6 @@ class Architecture:
         return self._dropout
 
     @dropout.setter
-    @accepts(object, float)
     def dropout(self, new_value):
         self._dropout = new_value
 
@@ -137,13 +138,23 @@ class Architecture:
         return self._patience
 
     @patience.setter
-    @accepts(object, float)
+    @accepts(object, int)
     def patience(self, new_value):
         self._patience = new_value
 
         if self._patience < 0:
             raise Exception("Patience for early stopping must be a positive integer. Exiting..")
             exit()
+
+    @property
+    def batchNormalization(self):
+        return self._batchNormalization
+
+    @batchNormalization.setter
+    @accepts(object, bool)
+    def batchNormalization(self, new_bool):
+        self._batchNormalization = new_bool
+
 
     @staticmethod
     def set_environment():
@@ -235,7 +246,6 @@ class classifier(Architecture):
         classifier = Sequential()
         classifier.add(Dense(self._n_neurons, activation=self._activation, kernel_initializer='random_normal', input_dim=input_dimension))
         if self._dropout != 0:
-            from tensorflow.python.keras.layers import Dropout
             classifier.add(Dropout(self._dropout))
             print("Dropping out some neurons...")
         while counter < self._layers:
@@ -330,9 +340,11 @@ class regressor(Architecture):
             from tensorflow.python.keras.layers import Dropout
             model.add(Dropout(self._dropout))
             print("Dropping out some neurons...")
+        if self._batchNormalization:
+            print("Normalization added!")
+            model.add(BatchNormalization())
         while counter < self._layers:
             model.add(Dense(self._n_neurons, activation=self._activation))
-            model.add(Dropout(self._dropout))
             counter +=1
         model.add(Dense(output_dimension, activation=self.__activation_output))
         model.summary()
@@ -545,16 +557,7 @@ class Autoencoder:
             np.savetxt(self.__path + 'Encoded_matrix.txt', encoded_X)
 
 
-
-
-if __name__ == '__main__':
-
-    import numpy as np
-    import matplotlib
-    import matplotlib.pyplot as plt
-
-    from utilities import *
-    import ANN
+def main():
 
     file_options = {
         "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data",
@@ -575,8 +578,8 @@ if __name__ == '__main__':
 
 
     ### CLASSIFICATION ###                                                      --> RUNNING, OK -- TO TEST
-
-    model = ANN.classifier(X,Y)
+    '''
+    model = classifier(X,Y)
 
     model.neurons = training_options["number_of_neurons"]
     model.layers = training_options["number_of_layers"]
@@ -585,28 +588,30 @@ if __name__ == '__main__':
     model.batch_size = training_options["batch_size"]
     model.dropout = 0.2
 
-    index = model.fit_network()
 
+    index = model.fit_network()
+    '''
 
 
     ### REGRESSION ###                                                          --> RUNNING, OK -- TO TEST
-    '''
-    model = ANN.regressor(X,Y)
+
+    model = regressor(X,Y)
 
     model.neurons = training_options["number_of_neurons"]
     model.layers = training_options["number_of_layers"]
     model.activation_function = training_options["activation_function"]
     model.n_epochs = training_options["number_of_epochs"]
     model.batch_size = training_options["batch_size"]
-    model.dropout = 0.2
+    model.dropout = 0
+    model.batchNormalization = True
 
     yo = model.fit_network()
-    '''
+
 
 
     ### DIMENSIONALITY REDUCTION ###                                            --> RUNNING, OK -- TO TEST
     '''
-    model = ANN.Autoencoder(X)
+    model = Autoencoder(X)
 
     model.neurons = training_options["number_of_neurons"]
     model.activation = training_options["activation_function"]
@@ -615,3 +620,10 @@ if __name__ == '__main__':
 
     model.fit()
     '''
+
+
+
+
+
+if __name__ == '__main__':
+    main()
