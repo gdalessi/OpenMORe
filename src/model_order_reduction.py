@@ -28,6 +28,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 from utilities import *
+import clustering
 
 class PCA:
     def __init__(self, X):
@@ -676,8 +677,8 @@ class SamplePopulation():
         self.X = X
         self.__nObs = self.X.shape[0]
         self.__nVar = self.X.shape[1]
-        #Choose the sampling strategy: random, cluster (miniK, LPCA), stratifed or multistage.
-        self._method = 'miniK'
+        #Choose the sampling strategy: random, cluster (KMeans, LPCA), stratifed or multistage.
+        self._method = 'KMeans'
         #Choose the dimensions of the sampled dataset.
         self._dimensions = 1
         #Predefined number of clusters, if 'cluster', 'stratified' or 'multistage' are chosen
@@ -718,27 +719,34 @@ class SamplePopulation():
                 #Randomly shuffle the observations and take the prescribed number
                 np.random.shuffle(self.X)
                 miniX = self.X[:self.__batchSize,:]
-            elif self._method == 'miniK':
-                #Perform miniBatchKMeans and take (randomly) from each cluster a certain batch to form the sampled matrix
-                from sklearn.cluster import MiniBatchKMeans
-                kmeans = MiniBatchKMeans(n_clusters=self.__k,random_state=0, batch_size=self.__batchSize, max_iter=10).fit(self.X_tilde)
-                id = kmeans.labels_
+            elif self._method == 'KMeans':
+                #Perform KMeans and take (randomly) from each cluster a certain
+                #batch to form the sampled matrix.
+                model_KM = clustering.KMeans(self.X_tilde)
+                model_KM.clusters = self.__k
+                model_KM.initMode = True
+                id = model_KM.fit()
                 miniX = self.X[1:3,:]
                 for ii in range(0, max(id)+1):
                     cluster_ = get_cluster(self.X, id, ii)
+                    #If the cluster contains less observation than the batch
+                    #size, then take all the clusters' observations.
                     if cluster_.shape[0] < self.__batchSize:
                         miniX = np.concatenate((miniX, cluster_), axis=0)
                     else:
+                        #Otherwise, shuffle the cluster and take the first
+                        #batchsize observations.
                         np.random.shuffle(cluster_)
                         miniX = np.concatenate((miniX, cluster_[:self.__batchSize,:]), axis=0)
                         if miniX.shape[0] < self._dimensions and ii == max(id):
                             delta = self._dimensions - miniX.shape[0]
                             miniX= np.concatenate((miniX, cluster_[(self.__batchSize+1):(self.__batchSize+1+delta),:]), axis=0)
             elif self._method == 'LPCA':
-                #Do the exact same thing done in miniK, but using the LPCA clustering algorithm
-                import clustering
-                import model_order_reduction
-                global_model = model_order_reduction.PCA(self.X)
+                #Do the exact same thing done in KMeans, but using the LPCA
+                #clustering algorithm. The number of PCs is automatically
+                #assessed via explained variance. The number of LPCs is chosen
+                #as LPCs = PCs/2
+                global_model = PCA(self.X)
                 optimalPCs = global_model.set_PCs()
                 model = clustering.lpca(self.X_tilde)
                 model.clusters = self.__k
@@ -756,18 +764,25 @@ class SamplePopulation():
                             delta = self._dimensions - miniX.shape[0]
                             miniX= np.concatenate((miniX, cluster_[(self.__batchSize+1):(self.__batchSize+1+delta),:]), axis=0)
             elif self._method == 'stratified':
-                #Condition the dataset dividing the interval of one variable in 'k' bins
-                #and sample from each bin. The default variable is '0'.
+                #Condition the dataset dividing the interval of one variable in
+                #'k' bins and sample from each bin. The default variable to
+                #condition with is '0'. This setting must be eventually modified
+                #via setter.
                 min_con = np.min(self.X[:,self._conditioning])
                 max_con = np.max(self.X[:,self._conditioning])
+                #Compute the extension of each bin (delta_step)
                 delta_step = int((max_con - min_con) / self.__k)
                 counter = 0
                 var_left = min_con
                 miniX = self.X[1:3,:]
                 while counter <= self.__k:
+                    #Compute the two extremes, and take all the observations in
+                    #the dataset which lie in the interval.
                     var_right = var_left + delta_step
                     mask = np.logical_and(self.X[:,self._conditioning] >= var_left, self.X[:,self._conditioning] < var_right)
                     cluster_ = X[mask]
+                    #Also in this case, if the cluster size is lower than the
+                    #batch size, take all the cluster.
                     if cluster_.shape[0] < self.__batchSize:
                         miniX = np.concatenate((miniX, cluster_), axis=0)
                         var_left += delta_step
@@ -781,7 +796,10 @@ class SamplePopulation():
                         var_left += delta_step
                         counter+=1
             elif self._method == 'multistage':
-                #Stratified sampling step: build multiMiniX from X conditioning
+                #Stratified sampling step: build multiMiniX from X conditioning,
+                #and after that cluster to have a further reduction in the
+                #dataset' size. The condition is done with k = 32, while the
+                #clustering takes k = 16
                 self.__multiBatchSize = 2*self.__batchSize
                 min_con = np.min(self.X[:,self._conditioning])
                 max_con = np.max(self.X[:,self._conditioning])
@@ -805,13 +823,13 @@ class SamplePopulation():
                             multiMiniX= np.concatenate((multiMiniX, cluster_[(self.__multiBatchSize+1):(self.__multiBatchSize+1+delta),:]), axis=0)
                         var_left += delta_step
                         counter+=1
-                #Clustering sampling step: build miniX from multiMiniX via miniBatchKMeans
-                from sklearn.cluster import MiniBatchKMeans
+                #Clustering sampling step: build miniX from multiMiniX via KMeans
                 multiMiniX_tilde = center_scale(multiMiniX, center(multiMiniX,'mean'), scale(multiMiniX, 'auto'))
                 multiK = int(self.__k / 2)
-                kmeans = MiniBatchKMeans(n_clusters=multiK,random_state=0, batch_size=self.__batchSize, max_iter=10).fit(multiMiniX_tilde)
-                id = kmeans.labels_
-                miniX = multiMiniX[1:3,:]
+                model_KM = clustering.KMeans(multiMiniX_tilde)
+                model_KM.clusters = self.__k
+                model_KM.initMode = True
+                id = model_KM.fit()
                 for ii in range(0, max(id)+1):
                     cluster_ = get_cluster(multiMiniX, id, ii)
                     if cluster_.shape[0] < self.__batchSize:
@@ -899,7 +917,7 @@ def main_sample_dataset():
         X = readCSV(file_options["path_to_file"], file_options["input_file_name"])
         yo = SamplePopulation(X)
         yo.set_size = 3000
-        yo.sampling_strategy = 'miniK'
+        yo.sampling_strategy = 'KMeans'
         miniX = yo.fit()
         print("Training matrix sampled. New size: {}x{}".format(miniX.shape[0],miniX.shape[1]))
         print("\tOriginal size: {}x{}".format(X.shape[0],X.shape[1]))
