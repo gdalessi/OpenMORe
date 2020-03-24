@@ -44,40 +44,12 @@ class Architecture:
         self._activation = 'relu'
         self._batch_size = 64
         self._n_epochs = 1000
-        self._n_neurons = 2
-        self._layers = 1
+        self._getNeurons = [1, 1]
         self._dropout = 0
         self._patience = 10
         self._batchNormalization = False
 
         self.save_txt = True
-
-
-    @property
-    def neurons(self):
-        return self._n_neurons
-
-    @neurons.setter
-    @accepts(object, int)
-    def neurons(self, new_number):
-        self._n_neurons = new_number
-
-        if self._n_neurons <= 0:
-            raise Exception("The number of neurons in the hidden layer must be a positive integer. Exiting..")
-            exit()
-
-    @property
-    def layers(self):
-        return self._layers
-
-    @layers.setter
-    @accepts(object, int)
-    def layers(self, new_number_layers):
-        self._layers = new_number_layers
-
-        if self._layers <= 0:
-            raise Exception("The number hidden layers must be a positive integer. Exiting..")
-            exit()
 
     @property
     def activation(self):
@@ -155,6 +127,14 @@ class Architecture:
     def batchNormalization(self, new_bool):
         self._batchNormalization = new_bool
 
+    @property
+    def getNeurons(self):
+        return self._getNeurons
+
+    @getNeurons.setter
+    def getNeurons(self, new_vector):
+        self._getNeurons = new_vector
+
 
     @staticmethod
     def set_environment():
@@ -177,7 +157,7 @@ class Architecture:
 
 
     @staticmethod
-    def write_recap_text(neuro_number, lay_number, number_batches, activation_specification):
+    def write_recap_text(neuro_number, number_batches, activation_specification):
         '''
         This function writes a txt with all the hyperparameters
         recaped, to not forget the settings if several trainings are
@@ -185,7 +165,6 @@ class Architecture:
         '''
         text_file = open("recap_training.txt", "wt")
         neurons_number = text_file.write("The number of neurons in the implemented architecture is equal to: {} \n".format(neuro_number))
-        layers_number = text_file.write("The number of hidden layers in the implemented architecture is equal to: {} \n".format(lay_number))
         batches_number = text_file.write("The batch size is equal to: {} \n".format(number_batches))
         activation_used = text_file.write("The activation function which was used was: "+ activation_specification + ". \n")
         text_file.close()
@@ -234,22 +213,25 @@ class classifier(Architecture):
             self.Y = MLP_classifier.idx_to_labels(self.Y)
 
         Architecture.set_environment()
-        Architecture.write_recap_text(self._n_neurons, self._layers, self._batch_size, self._activation)
+        Architecture.write_recap_text(self._getNeurons, self._batch_size, self._activation)
 
         X_train, X_test, y_train, y_test = train_test_split(self.X, self.Y, test_size=0.3)
         input_dimension = self.X.shape[1]
         number_of_classes = self.Y.shape[1]
         self.__set_hard_parameters()
 
-        counter = 1
+        self._layers = len(self._getNeurons)
+
+        counter = 0
 
         classifier = Sequential()
-        classifier.add(Dense(self._n_neurons, activation=self._activation, kernel_initializer='random_normal', input_dim=input_dimension))
+        classifier.add(Dense(self._getNeurons[counter], activation=self._activation, kernel_initializer='random_normal', input_dim=input_dimension))
+        counter += 1
         if self._dropout != 0:
             classifier.add(Dropout(self._dropout))
             print("Dropping out some neurons...")
         while counter < self._layers:
-            classifier.add(Dense(self._n_neurons, activation=self._activation))
+            classifier.add(Dense(self._getNeurons[counter], activation=self._activation))
             if self._dropout != 0:
                 classifier.add(Dropout(self._dropout))
             counter +=1
@@ -297,6 +279,7 @@ class classifier(Architecture):
                 counter_saver +=1
 
         test = classifier.predict(self.X)
+
         return test
 
 
@@ -307,6 +290,16 @@ class regressor(Architecture):
 
         super().__init__(self.X, self.Y)
 
+        self._activation_output = 'linear'
+
+    @property
+    def activationOutput(self):
+        return self._activationOutput
+
+    @activationOutput.setter
+    def activationOutput(self, new_string):
+        self._activationOutput = new_string
+
 
     def __set_hard_parameters(self):
         '''
@@ -314,7 +307,6 @@ class regressor(Architecture):
         This function sets all the parameters for the neural network which should not
         be changed during the tuning.
         '''
-        self.__activation_output = 'linear'
         self.__path = os.getcwd()
         self.__monitor_early_stop= 'mean_squared_error'
         self.__optimizer= 'adam'
@@ -327,32 +319,36 @@ class regressor(Architecture):
         output_dimension = self.Y.shape[1]
 
         Architecture.set_environment()
-        Architecture.write_recap_text(self._n_neurons, self._layers, self._batch_size, self._activation)
+        Architecture.write_recap_text(self._getNeurons, self._batch_size, self._activation)
         self.__set_hard_parameters()
 
-        X_train, X_test, y_train, y_test = train_test_split(self.X, self.Y, test_size=0.3)
+        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(self.X, self.Y, test_size=0.3)
 
-        counter = 1
+        self._layers = len(self._getNeurons)
 
-        model = Sequential()
-        model.add(Dense(self._n_neurons, input_dim=input_dimension, kernel_initializer='normal', activation=self._activation))
+        counter = 0
+
+
+        self.model = Sequential()
+        self.model.add(Dense(self._getNeurons[counter], input_dim=input_dimension, kernel_initializer='normal', activation=self._activation))
+        counter += 1
         if self._dropout != 0:
             from tensorflow.python.keras.layers import Dropout
-            model.add(Dropout(self._dropout))
+            self.model.add(Dropout(self._dropout))
             print("Dropping out some neurons...")
         if self._batchNormalization:
             print("Normalization added!")
-            model.add(BatchNormalization())
+            self.model.add(BatchNormalization())
         while counter < self._layers:
-            model.add(Dense(self._n_neurons, activation=self._activation))
+            self.model.add(Dense(self._getNeurons[counter], activation=self._activation))
             counter +=1
-        model.add(Dense(output_dimension, activation=self.__activation_output))
-        model.summary()
+        self.model.add(Dense(output_dimension, activation=self._activation_output))
+        self.model.summary()
 
         earlyStopping = EarlyStopping(monitor=self.__monitor_early_stop, patience=self._patience, verbose=0, mode='min')
         mcp_save = ModelCheckpoint(filepath=self.__path+ '/best_weights2c.h5', verbose=1, save_best_only=True, monitor=self.__monitor_early_stop, mode='min')
-        model.compile(loss=self.__loss_function, optimizer=self.__optimizer, metrics=[self.__metrics])
-        history = model.fit(X_train, y_train, batch_size=self._batch_size, epochs=self._n_epochs, verbose=1, validation_data=(X_test, y_test), callbacks=[earlyStopping, mcp_save])
+        self.model.compile(loss=self.__loss_function, optimizer=self.__optimizer, metrics=[self.__metrics])
+        history = self.model.fit(self.X_train, self.y_train, batch_size=self._batch_size, epochs=self._n_epochs, verbose=1, validation_data=(self.X_test, self.y_test), callbacks=[earlyStopping, mcp_save])
 
         plt.plot(history.history['loss'])
         plt.plot(history.history['val_loss'])
@@ -363,17 +359,17 @@ class regressor(Architecture):
         plt.savefig('loss_history.eps')
         plt.show()
 
-        model.load_weights(self.__path + '/best_weights2c.h5')
-
-        test = model.predict(self.X)
+        self.model.load_weights(self.__path + '/best_weights2c.h5')
 
         counter_saver = 0
+
+        test = self.model.predict(self.X)
 
         if self.save_txt:
 
             while counter_saver < self._layers:
-                layer_weights = classifier.layers[counter_saver].get_weights()[0]
-                layer_biases = classifier.layers[counter_saver].get_weights()[1]
+                layer_weights = self.model.layers[counter_saver].get_weights()[0]
+                layer_biases = self.model.layers[counter_saver].get_weights()[1]
                 name_weights = "Weights_HL{}.txt".format(counter_saver)
                 name_biases = "Biases_HL{}.txt".format(counter_saver)
                 np.savetxt(name_weights, layer_weights)
@@ -382,6 +378,12 @@ class regressor(Architecture):
                 counter_saver +=1
 
         return test
+
+    def predict(self):
+
+        prediction_test = self.model.predict(self.X_test)
+
+        return prediction_test, self.y_test
 
 
 class Autoencoder:
@@ -587,6 +589,7 @@ def main():
     model.n_epochs = training_options["number_of_epochs"]
     model.batch_size = training_options["batch_size"]
     model.dropout = 0.2
+    model.getNeurons = [10, 20, 30, 40]
 
 
     index = model.fit_network()
@@ -604,8 +607,15 @@ def main():
     model.batch_size = training_options["batch_size"]
     model.dropout = 0
     model.batchNormalization = True
+    model.activationOutput = 'softmax'
+    model.getNeurons = [10, 20, 30, 40]
+    model.patience = 3
 
     yo = model.fit_network()
+    predictedTest, trueTest = model.predict()
+
+    error = NRMSE(trueTarget, predictedTarget)
+    print(error)
 
 
 
