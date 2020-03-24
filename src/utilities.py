@@ -396,6 +396,30 @@ def scale(X, method, return_scaled_matrix=False):
             raise Exception("Unsupported scaling option. Please choose: AUTO, PARETO, VAST or RANGE.")
         return sig, X0
 
+def split_for_validation(X, validation_quota):
+    '''
+    Split the data into two matrices, one to train the model (X_train) and the
+    other to validate it.
+    - Input:
+    X = matrix to be split -- dim: (observations x variables)
+    validation_quota = percentage of observations to take as validation
+    - Output:
+    X_train = matrix to be used to train the reduced model 
+    X_test = matrix to be used to test the reduced model
+    '''
+
+    nObs = X.shape[0]
+    nVar = X.shape[1]
+
+    nTest = int(nObs * validation_quota)
+
+    np.random.shuffle(X)
+
+    X_test = X[:nTest,:]
+    X_train = X[nTest+1:,:]
+
+    return X_train, X_test
+
 
 def uncenter(X_tilde, mu):
     '''

@@ -682,7 +682,7 @@ class SamplePopulation():
         #Choose the dimensions of the sampled dataset.
         self._dimensions = 1
         #Predefined number of clusters, if 'cluster', 'stratified' or 'multistage' are chosen
-        self.__k = 64
+        self.__k = 32
         #Variable to use for the matrix conditioning in case of stratified sampling
         self._conditioning =0
 
@@ -780,7 +780,7 @@ class SamplePopulation():
                     #the dataset which lie in the interval.
                     var_right = var_left + delta_step
                     mask = np.logical_and(self.X[:,self._conditioning] >= var_left, self.X[:,self._conditioning] < var_right)
-                    cluster_ = X[mask]
+                    cluster_ = self.X[mask]
                     #Also in this case, if the cluster size is lower than the
                     #batch size, take all the cluster.
                     if cluster_.shape[0] < self.__batchSize:
@@ -826,6 +826,7 @@ class SamplePopulation():
                 #Clustering sampling step: build miniX from multiMiniX via KMeans
                 multiMiniX_tilde = center_scale(multiMiniX, center(multiMiniX,'mean'), scale(multiMiniX, 'auto'))
                 multiK = int(self.__k / 2)
+                miniX = self.X[1:3,:]
                 model_KM = clustering.KMeans(multiMiniX_tilde)
                 model_KM.clusters = self.__k
                 model_KM.initMode = True
@@ -917,14 +918,23 @@ def main_sample_dataset():
         X = readCSV(file_options["path_to_file"], file_options["input_file_name"])
         yo = SamplePopulation(X)
         yo.set_size = 3000
-        yo.sampling_strategy = 'KMeans'
+        yo.sampling_strategy = 'multistage'
         miniX = yo.fit()
         print("Training matrix sampled. New size: {}x{}".format(miniX.shape[0],miniX.shape[1]))
         print("\tOriginal size: {}x{}".format(X.shape[0],X.shape[1]))
         print(miniX)
-        print("END")
+    
+        import matplotlib
+        import matplotlib.pyplot as plt
 
+        fig = plt.figure()
+        axes = fig.add_axes([0.15,0.15,0.7,0.7], frameon=True)
+        axes.scatter(X[:,0], X[:,5], 1, color= 'k')
+        axes.scatter(miniX[:,0], miniX[:,5], 1, color= 'r')
 
+        axes.set_xlabel('T')
+        axes.set_ylabel('Y')
+        plt.show()
 
 
 
