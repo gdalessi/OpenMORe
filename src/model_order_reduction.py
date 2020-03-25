@@ -330,7 +330,7 @@ class PCA:
         #axes.set_title('Parity plot')
         plt.show()
 
-    def outlier_detection(self):
+    def outlier_removal(self):
         '''
         This function removes the multivariate outliers eventually contained
         in the training dataset, via PCA. In fact, examining the data projection
@@ -338,38 +338,41 @@ class PCA:
         from the manifold center, it is possible to identify the so-called
         leverage points. They are characterized by very high distance from the
         center of mass, once detected they can easily be removed.
-        Reference: Jolliffe pag 237 --- formula (10.1.2)
+        Additional info on outlier identification and removal can be found here:
+        Jolliffe pag 237 --- formula (10.1.2):
 
         dist^{2}_{2,i} = sum_{k=p-q+1}^{p}(z^{2}_{ik}/l_{k})
         where:
         p = number of variables
         q = number of required PCs
         i = index to count the observations
-        k = index to count the PCs 
+        k = index to count the PCs
 
         '''
         #Compute the PCA scores. Override the eventual number of PCs: ALL the
         #PCs are needed, as the outliers are given by the last PCs examination
-        model.eigens = X.shape[1]-1
+        input_eigens = self.eigens
+        self.eigens = self.X.shape[1]-1
         PCs, eigval = self.fit()
         scores = self.get_scores()
-
-        #Set now the number of PCs based on the explained variance
-        eig = self.set_PCs()
-
+        TOL = 1E-16
+        #put again the user-defined number of PCs
+        self.eigens = input_eigens
 
         scores_dist = np.empty((self.X.shape[0],), dtype=float)
         #For each observation, compute the distance from the center of the manifold
         for ii in range(0,self.X.shape[0]):
             t_sq = 0
             lam_j = 0
-            for jj in range(eig, scores.shape[1]):
+            for jj in range(input_eigens, scores.shape[1]):
                 t_sq += scores[ii,jj]**2
                 lam_j += eigval[jj]
-            scores_dist[ii] = np.sqrt(t_sq/lam_j)
+            scores_dist[ii] = np.sqrt(t_sq/(lam_j + TOL))
 
-        #Now compute the distance distribution, and delete the observation in the
-        #upper 3% (done in the while loop) to get the outlier-free matrix X_cleaned
+        #Now compute the distance distribution, and delete the observations in the
+        #upper 3% (done in the while loop) to get the outlier-free matrix X_cleaned.
+
+        #Divide the distance vector in 100 bins
         n_bins = 100
         min_interval = np.min(scores_dist)
         max_interval = np.max(scores_dist)
@@ -380,18 +383,21 @@ class PCA:
         bin = np.empty((len(scores_dist),))
         var_left = min_interval
 
+        #Find the observations in each bin (find the idx, where the classes are
+        #the different bins number)
         while counter <= n_bins:
             var_right = var_left + delta_step
             mask = np.logical_and(scores_dist >= var_left, scores_dist < var_right)
             bin[np.where(mask)] = counter
             counter += 1
             var_left += delta_step
-
+        #Find the idx >= 97 (corresponding to the largest distances) and delete
+        #the corresponding points from the training matrix, as they can be identified
+        #as outliers.
         cleanMask = np.where(bin >= 97)
         X_cleaned = np.delete(self.X, cleanMask, axis=0)
 
         return X_cleaned, bin
-
 
 
 class LPCA(PCA):
@@ -448,9 +454,9 @@ class LPCA(PCA):
         Leigen = list with the eigenvalues in each cluster -- dim: [k]
         centroids = list with the centroids in each cluster -- dim: [k]
         '''
-        self.idx = LPCA.get_idx(self.path_to_idx)
+        self.idx = self.get_idx(self.path_to_idx)
         self.k = int(max(self.idx) +1)
-        self.X_tilde = LPCA.preprocess_training(self.X, self.to_center, self.to_scale, self.centering, self.scaling)
+        self.X_tilde = self.preprocess_training(self.X, self.to_center, self.to_scale, self.centering, self.scaling)
 
 
         self.centroids = [None] *self.k
@@ -485,7 +491,7 @@ class LPCA(PCA):
 
 
         self.X_rec = np.empty(self.X.shape, dtype=float)
-        self.X_tilde = LPCA.preprocess_training(self.X, self.to_center, self.to_scale, self.centering, self.scaling)
+        self.X_tilde = self.preprocess_training(self.X, self.to_center, self.to_scale, self.centering, self.scaling)
 
         mu_global = center(self.X, self.centering)
         sigma_global = scale(self.X, self.scaling)
@@ -1011,7 +1017,7 @@ def main_out():
 
 
     model = PCA(X)
-    model.eigens = X.shape[1]-1
+    model.eigens = 15
 
     X_cleaned, bin = model.outlier_detection()
 
