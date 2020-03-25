@@ -391,13 +391,29 @@ class PCA:
             bin[np.where(mask)] = counter
             counter += 1
             var_left += delta_step
+
+        unique,counts=np.unique(bin,return_counts=True)
+        cumulativeDensity = 0
+        new_counter = 0
+
+        while cumulativeDensity < 0.98:
+            cumulative_ = counts[new_counter]/self.X.shape[0]
+            cumulativeDensity += cumulative_
+            new_counter += 1
+
+        print("MAX ID: {}".format(new_counter))
+
+        '''
         #Find the idx >= 97 (corresponding to the largest distances) and delete
         #the corresponding points from the training matrix, as they can be identified
         #as outliers.
         cleanMask = np.where(bin >= 97)
         X_cleaned = np.delete(self.X, cleanMask, axis=0)
+        '''
+        new_mask = np.where(bin > new_counter)
+        X_cleaned = np.delete(self.X, new_mask, axis=0)
 
-        return X_cleaned, bin
+        return X_cleaned, bin, new_mask
 
 
 class LPCA(PCA):
@@ -1008,7 +1024,7 @@ def main_sample_dataset():
 def main_out():
     file_options = {
         "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data",
-        "input_file_name"           : "concentrations.csv",
+        "input_file_name"           : "X_zc.csv",
     }
 
 
@@ -1017,13 +1033,11 @@ def main_out():
 
 
     model = PCA(X)
-    model.eigens = 15
+    model.eigens = 2
 
-    X_cleaned, bin = model.outlier_detection()
+    X_cleaned, bin, new_mask = model.outlier_removal()
 
-    unique,counts=np.unique(bin,return_counts=True)
-    print(counts)
-    print(unique)
+
     print("The training matrix dimensions with outliers are: {}x{}".format(X.shape[0], X.shape[1]))
     print("The training matrix dimensions without outliers are: {}x{}".format(X_cleaned.shape[0], X_cleaned.shape[1]))
 

@@ -585,20 +585,22 @@ def main():
     #X_tilde = center_scale(X, center(X, method=settings["centering_method"]), scale(X, method=settings["scaling_method"]))
 
     modelReduction = model_order_reduction.PCA(X)
-    nPCs = modelReduction.set_PCs()
-    modelReduction.eigens = nPCs
+    modelReduction.eigens = 2
 
-    X_cleaned, bin = modelReduction.outlier_detection()
+    X_cleaned, bin, new_mask = modelReduction.outlier_removal()
 
     unique,counts=np.unique(bin,return_counts=True)
     print(counts)
     print(unique)
+
+    Y_cleaned = np.delete(Y, new_mask, axis=0)
+
+
     print("The training matrix dimensions with outliers are: {}x{}".format(X.shape[0], X.shape[1]))
     print("The training matrix dimensions without outliers are: {}x{}".format(X_cleaned.shape[0], X_cleaned.shape[1]))
 
     X_tilde = center_scale(X_cleaned, center(X_cleaned, method=settings["centering_method"]), scale(X_cleaned, method=settings["scaling_method"]))
-    cleanMask = np.where(bin >= 97)
-    Y_cleaned = np.delete(Y, cleanMask, axis=0)
+
 
 
 
@@ -613,7 +615,7 @@ def main():
     model.batchNormalization = True
     model.activationOutput = 'softmax'
     model.getNeurons = [256, 512]
-    model.patience = 10
+    model.patience = 5
 
     yo = model.fit_network()
     predictedTest, trueTest = model.predict()
