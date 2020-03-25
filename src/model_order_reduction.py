@@ -330,6 +330,69 @@ class PCA:
         #axes.set_title('Parity plot')
         plt.show()
 
+    def outlier_detection(self):
+        '''
+        This function removes the multivariate outliers eventually contained
+        in the training dataset, via PCA. In fact, examining the data projection
+        on the PCA manifold (i.e., the scores), and measuring the score distance
+        from the manifold center, it is possible to identify the so-called
+        leverage points. They are characterized by very high distance from the
+        center of mass, once detected they can easily be removed.
+        Reference: Jolliffe pag 237 --- formula (10.1.2)
+
+        dist^{2}_{2,i} = sum_{k=p-q+1}^{p}(z^{2}_{ik}/l_{k})
+        where:
+        p = number of variables
+        q = number of required PCs
+        i = index to count the observations
+        k = index to count the PCs 
+
+        '''
+        #Compute the PCA scores. Override the eventual number of PCs: ALL the
+        #PCs are needed, as the outliers are given by the last PCs examination
+        model.eigens = X.shape[1]-1
+        PCs, eigval = self.fit()
+        scores = self.get_scores()
+
+        #Set now the number of PCs based on the explained variance
+        eig = self.set_PCs()
+
+
+        scores_dist = np.empty((self.X.shape[0],), dtype=float)
+        #For each observation, compute the distance from the center of the manifold
+        for ii in range(0,self.X.shape[0]):
+            t_sq = 0
+            lam_j = 0
+            for jj in range(eig, scores.shape[1]):
+                t_sq += scores[ii,jj]**2
+                lam_j += eigval[jj]
+            scores_dist[ii] = np.sqrt(t_sq/lam_j)
+
+        #Now compute the distance distribution, and delete the observation in the
+        #upper 3% (done in the while loop) to get the outlier-free matrix X_cleaned
+        n_bins = 100
+        min_interval = np.min(scores_dist)
+        max_interval = np.max(scores_dist)
+
+        delta_step = (max_interval - min_interval) / n_bins
+
+        counter = 0
+        bin = np.empty((len(scores_dist),))
+        var_left = min_interval
+
+        while counter <= n_bins:
+            var_right = var_left + delta_step
+            mask = np.logical_and(scores_dist >= var_left, scores_dist < var_right)
+            bin[np.where(mask)] = counter
+            counter += 1
+            var_left += delta_step
+
+        cleanMask = np.where(bin >= 97)
+        X_cleaned = np.delete(self.X, cleanMask, axis=0)
+
+        return X_cleaned, bin
+
+
 
 class LPCA(PCA):
     def __init__(self,X):
@@ -911,7 +974,7 @@ def main_sample_dataset():
 
         file_options = {
             "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data",
-            "input_file_name"           : "cfdf.csv",
+            "input_file_name"           : "f10A25.csv",
         }
 
 
@@ -923,20 +986,42 @@ def main_sample_dataset():
         print("Training matrix sampled. New size: {}x{}".format(miniX.shape[0],miniX.shape[1]))
         print("\tOriginal size: {}x{}".format(X.shape[0],X.shape[1]))
         print(miniX)
-    
+
         import matplotlib
         import matplotlib.pyplot as plt
 
         fig = plt.figure()
         axes = fig.add_axes([0.15,0.15,0.7,0.7], frameon=True)
-        axes.scatter(X[:,0], X[:,5], 1, color= 'k')
-        axes.scatter(miniX[:,0], miniX[:,5], 1, color= 'r')
+        axes.scatter(X[:,0], X[:,25], 1, color= 'k')
+        axes.scatter(miniX[:,0], miniX[:,25], 1, color= 'r')
 
         axes.set_xlabel('T')
         axes.set_ylabel('Y')
         plt.show()
 
+def main_out():
+    file_options = {
+        "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data",
+        "input_file_name"           : "concentrations.csv",
+    }
+
+
+
+    X = readCSV(file_options["path_to_file"], file_options["input_file_name"])
+
+
+    model = PCA(X)
+    model.eigens = X.shape[1]-1
+
+    X_cleaned, bin = model.outlier_detection()
+
+    unique,counts=np.unique(bin,return_counts=True)
+    print(counts)
+    print(unique)
+    print("The training matrix dimensions with outliers are: {}x{}".format(X.shape[0], X.shape[1]))
+    print("The training matrix dimensions without outliers are: {}x{}".format(X_cleaned.shape[0], X_cleaned.shape[1]))
+
 
 
 if __name__ =='__main__':
-    main_sample_dataset()
+    main_out()

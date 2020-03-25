@@ -34,6 +34,7 @@ from keras.layers import LeakyReLU
 
 
 from utilities import *
+import model_order_reduction
 
 
 class Architecture:
@@ -210,7 +211,7 @@ class classifier(Architecture):
 
         if self.Y.shape[1] == 1:        # check if the Y matrix is in the correct form
             print("Changing idx shape in the correct format: [n x k]..")
-            self.Y = MLP_classifier.idx_to_labels(self.Y)
+            self.Y = classifier.idx_to_labels(self.Y)
 
         Architecture.set_environment()
         Architecture.write_recap_text(self._getNeurons, self._batch_size, self._activation)
@@ -563,20 +564,71 @@ def main():
 
     file_options = {
         "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data",
-        "input_file_name"           : "CF_pasr_Z.csv",
-        "output_file_name"          : "idx_CFP.csv"
+        "input_file_name"           : "X_zc.csv",
+        "output_file_name"          : "Y_zc.csv"
     }
 
     training_options = {
-        "number_of_layers"          : 2,
-        "number_of_neurons"         : 50,
-        "batch_size"                : 32,
-        "activation_function"       : "relu",
+        "batch_size"                : 64,
+        "activation_function"       : "leaky_relu",
         "number_of_epochs"          : 200,
+    }
+
+    settings = {
+        "centering_method"          : "MEAN",
+        "scaling_method"            : "AUTO",
     }
 
     X = readCSV(file_options["path_to_file"], file_options["input_file_name"])
     Y = readCSV(file_options["path_to_file"], file_options["output_file_name"])
+
+    #X_tilde = center_scale(X, center(X, method=settings["centering_method"]), scale(X, method=settings["scaling_method"]))
+
+    modelReduction = model_order_reduction.PCA(X)
+    nPCs = modelReduction.set_PCs()
+    modelReduction.eigens = nPCs
+
+    X_cleaned, bin = modelReduction.outlier_detection()
+
+    unique,counts=np.unique(bin,return_counts=True)
+    print(counts)
+    print(unique)
+    print("The training matrix dimensions with outliers are: {}x{}".format(X.shape[0], X.shape[1]))
+    print("The training matrix dimensions without outliers are: {}x{}".format(X_cleaned.shape[0], X_cleaned.shape[1]))
+
+    X_tilde = center_scale(X_cleaned, center(X_cleaned, method=settings["centering_method"]), scale(X_cleaned, method=settings["scaling_method"]))
+    cleanMask = np.where(bin >= 97)
+    Y_cleaned = np.delete(Y, cleanMask, axis=0)
+
+
+
+    ### REGRESSION ###                                                          --> RUNNING, OK -- TO TEST
+
+    model = regressor(X_tilde,Y_cleaned)
+
+    model.activation_function = training_options["activation_function"]
+    model.n_epochs = training_options["number_of_epochs"]
+    model.batch_size = training_options["batch_size"]
+    model.dropout = 0
+    model.batchNormalization = True
+    model.activationOutput = 'softmax'
+    model.getNeurons = [256, 512]
+    model.patience = 10
+
+    yo = model.fit_network()
+    predictedTest, trueTest = model.predict()
+
+
+    a = plt.axes(aspect='equal')
+    plt.scatter(trueTest.flatten(), predictedTest.flatten())
+    plt.xlabel('Y_zc')
+    plt.ylabel('Y_pred')
+    lims = [np.min(trueTest), np.max(trueTest)]
+    plt.xlim(lims)
+    plt.ylim(lims)
+    _ = plt.plot(lims, lims, 'r')
+    plt.show()
+
 
 
     ### CLASSIFICATION ###                                                      --> RUNNING, OK -- TO TEST
@@ -594,28 +646,6 @@ def main():
 
     index = model.fit_network()
     '''
-
-
-    ### REGRESSION ###                                                          --> RUNNING, OK -- TO TEST
-
-    model = regressor(X,Y)
-
-    model.neurons = training_options["number_of_neurons"]
-    model.layers = training_options["number_of_layers"]
-    model.activation_function = training_options["activation_function"]
-    model.n_epochs = training_options["number_of_epochs"]
-    model.batch_size = training_options["batch_size"]
-    model.dropout = 0
-    model.batchNormalization = True
-    model.activationOutput = 'softmax'
-    model.getNeurons = [10, 20, 30, 40]
-    model.patience = 3
-
-    yo = model.fit_network()
-    predictedTest, trueTest = model.predict()
-
-    error = NRMSE(trueTarget, predictedTarget)
-    print(error)
 
 
 
