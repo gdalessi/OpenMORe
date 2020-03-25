@@ -180,7 +180,7 @@ class PCA:
         because the eigenvalues are also ordered in terms of magnitude.
         '''
         #Center and scale the original training dataset
-        self.X_tilde = PCA.preprocess_training(self.X, self._center, self._scale, self._centering, self._scaling)
+        self.X_tilde = self.preprocess_training(self.X, self._center, self._scale, self._centering, self._scaling)
 
         #Compute the covariance matrix
         C = np.cov(self.X_tilde, rowvar=False) #rowvar=False because the X matrix is (observations x variables)

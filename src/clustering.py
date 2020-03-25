@@ -366,6 +366,170 @@ class VQclassifier:
         return idx_classification
 
 
+class fpca:
+    '''
+    Supervised partitioning based on an a-priori conditioning (and subsequent dim reduction), by means
+    of a selected variable which is known to be important for the process. As it
+    is not an iterative algorithm, it allows for a faster clustering in comparison with
+    lpca via Vector Quantization, even if the choice of the optimal variable could constitute a
+    difficult task for some applications, as it requires prior knowledge on the process, and the choice must
+    be assessed case-by-case. For non-premixed, turbulent combustion applications, the
+    mixture fraction Z is an optimal variable for the data conditioning, leading to excellent
+    results both for data compression and interpretation tasks.
+
+    Input:
+    X = raw data matrix (observations x variables)
+    condVec = the vector to be used in the partitioning phase
+
+    '''
+    def __init__(self, X, condVec):
+        self.X = X
+        self.condVec = condVec
+
+        #Decide if the input matrix must be centered:
+        self._center = True
+        #Set the centering method:
+        self._centering = 'mean'                                                                    #'mean' or 'min' are available
+        #Decide if the input matrix must be scaled:
+        self._scale = True
+        #Set the scaling method:
+        self._scaling = 'auto'
+
+    @property
+    def clusters(self):
+        return self._k
+
+    @clusters.setter
+    @accepts(object, int)
+    def clusters(self, new_number):
+        self._k = new_number
+
+        if self._nPCs <= 0:
+            raise Exception("The number of clusters must be a positive integer. Exiting..")
+            exit()
+
+    @property
+    def eigens(self):
+        return self._nPCs
+
+    @eigens.setter
+    @accepts(object, int)
+    def eigens(self, new_value):
+        self._nPCs = new_value
+
+        if self._nPCs <= 0:
+            raise Exception("The number of Principal Components must be a positive integer. Exiting..")
+            exit()
+        elif self._nPCs >= self.n_var:
+            raise Exception("The number of PCs exceeds (or is equal to) the number of variables in the data-set. Exiting..")
+            exit()
+
+    @property
+    def to_center(self):
+        return self._center
+
+    @to_center.setter
+    @accepts(object, bool)
+    def to_center(self, new_bool):
+        self._center = new_bool
+
+
+    @property
+    def centering(self):
+        return self._centering
+
+    @centering.setter
+    @allowed_centering
+    def centering(self, new_string):
+        self._centering = new_string
+
+
+    @property
+    def to_scale(self):
+        return self._scale
+
+    @to_scale.setter
+    @accepts(object, bool)
+    def to_scale(self, new_bool):
+        self._scale = new_bool
+
+
+    @property
+    def scaling(self):
+        return self._scaling
+
+    @scaling.setter
+    @allowed_scaling
+    def scaling(self, new_string):
+        self._scaling = new_string
+
+    @staticmethod
+    def preprocess_training(X, centering_decision, scaling_decision, centering_method, scaling_method):
+
+        if centering_decision and scaling_decision:
+            mu, X_ = center(X, centering_method, True)
+            sigma, X_tilde = scale(X_, scaling_method, True)
+        elif centering_decision and not scaling_decision:
+            mu, X_tilde = center(X, centering_method, True)
+        elif scaling_decision and not centering_decision:
+            sigma, X_tilde = scale(X, scaling_method, True)
+        else:
+            X_tilde = X
+
+        return X_tilde
+
+
+    def condition(self):
+        '''
+        This function is used to partition the data matrix 'X' in 'k' different
+        bins, depending on the conditioning vector interval.
+        '''
+
+        self.X_tilde = self.preprocess_training(self.X, self._center, self._scale, self._centering, self._scaling)
+
+
+        min_interval = np.min(self.condVec)
+        max_interval = np.max(self.condVec)
+
+        delta_step = (max_interval - min_interval) / self._k
+
+        self.idx = 0
+        bin = np.empty((len(self.condVec),))
+        var_left = min_interval
+
+        #Find the observations in each bin (find the idx, where the classes are
+        #the different bins number)
+        while self.idx <= self._k:
+            var_right = var_left + delta_step
+            mask = np.logical_and(self.condVec >= var_left, self.condVec < var_right)
+            bin[np.where(mask)] = self.idx
+            self.idx += 1
+            var_left += delta_step
+
+        return self.idx
+
+
+    def fit(self):
+        '''
+        This function performs PCA in each bin, and then it returns the LPCs,
+        the local eigenvalues, the local scores and the centroids .
+        '''
+
+        for ii in range(0, self._k):
+            self.centroids = [None] *self._k
+            self.LPCs = [None] *self._k
+            self.u_scores = [None] *self._k
+            self.Leigen = [None] *self._k
+
+            for ii in range (0,self._k):
+                cluster = get_cluster(self.X_tilde, self.idx, ii)
+                self.centroids[ii], cluster_ = center(cluster, self._centering, True)
+                self.LPCs[ii], self.Leigen[ii] = PCA_fit(cluster_, self._nPCs)
+                self.u_scores[ii] = cluster_ @ self.LPCs[ii]
+
+            return self.LPCs, self.u_scores, self.Leigen, self.centroids
+
+
 class spectral:
     '''
     The spectral clustering algorithm is based on the following steps:
