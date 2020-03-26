@@ -331,6 +331,7 @@ class PCA:
         #axes.set_title('Parity plot')
         plt.show()
 
+    
     def outlier_removal_leverage(self):
         '''
         This function removes the multivariate outliers (leverage) eventually contained
@@ -474,8 +475,6 @@ class PCA:
         self.X = np.delete(self.X, new_mask, axis=0)
 
         return self.X, bin_id, new_mask
-
-        
 
 
 class LPCA(PCA):
@@ -717,6 +716,8 @@ class variables_selection(PCA):
 
         super().__init__(self.X)
 
+        self._method = 'B2' #'B2', 'B4', "Procustes"
+
 
     @property
     def retained(self):
@@ -748,6 +749,18 @@ class variables_selection(PCA):
     def labels_file_name(self, new_string):
         self._labels_name = new_string
 
+    @property
+    def method(self):
+        return self._method
+
+    @method.setter
+    def method(self, new_string):
+        self._method = new_string
+
+        if self._method.lower() != 'procustes' and self.method.lower() !='b2' and self.method.lower() != 'b4':
+            raise Exception("Variables selection method not supported: choose one between 'procustes', 'b2' and 'b4'. Exiting..")
+            exit()
+
 
     def load_labels(self):
         import pandas as pd
@@ -760,7 +773,7 @@ class variables_selection(PCA):
 
     @staticmethod
     def check_sanity_input(X, labels, retained):
-        print(labels)
+        #print(labels)
         if X.shape[1] != labels.shape[1]:
             print("Variables number: {}, Labels length: {}".format(X.shape[1], labels.shape[1]))
             raise Exception("The number of variables does not match the labels.")
@@ -777,31 +790,51 @@ class variables_selection(PCA):
 
         self.X_tilde = PCA.preprocess_training(self.X, self.to_center, self.to_scale, self.centering, self.scaling)
 
-        eigenvec = PCA_fit(self.X_tilde, self._nPCs)
-        Z = self.X_tilde @ eigenvec[0]
-        #Start the backward elimination
-        while self.X_tilde.shape[1] > self._n_ret:
-            M2 = 1E12
-            M2_tmp = 0
-            var_tmp = 0
+        if self._method == 'Procustes':
+            eigenvec = PCA_fit(self.X_tilde, self._nPCs)
+            Z = self.X_tilde @ eigenvec[0]
+            #Start the backward elimination
+            while self.X_tilde.shape[1] > self._n_ret:
+                M2 = 1E12
+                M2_tmp = 0
+                var_tmp = 0
 
-            for ii in range(0,self.X_tilde.shape[1]):
-                X_cut = np.delete(self.X_tilde, ii, axis=1)
-                eigenvec = PCA_fit(X_cut, self._nPCs)
-                Z_tilde = X_cut @ eigenvec[0]
+                for ii in range(0,self.X_tilde.shape[1]):
+                    X_cut = np.delete(self.X_tilde, ii, axis=1)
+                    eigenvec = PCA_fit(X_cut, self._nPCs)
+                    Z_tilde = X_cut @ eigenvec[0]
 
-                covZZ = np.transpose(Z_tilde) @ Z
+                    covZZ = np.transpose(Z_tilde) @ Z
 
-                u, s, vh = np.linalg.svd(covZZ, full_matrices=True)
-                M2_tmp = np.trace((np.transpose(Z) @ Z) + (np.transpose(Z_tilde) @ Z_tilde) - 2*s)
-                #If the Silhouette score is lower, store the variable 'ii' to remove it
-                if M2_tmp < M2:
-                    M2 = M2_tmp
-                    var_tmp = ii
+                    u, s, vh = np.linalg.svd(covZZ, full_matrices=True)
+                    M2_tmp = np.trace((np.transpose(Z) @ Z) + (np.transpose(Z_tilde) @ Z_tilde) - 2*s)
+                    #If the Silhouette score is lower, store the variable 'ii' to remove it
+                    if M2_tmp < M2:
+                        M2 = M2_tmp
+                        var_tmp = ii
 
-            self.X_tilde = np.delete(self.X_tilde, var_tmp, axis=1)
-            self.labels = np.delete(self.labels, var_tmp, axis=1)
-            print("Current number of variables: {}".format(self.X_tilde.shape[1]))
+                self.X_tilde = np.delete(self.X_tilde, var_tmp, axis=1)
+                self.labels = np.delete(self.labels, var_tmp, axis=1)
+                print("Current number of variables: {}".format(self.X_tilde.shape[1]))
+        elif self._method == 'B2':
+            max_var = self.X.shape[1]
+
+            while max_var > self.retained:
+                model = PCA(self.X)
+                model.eigens = self._nPCs
+                PCs = model.fit()
+                
+                
+                max_on_last = np.max(np.abs(PCs[0][:,self._nPCs-1]))
+                argmax_on_last = np.max(np.abs(PCs[0][:,self._nPCs-1]))
+
+                self.X_tilde = np.delete(self.X_tilde, argmax_on_last, axis=1)
+                self.labels = np.delete(self.labels, argmax_on_last, axis=1)
+                print("Current number of variables: {}".format(self.X_tilde.shape[1]))
+                
+                max_var = self.X_tilde.shape[1]
+
+
 
         return self.labels
 
@@ -1109,7 +1142,43 @@ def main_out():
     print("The training matrix dimensions with orthogonal outliers are: {}x{}".format(X_cleaned_lev.shape[0], X_cleaned_lev.shape[1]))
     print("The training matrix dimensions without orthogonal outliers are: {}x{}".format(X_cleaned_ortho.shape[0], X_cleaned_ortho.shape[1]))
 
+def main_var_selec():
+
+    file_options = {
+        "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data",
+        "input_file_name"           : "concentrations.csv",
+        "labels_name"               : "labels_species.csv",
+    }
+
+
+    ##### VARIABLES SELECTION #####
+
+
+
+    X = readCSV(file_options["path_to_file"], file_options["input_file_name"])
+
+    PVs = variables_selection(X)
+
+    PVs.path_to_labels = file_options["path_to_file"]
+    PVs.labels_file_name = file_options["labels_name"]
+    PVs.eigens = 15
+    PVs.retained = 20
+    labels = PVs.fit()
+    print(labels)
+
+    PVs = variables_selection(X)
+    PVs.method = 'Procustes'
+    PVs.path_to_labels = file_options["path_to_file"]
+    PVs.labels_file_name = file_options["labels_name"]
+    PVs.eigens = 15
+    PVs.retained = 20
+    labels = PVs.fit()
+    print(labels)
+   
+
+    print("done")
+
 
 
 if __name__ =='__main__':
-    main_out()
+    main_var_selec()
