@@ -190,7 +190,8 @@ class PCA:
         self.evecs = evecs[:,mask]
         self.evals = evals[mask]
 
-        self.evecs = self.evecs[:, 0:self._nPCs]
+        self.evecs = self.evecs[:,:self._nPCs]
+        self.evals = self.evals[:self._nPCs]
 
         return self.evecs, self.evals
 
@@ -330,15 +331,16 @@ class PCA:
         #axes.set_title('Parity plot')
         plt.show()
 
-    def outlier_removal(self):
+    def outlier_removal_leverage(self):
         '''
-        This function removes the multivariate outliers eventually contained
+        This function removes the multivariate outliers (leverage) eventually contained
         in the training dataset, via PCA. In fact, examining the data projection
         on the PCA manifold (i.e., the scores), and measuring the score distance
         from the manifold center, it is possible to identify the so-called
         leverage points. They are characterized by very high distance from the
         center of mass, once detected they can easily be removed.
         Additional info on outlier identification and removal can be found here:
+        
         Jolliffe pag 237 --- formula (10.1.2):
 
         dist^{2}_{2,i} = sum_{k=p-q+1}^{p}(z^{2}_{ik}/l_{k})
@@ -349,6 +351,7 @@ class PCA:
         k = index to count the PCs
 
         '''
+        #Leverage points removal:
         #Compute the PCA scores. Override the eventual number of PCs: ALL the
         #PCs are needed, as the outliers are given by the last PCs examination
         input_eigens = self.eigens
@@ -370,7 +373,7 @@ class PCA:
             scores_dist[ii] = np.sqrt(t_sq/(lam_j + TOL))
 
         #Now compute the distance distribution, and delete the observations in the
-        #upper 3% (done in the while loop) to get the outlier-free matrix X_cleaned.
+        #upper 3% (done in the while loop) to get the outlier-free matrix.
 
         #Divide the distance vector in 100 bins
         n_bins = 100
@@ -401,19 +404,78 @@ class PCA:
             cumulativeDensity += cumulative_
             new_counter += 1
 
-        print("MAX ID: {}".format(new_counter))
-
-        '''
-        #Find the idx >= 97 (corresponding to the largest distances) and delete
-        #the corresponding points from the training matrix, as they can be identified
-        #as outliers.
-        cleanMask = np.where(bin >= 97)
-        X_cleaned = np.delete(self.X, cleanMask, axis=0)
-        '''
         new_mask = np.where(bin > new_counter)
-        X_cleaned = np.delete(self.X, new_mask, axis=0)
+        self.X = np.delete(self.X, new_mask, axis=0)
 
-        return X_cleaned, bin, new_mask
+        return self.X , bin, new_mask
+
+
+    
+    def outlier_removal_orthogonal(self):
+        '''
+        This function removes the multivariate outliers (orthogonal out) eventually contained
+        in the training dataset, via PCA. In fact, examining the reconstruction error
+        it is possible to identify the so-called orthogonal outliers. They are characterized 
+        by very high distance from the manifold (large rec error), once detected they can easily 
+        be removed.
+        Additional info on outlier identification and removal can be found here:
+        
+        Hubert, Mia, Peter Rousseeuw, and Tim Verdonck. Computational Statistics & Data Analysis 53.6 (2009): 2264-2274.
+
+        '''
+        #Orthogonal outliers removal:
+        PCs, eigval = self.fit()
+
+        mu_X = center(self.X, self.centering)
+        sigma_X = scale(self.X, self.scaling)
+
+        X_cs = center_scale(self.X, mu_X, sigma_X)
+
+
+        epsilon_rec = X_cs - X_cs @ PCs @ PCs.T
+        sq_rec_oss = np.power(epsilon_rec, 2)
+
+        #Now compute the distance distribution, and delete the observations in the
+        #upper 3% (done in the while loop) to get the outlier-free matrix.
+
+        #Divide the distance vector in 100 bins
+        n_bins = 100
+        min_interval = np.min(sq_rec_oss)
+        max_interval = np.max(sq_rec_oss)
+
+        delta_step = (max_interval - min_interval) / n_bins
+
+        counter = 0
+        bin_id = np.empty((len(epsilon_rec),))
+        var_left = min_interval
+
+        #Find the observations in each bin (find the idx, where the classes are
+        #the different bins number)
+        while counter <= n_bins:
+            var_right = var_left + delta_step
+            mask = np.logical_and(sq_rec_oss >= var_left, sq_rec_oss < var_right)
+            bin_id[np.where(mask)[0]] = counter
+            counter += 1
+            var_left += delta_step
+
+        #Compute the classes (unique) and the number of elements per class (counts)
+        unique,counts=np.unique(bin_id,return_counts=True)
+        #Declare the variables to build the CDF to select the observations belonging to the
+        #98% of the total
+        cumulativeDensity = 0
+        new_counter = 0
+
+        while cumulativeDensity < 0.98:
+            cumulative_ = counts[new_counter]/self.X.shape[0]
+            cumulativeDensity += cumulative_
+            new_counter += 1
+
+        new_mask = np.where(bin_id > new_counter)
+        self.X = np.delete(self.X, new_mask, axis=0)
+
+        return self.X, bin_id, new_mask
+
+        
 
 
 class LPCA(PCA):
@@ -1035,11 +1097,17 @@ def main_out():
     model = PCA(X)
     model.eigens = 2
 
-    X_cleaned, bin, new_mask = model.outlier_removal()
+    X_cleaned_lev, bin, new_mask = model.outlier_removal_leverage()
 
+    model = PCA(X_cleaned_lev)
+    model.eigens = 2
+    print("The training matrix dimensions with leverage outliers are: {}x{}".format(X.shape[0], X.shape[1]))
+    print("The training matrix dimensions without leverage outliers are: {}x{}".format(X_cleaned_lev.shape[0], X_cleaned_lev.shape[1]))
 
-    print("The training matrix dimensions with outliers are: {}x{}".format(X.shape[0], X.shape[1]))
-    print("The training matrix dimensions without outliers are: {}x{}".format(X_cleaned.shape[0], X_cleaned.shape[1]))
+    X_cleaned_ortho, bin, new_mask = model.outlier_removal_orthogonal()
+
+    print("The training matrix dimensions with orthogonal outliers are: {}x{}".format(X_cleaned_lev.shape[0], X_cleaned_lev.shape[1]))
+    print("The training matrix dimensions without orthogonal outliers are: {}x{}".format(X_cleaned_ortho.shape[0], X_cleaned_ortho.shape[1]))
 
 
 

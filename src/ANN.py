@@ -582,31 +582,33 @@ def main():
     X = readCSV(file_options["path_to_file"], file_options["input_file_name"])
     Y = readCSV(file_options["path_to_file"], file_options["output_file_name"])
 
-    #X_tilde = center_scale(X, center(X, method=settings["centering_method"]), scale(X, method=settings["scaling_method"]))
-
+    
     modelReduction = model_order_reduction.PCA(X)
     modelReduction.eigens = 2
 
-    X_cleaned, bin, new_mask = modelReduction.outlier_removal()
+    X_cleaned_lev, bin, new_mask = modelReduction.outlier_removal_leverage()
+    Y_cleaned1 = np.delete(Y, new_mask, axis=0)
 
-    unique,counts=np.unique(bin,return_counts=True)
-    print(counts)
-    print(unique)
+    modelReduction = model_order_reduction.PCA(X_cleaned_lev)
+    modelReduction.eigens = 2
+    print("The training matrix dimensions with leverage outliers are: {}x{}".format(X.shape[0], X.shape[1]))
+    print("The training matrix dimensions without leverage outliers are: {}x{}".format(X_cleaned_lev.shape[0], X_cleaned_lev.shape[1]))
+    
 
-    Y_cleaned = np.delete(Y, new_mask, axis=0)
+    X_cleaned_ortho, bin, new_mask2 = modelReduction.outlier_removal_orthogonal()
+    Y_cleaned2 = np.delete(Y_cleaned1, new_mask2, axis=0)
 
-
-    print("The training matrix dimensions with outliers are: {}x{}".format(X.shape[0], X.shape[1]))
-    print("The training matrix dimensions without outliers are: {}x{}".format(X_cleaned.shape[0], X_cleaned.shape[1]))
-
-    X_tilde = center_scale(X_cleaned, center(X_cleaned, method=settings["centering_method"]), scale(X_cleaned, method=settings["scaling_method"]))
+    print("The training matrix dimensions with orthogonal outliers are: {}x{}".format(X_cleaned_lev.shape[0], X_cleaned_lev.shape[1]))
+    print("The training matrix dimensions without orthogonal outliers are: {}x{}".format(X_cleaned_ortho.shape[0], X_cleaned_ortho.shape[1]))
+    
+    X_tilde = center_scale(X_cleaned_ortho, center(X_cleaned_ortho, method=settings["centering_method"]), scale(X_cleaned_ortho, method=settings["scaling_method"]))
 
 
 
 
     ### REGRESSION ###                                                          --> RUNNING, OK -- TO TEST
 
-    model = regressor(X_tilde,Y_cleaned)
+    model = regressor(X_tilde,Y_cleaned2)
 
     model.activation_function = training_options["activation_function"]
     model.n_epochs = training_options["number_of_epochs"]
