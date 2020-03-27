@@ -876,9 +876,6 @@ class variables_selection(PCA):
             return PVs 
 
 
-
-        
-
 class SamplePopulation():
     '''
     This class contains a set of methods to consider only a subset of the original training
@@ -900,6 +897,7 @@ class SamplePopulation():
         self.__nVar = self.X.shape[1]
         #Choose the sampling strategy: random, cluster (KMeans, LPCA), stratifed or multistage.
         self._method = 'KMeans'
+        self.__condVec = False
         #Choose the dimensions of the sampled dataset.
         self._dimensions = 1
         #Predefined number of clusters, if 'cluster', 'stratified' or 'multistage' are chosen
@@ -930,6 +928,9 @@ class SamplePopulation():
     @set_conditioning.setter
     def set_conditioning(self, new_value):
         self._conditioning = new_value
+        if not isinstance(self._conditioning, int) and  not isinstance(self._conditioning, float):
+            self._conditioning = new_value
+            self.__condVec = True
 
     def fit(self):
             #Center and scale the matrix (auto preset)
@@ -989,10 +990,15 @@ class SamplePopulation():
                 #'k' bins and sample from each bin. The default variable to
                 #condition with is '0'. This setting must be eventually modified
                 #via setter.
-                min_con = np.min(self.X[:,self._conditioning])
-                max_con = np.max(self.X[:,self._conditioning])
+                if not self.__condVec:
+                    min_con = np.min(self.X[:,self._conditioning])
+                    max_con = np.max(self.X[:,self._conditioning])
+                else:
+                    min_con = np.min(self._conditioning)
+                    max_con = np.max(self._conditioning)
                 #Compute the extension of each bin (delta_step)
-                delta_step = int((max_con - min_con) / self.__k)
+
+                delta_step = ((max_con - min_con) / self.__k)
                 counter = 0
                 var_left = min_con
                 miniX = self.X[1:3,:]
@@ -1000,7 +1006,10 @@ class SamplePopulation():
                     #Compute the two extremes, and take all the observations in
                     #the dataset which lie in the interval.
                     var_right = var_left + delta_step
-                    mask = np.logical_and(self.X[:,self._conditioning] >= var_left, self.X[:,self._conditioning] < var_right)
+                    if not self.__condVec:
+                        mask = np.logical_and(self.X[:,self._conditioning] >= var_left, self.X[:,self._conditioning] < var_right)
+                    else:
+                        mask = np.logical_and(self._conditioning >= var_left, self._conditioning < var_right)
                     cluster_ = self.X[mask]
                     #Also in this case, if the cluster size is lower than the
                     #batch size, take all the cluster.
@@ -1022,15 +1031,22 @@ class SamplePopulation():
                 #dataset' size. The condition is done with k = 32, while the
                 #clustering takes k = 16
                 self.__multiBatchSize = 2*self.__batchSize
-                min_con = np.min(self.X[:,self._conditioning])
-                max_con = np.max(self.X[:,self._conditioning])
-                delta_step = int((max_con - min_con) / self.__k)
+                if not self.__condVec:
+                    min_con = np.min(self.X[:,self._conditioning])
+                    max_con = np.max(self.X[:,self._conditioning])
+                else:
+                    min_con = np.min(self._conditioning)
+                    max_con = np.max(self._conditioning)
+                delta_step = ((max_con - min_con) / self.__k)
                 counter = 0
                 var_left = min_con
                 multiMiniX = self.X[1:3,:]
                 while counter <= self.__k:
                     var_right = var_left + delta_step
-                    mask = np.logical_and(self.X[:,self._conditioning] >= var_left, self.X[:,self._conditioning] < var_right)
+                    if not self.__condVec:
+                        mask = np.logical_and(self.X[:,self._conditioning] >= var_left, self.X[:,self._conditioning] < var_right)
+                    else:
+                        mask = np.logical_and(self._conditioning >= var_left, self._conditioning < var_right)
                     cluster_ = self.X[mask]
                     if cluster_.shape[0] < self.__multiBatchSize:
                         multiMiniX = np.concatenate((multiMiniX, cluster_), axis=0)
@@ -1137,9 +1153,11 @@ def main_sample_dataset():
 
 
         X = readCSV(file_options["path_to_file"], file_options["input_file_name"])
+        Z = X[:,0]
         yo = SamplePopulation(X)
         yo.set_size = 3000
         yo.sampling_strategy = 'multistage'
+        yo.set_conditioning = Z
         miniX = yo.fit()
         print("Training matrix sampled. New size: {}x{}".format(miniX.shape[0],miniX.shape[1]))
         print("\tOriginal size: {}x{}".format(X.shape[0],X.shape[1]))
@@ -1232,4 +1250,4 @@ def main_var_selec():
 
 
 if __name__ =='__main__':
-    main_var_selec()
+    main_sample_dataset()
