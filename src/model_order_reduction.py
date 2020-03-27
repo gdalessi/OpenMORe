@@ -683,21 +683,15 @@ class variables_selection(PCA):
     '''
     In many applications, rather than reducing the dimensionality considering a new set of coordinates
     which are linear combination of the original ones, the main interest is to achieve a dimensionality
-    reduction selecting a subset of m variables from the original set of p variables. One of the possible
-    ways to accomplish this task is to couple the PCA dimensionality reduction with a Procustes Analysis.
+    reduction selecting a subset of m variables from the original set of p variables. 
+    This can be done via PCA, as also explained in [a].
+    Three methods for variables selection are implemented in this class:
+    i) Method B2 backward;
+    ii) Method B4 forward;
+    iii) Variables selection via PCA and Procustes Analysis, by means of the Krzanovski iterative algorithm [b]
 
-    The iterative variable algorithm introduced by Krzanovski [a] is based on the following steps (1-3):
-    0. Preprocessing: The training matrix X is centered and scaled, after being loaded.
-    1. The dimensionality of m is initially set equal to p.
-    2. Each variable is deleted from the matrix X, obtaining p ~X matrices. The
-    corresponding scores matrices are computed by means of PCA. For each of them, a Procustes Analysis
-    is performed with respect to the scores of the original matrix X, and the corresponding M2 coeffcient is computed.
-    3. The variable which, once excluded, leads to the smallest M2 coefficient is deleted from the matrix.
-    4. Steps 2 and 3 are repeated until m variables are left.
+    Additional info about the methods are available in the fit method.
 
-    @Cite:
-    [a] Wojtek J Krzanowski. Journal of the Royal Statistical Society: Series C (Applied Statistics), 36(1):22{33, 1987.
-    [b] Ian Jolliffe. Principal component analysis. Springer, 2011.
 
     WARNING --> the input matrix must be the original (uncentered, unscaled) one. The code centers and scales
                 automatically.
@@ -791,52 +785,99 @@ class variables_selection(PCA):
         self.X_tilde = PCA.preprocess_training(self.X, self.to_center, self.to_scale, self.centering, self.scaling)
 
         if self._method == 'Procustes':
+            '''
+            The iterative variable algorithm introduced by Krzanovski [a] is based on the following steps (1-3):
+            0.  Preprocessing: The training matrix X is centered and scaled, after being loaded.
+            1.  The dimensionality of m is initially set equal to p.
+            2.  Each variable is deleted from the matrix X, obtaining p ~X matrices. The
+                corresponding scores matrices are computed by means of PCA. For each of them, a Procustes Analysis
+                is performed with respect to the scores of the original matrix X, and the corresponding M2 coeffcient is computed.
+            3.  The variable which, once excluded, leads to the smallest M2 coefficient is deleted from the matrix.
+            4.  Steps 2 and 3 are repeated until m variables are left.
+            '''
+            #Start with PCA, and compute the scores (Z)
             eigenvec = PCA_fit(self.X_tilde, self._nPCs)
             Z = self.X_tilde @ eigenvec[0]
-            #Start the backward elimination
+            #Start the backward elimination:
             while self.X_tilde.shape[1] > self._n_ret:
                 M2 = 1E12
                 M2_tmp = 0
                 var_tmp = 0
 
                 for ii in range(0,self.X_tilde.shape[1]):
+                    #Delete each variable from the original matrix (one at the time)
                     X_cut = np.delete(self.X_tilde, ii, axis=1)
+                    #Compute the scores of the reduced matrix, after PCA
                     eigenvec = PCA_fit(X_cut, self._nPCs)
                     Z_tilde = X_cut @ eigenvec[0]
-
+                    #Compute the reduced scores covariance matrix, and then apply SVD
                     covZZ = np.transpose(Z_tilde) @ Z
-
                     u, s, vh = np.linalg.svd(covZZ, full_matrices=True)
+                    #Compute the Procustes Analysis score M2 for the matrix without the 'ii' variable
                     M2_tmp = np.trace((np.transpose(Z) @ Z) + (np.transpose(Z_tilde) @ Z_tilde) - 2*s)
-                    #If the Silhouette score is lower, store the variable 'ii' to remove it
+                    #If the Silhouette score M2 is lower than the previous one in M2_tmp, store the 
+                    #variable 'ii' to remove it after the for loop
                     if M2_tmp < M2:
                         M2 = M2_tmp
                         var_tmp = ii
-
+                #Remove the variable from the matrix and the labels list
                 self.X_tilde = np.delete(self.X_tilde, var_tmp, axis=1)
                 self.labels = np.delete(self.labels, var_tmp, axis=1)
                 print("Current number of variables: {}".format(self.X_tilde.shape[1]))
-        elif self._method == 'B2':
-            max_var = self.X.shape[1]
 
+            return self.labels
+
+        elif self._method == 'B2':
+            '''
+            The variable with the largest weight is found on the last PC, and then it is deleted.
+            This is accomplished via iterative backward elimination algorithm, until the number of 
+            variables is equal to the selected number of variables.
+            '''
+            #Number of variables before the elimination starts:
+            max_var = self.X.shape[1]
+            #While the number of variables is larger than the number you want to retain 'm', go on 
+            #with the elimination process:
             while max_var > self.retained:
+                #Perform PCA:
                 model = PCA(self.X)
                 model.eigens = self._nPCs
-                PCs = model.fit()
-                
-                
-                max_on_last = np.max(np.abs(PCs[0][:,self._nPCs-1]))
-                argmax_on_last = np.max(np.abs(PCs[0][:,self._nPCs-1]))
-
+                PCs,eigvals = model.fit()
+                #Check which variable has the max weight on the last PC. Python starts to count from
+                #zero, that's why the last number is "self._nPCs -1" and not "self._nPCs"
+                max_on_last = np.max(np.abs(PCs[:,self._nPCs-1]))
+                argmax_on_last = np.max(np.abs(PCs[:,self._nPCs-1]))
+                #Delete the selected variable
                 self.X_tilde = np.delete(self.X_tilde, argmax_on_last, axis=1)
                 self.labels = np.delete(self.labels, argmax_on_last, axis=1)
                 print("Current number of variables: {}".format(self.X_tilde.shape[1]))
-                
+                #Get the current number of variables for the while loop
                 max_var = self.X_tilde.shape[1]
 
+            return self.labels
+
+        
+        elif self._method == 'B4':
+            '''
+            The variables associated with the largest weights on each of the 'm' first PCs are 
+            selected. This is not an iterative algorithm.
+            '''
+            model = PCA(self.X)
+            model.eigens = self._nPCs
+            PCs,eigvals = model.fit()
+            PVs = []
+
+            for ii in range(0, self.retained):
+                #Check the largest weight on the first 'm' PCs and add it to the PVs list.
+                argmax_= np.argmax(np.abs(PCs[:,ii]))
+                PVs.append(self.labels[0][argmax_])
+                #Set the variable weight to zero on all the PCs, to avoid repetition in the PVs list.
+                PCs[argmax_,:]= 0
+            
+            return PVs 
 
 
-        return self.labels
+
+        
 
 class SamplePopulation():
     '''
@@ -1156,9 +1197,19 @@ def main_var_selec():
 
 
     X = readCSV(file_options["path_to_file"], file_options["input_file_name"])
-
+    
     PVs = variables_selection(X)
-
+    PVs.method = 'B4'
+    PVs.path_to_labels = file_options["path_to_file"]
+    PVs.labels_file_name = file_options["labels_name"]
+    PVs.eigens = 15
+    PVs.retained = 10
+    labels = PVs.fit()
+    print(labels)
+    
+    
+    PVs = variables_selection(X)
+    PVs.method = 'B2'
     PVs.path_to_labels = file_options["path_to_file"]
     PVs.labels_file_name = file_options["labels_name"]
     PVs.eigens = 15
