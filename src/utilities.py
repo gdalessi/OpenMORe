@@ -28,7 +28,7 @@ import time
 
 import matplotlib
 import matplotlib.pyplot as plt
-__all__ = ["check_sanity_int", "check_sanity_NaN", "unscale", "uncenter", "center", "scale", "center_scale", "PHC_index", "check_dummy", "get_centroids", "get_cluster", "get_all_clusters", "explained_variance", "evaluate_clustering_DB", "NRMSE", "PCA_fit", "accepts", "readCSV", "allowed_centering","allowed_scaling"]
+__all__ = ["unscale", "uncenter", "center", "scale", "center_scale", "PHC_index", "get_centroids", "get_cluster", "get_all_clusters", "explained_variance", "evaluate_clustering_DB", "NRMSE", "PCA_fit", "accepts", "readCSV", "allowed_centering","allowed_scaling"]
 
 
 # ------------------------------
@@ -95,37 +95,6 @@ def center_scale(X, mu, sig):
         raise Exception("The matrix to be centered & scaled and the centering/scaling vectors must have the same dimensionality.")
 
 
-def check_sanity_int(kappa):
-    '''
-    Check if the input is an integer.
-    '''
-    if isinstance(kappa, int) == True:
-        return kappa
-    else:
-        raise Exception("The number of cluster and/or eigenvectors input must be integers. Please provide a valid input.")
-        exit()
-
-
-def check_sanity_NaN(X):
-    '''
-    Check if a matrix contains NaNs.
-    '''
-    if X.isna().values.any() == False:
-        return X
-    else:
-        raise Exception("The input matrix contains NaN values. Please double-check your input.")
-        exit()
-
-
-def check_dummy(X, k, n_eigs):
-    if X.shape[0] < X.shape[1]:
-        raise Exception("It is not possible to apply PCA or LPCA to a matrix with less observations than variables.")
-    elif k > X.shape[0]:
-        raise Exception("It is not possible to have more cluster than observations. Please consider to use a lower number of clusters.")
-    elif n_eigs > X.shape[1]:
-        raise Exception("It is not possible to have more Principal Components than variables. Please consider to use a lower number of PCs.")
-
-
 def explained_variance(X, n_eigs, plot=False):
     '''
     Assess the variance explained by the first 'n_eigs' retained
@@ -166,19 +135,20 @@ def evaluate_clustering_DB(X, idx):
     the clustering solution is. -- Tested OK with comparison Matlab
     """
     from scipy.spatial.distance import euclidean, cdist
-
+    #Initialize matrix and other quantitites
     k = int(np.max(idx) +1)
     centroids_list = [None] *k
     S_i = [None] *k
     M_ij = np.zeros((k,k), dtype=float)
     TOL = 1E-16
 
-
+    #For each cluster, compute the mean distance between the points and their centroids
     for ii in range(0,k):
         cluster_ = get_cluster(X, idx, ii)
         centroids_list[ii] = get_centroids(cluster_)
         S_i[ii] = np.mean(cdist(cluster_, centroids_list[ii].reshape((1,-1))))  #reshape centroids_list[ii] from (n,) to (1,n)
 
+    #Compute the distance between once centroid and all the others:
     for ii in range(0,k):
         for jj in range(0,k):
             if ii != jj:
@@ -188,6 +158,8 @@ def evaluate_clustering_DB(X, idx):
 
     R_ij = np.empty((k,k),dtype=float)
 
+    #Compute the R_ij coefficient for each couple of clusters, using the
+    #two coefficients S_ij and M_ij
     for ii in range(0,k):
         for jj in range(0,k):
             if ii != jj:
@@ -197,6 +169,7 @@ def evaluate_clustering_DB(X, idx):
 
     D_i = [None] *k
 
+    #Compute the Davies-Bouldin index as the mean of the maximum R_ij value
     for ii in range(0,k):
         D_i[ii] = np.max(R_ij[ii], axis=0)
 

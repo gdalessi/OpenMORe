@@ -997,12 +997,12 @@ class SamplePopulation():
                     min_con = np.min(self._conditioning)
                     max_con = np.max(self._conditioning)
                 #Compute the extension of each bin (delta_step)
-
-                delta_step = ((max_con - min_con) / self.__k)
+                self.__kHardConditioning = 100
+                delta_step = ((max_con - min_con) / self.__kHardConditioning)
                 counter = 0
                 var_left = min_con
                 miniX = self.X[1:3,:]
-                while counter <= self.__k:
+                while counter <= self.__kHardConditioning:
                     #Compute the two extremes, and take all the observations in
                     #the dataset which lie in the interval.
                     var_right = var_left + delta_step
@@ -1020,7 +1020,7 @@ class SamplePopulation():
                     else:
                         np.random.shuffle(cluster_)
                         miniX = np.concatenate((miniX, cluster_[:self.__batchSize,:]), axis=0)
-                        if miniX.shape[0] < self._dimensions and counter == self.__k:
+                        if miniX.shape[0] < self._dimensions and counter == self.__kHardConditioning:
                             delta = self._dimensions - miniX.shape[0]
                             miniX= np.concatenate((miniX, cluster_[(self.__batchSize+1):(self.__batchSize+1+delta),:]), axis=0)
                         var_left += delta_step
@@ -1028,20 +1028,21 @@ class SamplePopulation():
             elif self._method == 'multistage':
                 #Stratified sampling step: build multiMiniX from X conditioning,
                 #and after that cluster to have a further reduction in the
-                #dataset' size. The condition is done with k = 32, while the
+                #dataset' size. The conditioning is done with k = 32, while the
                 #clustering takes k = 16
                 self.__multiBatchSize = 2*self.__batchSize
+                self.__kHardConditioning = 100
                 if not self.__condVec:
                     min_con = np.min(self.X[:,self._conditioning])
                     max_con = np.max(self.X[:,self._conditioning])
                 else:
                     min_con = np.min(self._conditioning)
                     max_con = np.max(self._conditioning)
-                delta_step = ((max_con - min_con) / self.__k)
+                delta_step = ((max_con - min_con) / self.__kHardConditioning)
                 counter = 0
                 var_left = min_con
                 multiMiniX = self.X[1:3,:]
-                while counter <= self.__k:
+                while counter <= self.__kHardConditioning:
                     var_right = var_left + delta_step
                     if not self.__condVec:
                         mask = np.logical_and(self.X[:,self._conditioning] >= var_left, self.X[:,self._conditioning] < var_right)
@@ -1055,7 +1056,7 @@ class SamplePopulation():
                     else:
                         np.random.shuffle(cluster_)
                         multiMiniX = np.concatenate((multiMiniX, cluster_[:self.__multiBatchSize,:]), axis=0)
-                        if multiMiniX.shape[0] < self._dimensions and counter == self.__k:
+                        if multiMiniX.shape[0] < self._dimensions and counter == self.__kHardConditioning:
                             delta = self._dimensions - multiMiniX.shape[0]
                             multiMiniX= np.concatenate((multiMiniX, cluster_[(self.__multiBatchSize+1):(self.__multiBatchSize+1+delta),:]), axis=0)
                         var_left += delta_step
