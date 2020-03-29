@@ -59,7 +59,15 @@ class lpca:
         self._correction = "off"                                            #Available options: 'off', 'mean', 'max', 'std', 'var'
         #Adaptive PCs per cluster:
         self._adaptive = False                                              #Available options: True or False (boolean)
-
+        
+        #Decide if the input matrix must be centered:
+        self._center = True
+        #Set the centering method:
+        self._centering = 'mean'                                                                    #'mean' or 'min' are available
+        #Decide if the input matrix must be scaled:
+        self._scale = True
+        #Set the scaling method:
+        self._scaling = 'auto' 
 
     @property
     def clusters(self):
@@ -113,6 +121,45 @@ class lpca:
     def adaptivePCs(self, new_bool):
         self._adaptive = new_bool
 
+    @property
+    def to_center(self):
+        return self._center
+
+    @to_center.setter
+    @accepts(object, bool)
+    def to_center(self, new_bool):
+        self._center = new_bool
+
+
+    @property
+    def centering(self):
+        return self._centering
+
+    @centering.setter
+    @allowed_centering
+    def centering(self, new_string):
+        self._centering = new_string
+
+
+    @property
+    def to_scale(self):
+        return self._scale
+
+    @to_scale.setter
+    @accepts(object, bool)
+    def to_scale(self, new_bool):
+        self._scale = new_bool
+
+
+    @property
+    def scaling(self):
+        return self._scaling
+
+    @scaling.setter
+    @allowed_scaling
+    def scaling(self, new_string):
+        self._scaling = new_string
+
 
     @staticmethod
     def initialize_clusters(X, k, method):
@@ -121,14 +168,38 @@ class lpca:
         a random allocation (RANDOM) or a previous clustering solution (KMEANS).
         '''
         if method.lower() == 'random':
+            #Assign randomly an integer between 0 and k to each observation.
             idx = np.random.random_integers(0, k, size=(X.shape[0], 1))
+        
         elif method.lower() == 'kmeans':
+            #call the KMeans class from the very same module. Set the number of clusters and
+            #choose 'initMode' to use a lower tolerance with respect to the normal algorithm.
             init = KMeans(X)
             init.clusters = k
             init.initMode =True
             idx = init.fit()
+        
+        elif method.lower() == 'observations':
+            from scipy.spatial.distance import euclidean, cdist
+            #Initialize the centroids using 'k' random observations taken from the
+            #dataset.
+            C_mat = np.empty((k, X.shape[1]), dtype=float)
+            idx = np.empty((X.shape[0],), dtype=int)
+            for ii in range(0,k):
+                C_mat[ii,:] = X[np.random.randint(0,X.shape[0]),:]
+            
+            #Compute the euclidean distances between the matrix and all the random vectors
+            #chosen as centroids. The function cdist returns a matrix 'dist' = (nObs x k)
+            dist = cdist(X, C_mat)
+        
+            #For each observation, choose the nearest centroid (cdist --> Euclidean dist).
+            #and compute the idx for the initialization.
+            for ii in range(0, X.shape[0]):
+                idx[ii] = np.argmin(dist[ii,:])
+        
         else:
             raise Exception("Initialization option not supported. Please choose one between RANDOM or KMEANS.")
+        
         return idx
 
 
@@ -193,8 +264,12 @@ class lpca:
 
         now = datetime.datetime.now()
         newDirName = "Clustering LPCA - " + now.strftime("%Y_%m_%d-%H%M")
-        os.mkdir(newDirName)
-        os.chdir(newDirName)
+        
+        try:
+            os.mkdir(newDirName)
+            os.chdir(newDirName)
+        except FileExistsError:
+            pass
 
 
     @staticmethod
@@ -225,28 +300,49 @@ class lpca:
         text_stats.close()
 
 
+    @staticmethod
+    def preprocess_training(X, centering_decision, scaling_decision, centering_method, scaling_method):
+
+        if centering_decision and scaling_decision:
+            mu, X_ = center(X, centering_method, True)
+            sigma, X_tilde = scale(X_, scaling_method, True)
+        elif centering_decision and not scaling_decision:
+            mu, X_tilde = center(X, centering_method, True)
+        elif scaling_decision and not centering_decision:
+            sigma, X_tilde = scale(X, scaling_method, True)
+        else:
+            X_tilde = X
+
+        return X_tilde
+    
+    
     def fit(self):
         '''
         Group the observations depending on the PCA reconstruction error.
         '''
+        #Center and scale the original training dataset
+        print("Preprocessing training matrix..")
+        self.X_tilde = self.preprocess_training(self.X, self._center, self._scale, self._centering, self._scaling)
         print("Fitting Local PCA model...")
         lpca.set_environment()
         lpca.write_recap_text(self._k, self._nPCs, self._correction, self._method)
         # Initialization
         iteration, eps_rec, residuals, iter_max, eps_tol = lpca.initialize_parameters()
-        rows, cols = np.shape(self.X)
+        rows, cols = np.shape(self.X_tilde)
         # Initialize solution
-        idx = lpca.initialize_clusters(self.X, self._k, self._method)
+        idx = lpca.initialize_clusters(self.X_tilde, self._k, self._method)
         residuals = np.array(0)
         if self._correction != "off":
             correction_ = np.zeros((rows, self._k), dtype=float)
             scores_factor = np.zeros((rows, self._k), dtype=float)
+            PHC_penalty = np.zeros((rows, self._k), dtype=float)
+            tmp_idx = idx
         # Iterate
         while(iteration < iter_max):
             sq_rec_oss = np.zeros((rows, cols), dtype=float)
             sq_rec_err = np.zeros((rows, self._k), dtype=float)
             for ii in range(0, self._k):
-                cluster = get_cluster(self.X, idx, ii)
+                cluster = get_cluster(self.X_tilde, idx, ii)
                 centroids = get_centroids(cluster)
                 local_model = model_order_reduction.PCA(cluster)
                 local_model.to_center = False
@@ -257,21 +353,24 @@ class lpca:
                     local_model.set_PCs()
                 modes = local_model.fit()
                 C_mat = np.matlib.repmat(centroids, rows, 1)
-                rec_err_os = (self.X - C_mat) - (self.X - C_mat) @ modes[0] @ modes[0].T
+                rec_err_os = (self.X_tilde - C_mat) - (self.X_tilde - C_mat) @ modes[0] @ modes[0].T
                 sq_rec_oss = np.power(rec_err_os, 2)
                 sq_rec_err[:,ii] = sq_rec_oss.sum(axis=1)
-                if self._correction != "off":
-                    if self.correction == "mean":
-                        correction_[:,ii] = np.mean(np.var((self.X - C_mat) @ modes[0], axis=0))
-                    elif self._correction == "max":
-                        correction_[:,ii] = np.max(np.var((self.X - C_mat) @ modes[0], axis=0))
-                    elif self._correction == "min":
-                        correction_[:,ii] = np.min(np.var((self.X - C_mat) @ modes[0], axis=0))
-                    elif self._correction == "std":
-                        correction_[:,ii] = np.std(np.var((self.X - C_mat) @ modes[0], axis=0))
+                if self._correction.lower() != "off":
+                    if self.correction.lower() == "mean":
+                        correction_[:,ii] = np.mean(np.var((self.X_tilde - C_mat) @ modes[0], axis=0))
+                    elif self._correction.lower() == "max":
+                        correction_[:,ii] = np.max(np.var((self.X_tilde - C_mat) @ modes[0], axis=0))
+                    elif self._correction.lower() == "min":
+                        correction_[:,ii] = np.min(np.var((self.X_tilde - C_mat) @ modes[0], axis=0))
+                    elif self._correction.lower() == "std":
+                        correction_[:,ii] = np.std(np.var((self.X_tilde - C_mat) @ modes[0], axis=0))
+                    else:
+                        raise Exception("Correction method not supported. Exiting with error..")
+                    exit()
                     scores_factor = np.multiply(sq_rec_err, correction_)
             # Update idx
-            if self._correction != "off":
+            if self._correction.lower() != "off":
                 idx = np.argmin(scores_factor, axis = 1)
             else:
                 idx = np.argmin(sq_rec_err, axis = 1)
@@ -293,7 +392,7 @@ class lpca:
             # Update counter
             iteration += 1
             # Consider only statistical meaningful groups of points
-            idx = lpca.merge_clusters(self.X, idx)
+            idx = lpca.merge_clusters(self.X_tilde, idx)
             self._k = max(idx)+1
         print("Convergence reached in {} iterations.".format(iteration))
         lpca.plot_residuals(iteration, residuals)
@@ -575,6 +674,9 @@ class spectral:
 
 
 class KMeans:
+    '''
+    X must be centered and scaled --- to change ---
+    '''
     def __init__(self,X):
         #Initialize matrix and number of clusters.
         self.X = X
@@ -588,6 +690,16 @@ class KMeans:
         self.__iterMax = 100
         self.__numericTol = 1e-16
         self.__convergeTol = 1E-16
+
+        #Decide if the input matrix must be centered:
+        self._center = True
+        #Set the centering method:
+        self._centering = 'mean'                                                                    #'mean' or 'min' are available
+        #Decide if the input matrix must be scaled:
+        self._scale = True
+        #Set the scaling method:
+        self._scaling = 'auto' 
+
 
     @property
     def clusters(self):
@@ -614,6 +726,46 @@ class KMeans:
         if self._initMode:
             self.__convergeTol = 1E-08
 
+    @property
+    def to_center(self):
+        return self._center
+
+    @to_center.setter
+    @accepts(object, bool)
+    def to_center(self, new_bool):
+        self._center = new_bool
+
+
+    @property
+    def centering(self):
+        return self._centering
+
+    @centering.setter
+    @allowed_centering
+    def centering(self, new_string):
+        self._centering = new_string
+
+
+    @property
+    def to_scale(self):
+        return self._scale
+
+    @to_scale.setter
+    @accepts(object, bool)
+    def to_scale(self, new_bool):
+        self._scale = new_bool
+
+
+    @property
+    def scaling(self):
+        return self._scaling
+
+    @scaling.setter
+    @allowed_scaling
+    def scaling(self, new_string):
+        self._scaling = new_string
+
+
     @staticmethod
     def merge_clusters(X, idx):
         '''
@@ -631,13 +783,33 @@ class KMeans:
                 break
         return idx
 
+    
+    @staticmethod
+    def preprocess_training(X, centering_decision, scaling_decision, centering_method, scaling_method):
+
+        if centering_decision and scaling_decision:
+            mu, X_ = center(X, centering_method, True)
+            sigma, X_tilde = scale(X_, scaling_method, True)
+        elif centering_decision and not scaling_decision:
+            mu, X_tilde = center(X, centering_method, True)
+        elif scaling_decision and not centering_decision:
+            sigma, X_tilde = scale(X, scaling_method, True)
+        else:
+            X_tilde = X
+
+        return X_tilde
+    
+
 
     def fit(self):
         from scipy.spatial.distance import euclidean, cdist
         if not self._initMode:
             print("Fitting kmeans model..")
+            self.X = self.preprocess_training(self.X, self._center, self._scale, self._centering, self._scaling)
         else:
             print("Initializing clusters via KMeans algorithm..")
+            #pass the centering/scaling if the kMeans is used for the initialization, if 
+            #explicitely asked.
         #Declare matrix and variables to be used:
         C_mat = np.empty((self._k, self.X.shape[1]), dtype=float)
         C_old = np.empty((self._k, self.X.shape[1]), dtype=float)
@@ -724,12 +896,12 @@ def main():
     settings = {
         "centering_method"          : "MEAN",
         "scaling_method"            : "AUTO",
-        "initialization_method"     : "KMEANS",
+        "initialization_method"     : "observations",
         "number_of_clusters"        : 16,
         "number_of_eigenvectors"    : 11,
         "adaptive_PCs"              : False,
         "classify"                  : False,
-        "write_on_txt"              : True,
+        "write_on_txt"              : False,
         "plot_on_mesh"              : True,
     }
 
@@ -739,7 +911,8 @@ def main():
 
 
     model = clustering.lpca(X_tilde)
-
+    model.centering = 'mean'
+    model.scaling = 'auto'
     model.clusters = settings["number_of_clusters"]
     model.eigens = settings["number_of_eigenvectors"]
     model.initialization = settings["initialization_method"]
