@@ -335,14 +335,14 @@ class lpca:
         if self._correction != "off":
             correction_ = np.zeros((rows, self._k), dtype=float)
             scores_factor = np.zeros((rows, self._k), dtype=float)
-            PHC_penalty = np.zeros((rows, self._k), dtype=float)
-            tmp_idx = idx
         # Iterate
         while(iteration < iter_max):
             sq_rec_oss = np.zeros((rows, cols), dtype=float)
             sq_rec_err = np.zeros((rows, self._k), dtype=float)
+            PHC_coefficients, PHC_std = PHC_index(self.X, idx)
             for ii in range(0, self._k):
                 cluster = get_cluster(self.X_tilde, idx, ii)
+                local_homogeneity = PHC_coefficients[ii]
                 centroids = get_centroids(cluster)
                 local_model = model_order_reduction.PCA(cluster)
                 local_model.to_center = False
@@ -356,7 +356,7 @@ class lpca:
                 rec_err_os = (self.X_tilde - C_mat) - (self.X_tilde - C_mat) @ modes[0] @ modes[0].T
                 sq_rec_oss = np.power(rec_err_os, 2)
                 sq_rec_err[:,ii] = sq_rec_oss.sum(axis=1)
-                if self._correction.lower() != "off":
+                if self._correction.lower() != "off" and self._correction != "phc":
                     if self.correction.lower() == "mean":
                         correction_[:,ii] = np.mean(np.var((self.X_tilde - C_mat) @ modes[0], axis=0))
                     elif self._correction.lower() == "max":
@@ -366,9 +366,11 @@ class lpca:
                     elif self._correction.lower() == "std":
                         correction_[:,ii] = np.std(np.var((self.X_tilde - C_mat) @ modes[0], axis=0))
                     else:
-                        raise Exception("Correction method not supported. Exiting with error..")
-                    exit()
+                        raise Exception("Correction method" + self._correction + "not supported. Exiting with error..")
+                        exit()
                     scores_factor = np.multiply(sq_rec_err, correction_)
+                elif self._correction.lower() == 'phc':
+                    scores_factor = np.add(sq_rec_err, local_homogeneity)
             # Update idx
             if self._correction.lower() != "off":
                 idx = np.argmin(scores_factor, axis = 1)
@@ -885,20 +887,20 @@ def main():
 
     file_options = {
         "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data",
-        "input_file_name"           : "concentrations.csv",
+        "input_file_name"           : "dns_syngas_thermochemical.csv",
     }
 
     mesh_options = {
         "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data",
-        "mesh_file_name"           : "mesh.csv",
+        "mesh_file_name"            : "dns_syngas_mesh.csv",
     }
 
     settings = {
         "centering_method"          : "MEAN",
         "scaling_method"            : "AUTO",
         "initialization_method"     : "observations",
-        "number_of_clusters"        : 16,
-        "number_of_eigenvectors"    : 11,
+        "number_of_clusters"        : 8,
+        "number_of_eigenvectors"    : 4,
         "adaptive_PCs"              : False,
         "classify"                  : False,
         "write_on_txt"              : False,
@@ -910,19 +912,26 @@ def main():
     X_tilde = center_scale(X, center(X, method=settings["centering_method"]), scale(X, method=settings["scaling_method"]))
 
 
-    model = clustering.lpca(X_tilde)
+    model = clustering.lpca(X)
     model.centering = 'mean'
     model.scaling = 'auto'
     model.clusters = settings["number_of_clusters"]
     model.eigens = settings["number_of_eigenvectors"]
     model.initialization = settings["initialization_method"]
-    model.correction = "off"
+    model.correction = "mean" # 'phc'
     model.adaptivePCs = settings["adaptive_PCs"]
 
     index = model.fit()
 
+    PHC_coeff, PHC_deviations = PHC_index(X, index)
+
     DB = evaluate_clustering_DB(X_tilde, index) #evaluate the clustering solutions by means of the Davies-Bouldin algorithm
     print(DB)
+
+    text_file = open("stats_training_correction_.txt", "wt")
+    DB_index = text_file.write("DB index equal to: {} \n".format(DB))
+    PHC_coeff = text_file.write("Average PHC is: {} \n".format(np.mean(PHC_coeff)))
+    text_file.close()
 
     if settings["write_on_txt"]:
         np.savetxt("idx_training.txt", index)

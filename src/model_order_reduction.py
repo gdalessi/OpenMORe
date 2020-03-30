@@ -1179,7 +1179,7 @@ def main_sample_dataset():
 def main_out():
     file_options = {
         "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data",
-        "input_file_name"           : "X_zc.csv",
+        "input_file_name"           : "dns_syngas_thermochemical.csv",
     }
 
 
@@ -1201,6 +1201,8 @@ def main_out():
 
     print("The training matrix dimensions with orthogonal outliers are: {}x{}".format(X_cleaned_lev.shape[0], X_cleaned_lev.shape[1]))
     print("The training matrix dimensions without orthogonal outliers are: {}x{}".format(X_cleaned_ortho.shape[0], X_cleaned_ortho.shape[1]))
+
+    np.savetxt("sampled_dns.txt", X_cleaned_ortho)
 
 def main_var_selec():
 
@@ -1251,4 +1253,4 @@ def main_var_selec():
 
 
 if __name__ =='__main__':
-    main_sample_dataset()
+    main_out()
