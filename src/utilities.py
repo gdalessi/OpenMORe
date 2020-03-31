@@ -235,7 +235,7 @@ def NRMSE (X_true, X_pred):
     NRMSE = [None] *n_var
 
     for ii in range(0, n_var):
-        NRMSE[ii] = np.sqrt(np.mean((X_true[:,ii] - X_pred[:,ii])**2)) / np.sqrt(np.mean(X_true**2))
+        NRMSE[ii] = np.sqrt(np.mean((X_true[:,ii] - X_pred[:,ii])**2)) / np.sqrt(np.mean(X_true[:,ii]**2))
 
     return NRMSE
 

@@ -371,7 +371,7 @@ class PCA:
             for jj in range(input_eigens, scores.shape[1]):
                 t_sq += scores[ii,jj]**2
                 lam_j += eigval[jj]
-            scores_dist[ii] = np.sqrt(t_sq/(lam_j + TOL))
+            scores_dist[ii] = t_sq/(lam_j + TOL)
 
         #Now compute the distance distribution, and delete the observations in the
         #upper 3% (done in the while loop) to get the outlier-free matrix.
@@ -475,6 +475,126 @@ class PCA:
         self.X = np.delete(self.X, new_mask, axis=0)
 
         return self.X, bin_id, new_mask
+
+    
+    def outlier_removal_multistep(self):
+        '''
+        Parente, Alessandro, and James C. Sutherland. Combustion and flame 160.2 (2013): 340-350.
+        
+        
+        This function has not been tested yet, but it's running correctly.
+        '''
+
+        from scipy.stats import kurtosis
+
+        convergence = False
+        iterations = 0
+        kurtosis_ = 1
+        conv_tol = 1E-6
+        iterMax = 150
+        TOL = 1E-16
+
+        while not convergence:
+            #Trim the input data to have a robust Mahalanobis distance, after PCA
+            input_eigens = self.eigens
+            self.eigens = self.X.shape[1]-1
+
+            PCs, eigval = self.fit()
+            scores = self.get_scores()
+            mahalanobis_ = np.empty((self.X.shape[0],), dtype=float)
+            
+            #The observations associated with large values of DM (mahal) are classified as outliers 
+            #and then discarded
+            for ii in range(0,self.X.shape[0]):
+                t_sq = 0
+                lam_j = 0
+                for jj in range(0, self.X.shape[1]-1):
+                    t_sq += scores[ii,jj]**2
+                    lam_j += eigval[jj]
+                mahalanobis_[ii] = t_sq/(lam_j + TOL)
+            
+            #A fraction alpha (typically 0.01%-0.1%) of the data points characterized by the largest 
+            #value of DM are classified as outliers and removed.
+            if iterations < 20:
+                alpha = 0.000007
+            else:
+                alpha = 0
+            
+            #compute the new number of observations after the trim factor:
+            trim = int((1-alpha)*self.X.shape[0])
+            to_trim = np.argsort(mahalanobis_)
+        
+            new_mask = to_trim[:trim]
+            self.X = self.X[new_mask,:]
+
+            print("X trimmed dim: {}".format(self.X.shape))
+            
+            #Compute the PCA scores. Override the eventual number of PCs: ALL the
+            #PCs are needed, as the outliers are also given by the last PCs examination
+            PCs, eigval = self.fit()
+            scores = self.get_scores()
+            w_scores = scores/np.sqrt(eigval)
+            #Select as "important" the PCs which explain the 20% of the average eigenvalue
+            self.eigens = input_eigens
+            
+
+            #compute the curtosis of the new w_scores = u_scores/sqrt(eigenvalues)
+            new_kurt = np.mean(kurtosis(w_scores[:,:self.eigens]))
+            #check if the kurtosis variation is below the fixed threshold, to activate convergence
+            check_conv = (new_kurt - np.mean(kurtosis_))/(new_kurt + TOL)
+            print("Delta Kurtosis: {}".format(check_conv))
+
+            if check_conv <= conv_tol or iterations >= iterMax:
+                convergence = True
+                break
+            
+            mahalanobis_ = np.empty((self.X.shape[0],), dtype=float)
+            scores_dist = np.empty((self.X.shape[0],), dtype=float)
+            #Compute again the Mahalanobis distance for the robust set of scores, evaluating the
+            #important PCs
+            for ii in range(0,self.X.shape[0]):
+                t_sq = 0
+                lam_j = 0
+                for jj in range(0, self.eigens):
+                    t_sq += scores[ii,jj]**2
+                    lam_j += eigval[jj]
+                mahalanobis_[ii] = t_sq/(lam_j + TOL)
+            #remove the points in the 99th quantile
+            to_remove = np.quantile(mahalanobis_, 0.9995)
+            new_mask = np.where(mahalanobis_ > to_remove)
+
+            #Do the same, but on the very last PCs. 
+            r = len(np.where(eigval < 0.2*np.mean(eigval))[0])
+            
+            for ii in range(0,self.X.shape[0]):
+                t_sq = 0
+                lam_j = 0
+                for jj in range(scores.shape[1]-r+1, scores.shape[1]):
+                    t_sq += scores[ii,jj]**2
+                    lam_j += eigval[jj]
+                scores_dist[ii] = t_sq/(lam_j + TOL)
+            #remove also here the scores in the 99th quantile
+            to_remove2 = np.quantile(scores_dist, 0.9995)
+            new_mask2 = np.where(scores_dist >= to_remove2)
+            #merge the idx of the points which were selected in the two steps, and delete
+            #the repetitions (unique)
+            temp = np.concatenate((new_mask, new_mask2), axis=1)
+            to_delete = np.unique(temp)
+
+            print('Observations to delete: {}'.format(len(to_delete)))
+            #Delete the points from the matrix
+            self.X = np.delete(self.X, to_delete, axis=0)
+
+            print("Iteration number: {}".format(iterations))
+            iterations +=1
+            #store the "previous" Kurtosis
+            kurtosis_ = kurtosis(w_scores[:,:self.eigens])
+
+
+            print("The training matrix dimensions without outliers are: {}x{}".format(self.X.shape[0], self.X.shape[1]))
+
+
+        return self.X 
 
 
 class LPCA(PCA):
@@ -1179,7 +1299,7 @@ def main_sample_dataset():
 def main_out():
     file_options = {
         "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data",
-        "input_file_name"           : "dns_syngas_thermochemical.csv",
+        "input_file_name"           : "cfdf.csv",#dns_syngas_thermochemical
     }
 
 
@@ -1188,21 +1308,54 @@ def main_out():
 
 
     model = PCA(X)
-    model.eigens = 2
+    model.eigens = 15
+    #
+    X_cleaned = model.outlier_removal_multistep()
 
-    X_cleaned_lev, bin, new_mask = model.outlier_removal_leverage()
+    print("The training matrix dimensions with leverage outliers are: {}x{}".format(X.shape[0], X.shape[1]))
+    print("The training matrix dimensions without leverage outliers are: {}x{}".format(X_cleaned.shape[0], X_cleaned.shape[1]))
+    '''
+    print("The training matrix dimensions with outliers are: {}x{}".format(X.shape[0], X.shape[1]))
+    print("The training matrix dimensions without outliers are: {}x{}".format(X_cleaned.shape[0], X_cleaned.shape[1]))
+    '''
+    matplotlib.rcParams.update({'font.size' : 18, 'text.usetex' : True})
+    fig = plt.figure()
+    axes = fig.add_axes([0.2,0.15,0.7,0.7], frameon=True)
+    axes.scatter(X[:,0], X[:,5], 1, color= 'k') #5= O2,6 =H2O,7 =CO,8 =CO2,9 =H2O2,11 =CH4,
+    axes.scatter(X_cleaned[:,0], X_cleaned[:,5], 1, color= 'b')
+
+    axes.set_xlabel('$T$')
+    axes.set_ylabel('var')
+    axes.set_xlim(min(X[:,0]), max(X[:,0]))
+    axes.set_ylim(min(X[:,3]), max(X[:,3]))
+    matplotlib.rcParams.update({'font.size' : 14, 'text.usetex' : True})
+    axes.legend(('Full training data', 'Sampled training data'), markerscale =7)
+    plt.show()
+
+    
+    
+    
+    
+    '''X_cleaned_lev, bin, new_mask = model.outlier_removal_leverage()
+
+
+    print(new_mask)
 
     model = PCA(X_cleaned_lev)
     model.eigens = 2
     print("The training matrix dimensions with leverage outliers are: {}x{}".format(X.shape[0], X.shape[1]))
     print("The training matrix dimensions without leverage outliers are: {}x{}".format(X_cleaned_lev.shape[0], X_cleaned_lev.shape[1]))
 
-    X_cleaned_ortho, bin, new_mask = model.outlier_removal_orthogonal()
+    X_cleaned_ortho, bin, new_mask2 = model.outlier_removal_orthogonal()
+
+    print(new_mask2)
 
     print("The training matrix dimensions with orthogonal outliers are: {}x{}".format(X_cleaned_lev.shape[0], X_cleaned_lev.shape[1]))
     print("The training matrix dimensions without orthogonal outliers are: {}x{}".format(X_cleaned_ortho.shape[0], X_cleaned_ortho.shape[1]))
 
-    np.savetxt("sampled_dns.txt", X_cleaned_ortho)
+    np.savetxt("sampled_dns.txt", X_cleaned_ortho)'''
+
+
 
 def main_var_selec():
 
