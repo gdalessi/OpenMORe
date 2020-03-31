@@ -356,7 +356,7 @@ class lpca:
                 rec_err_os = (self.X_tilde - C_mat) - (self.X_tilde - C_mat) @ modes[0] @ modes[0].T
                 sq_rec_oss = np.power(rec_err_os, 2)
                 sq_rec_err[:,ii] = sq_rec_oss.sum(axis=1)
-                if self._correction.lower() != "off" and self._correction != "phc":
+                if self._correction.lower() != "off" and self._correction.lower() != "phc":
                     if self.correction.lower() == "mean":
                         correction_[:,ii] = np.mean(np.var((self.X_tilde - C_mat) @ modes[0], axis=0))
                     elif self._correction.lower() == "max":
