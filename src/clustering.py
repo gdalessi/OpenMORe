@@ -339,10 +339,16 @@ class lpca:
         while(iteration < iter_max):
             sq_rec_oss = np.zeros((rows, cols), dtype=float)
             sq_rec_err = np.zeros((rows, self._k), dtype=float)
-            PHC_coefficients, PHC_std = PHC_index(self.X, idx)
+            if self._correction == 'phc_standard':
+                PHC_coefficients, PHC_std = PHC_index(self.X, idx)   #PHC_index(self.X, idx) or PHC_robustTrim(self.X, idx)
+            elif self._correction == 'phc_median':
+                PHC_coefficients, PHC_std = PHC_median(self.X, idx)
+            elif self._correction == 'phc_robust':
+                PHC_coefficients, PHC_std = PHC_robustTrim(self.X, idx)
             for ii in range(0, self._k):
                 cluster = get_cluster(self.X_tilde, idx, ii)
-                local_homogeneity = PHC_coefficients[ii]
+                if self._correction.lower() == 'phc_standard' or self._correction.lower() == 'phc_median' or self._correction.lower() == 'phc_robust':
+                    local_homogeneity = PHC_coefficients[ii]
                 centroids = get_centroids(cluster)
                 local_model = model_order_reduction.PCA(cluster)
                 local_model.to_center = False
@@ -356,7 +362,7 @@ class lpca:
                 rec_err_os = (self.X_tilde - C_mat) - (self.X_tilde - C_mat) @ modes[0] @ modes[0].T
                 sq_rec_oss = np.power(rec_err_os, 2)
                 sq_rec_err[:,ii] = sq_rec_oss.sum(axis=1)
-                if self._correction.lower() != "off" and self._correction.lower() != "phc":
+                if self._correction.lower() != "off" and self._correction.lower() != "phc_standard" and self._correction.lower() == 'phc_median' and self._correction.lower() == 'phc_robust':
                     if self.correction.lower() == "mean":
                         correction_[:,ii] = np.mean(np.var((self.X_tilde - C_mat) @ modes[0], axis=0))
                     elif self._correction.lower() == "max":
@@ -369,7 +375,7 @@ class lpca:
                         raise Exception("Correction method" + self._correction + "not supported. Exiting with error..")
                         exit()
                     scores_factor = np.multiply(sq_rec_err, correction_)
-                elif self._correction.lower() == 'phc':
+                elif self._correction.lower() == 'phc_standard' or self._correction.lower() == 'phc_median' or self._correction.lower() == 'phc_robust':
                     scores_factor = np.add(sq_rec_err, local_homogeneity)
             # Update idx
             if self._correction.lower() != "off":

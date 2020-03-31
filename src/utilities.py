@@ -1,22 +1,17 @@
 '''
 MODULE: utilities.py
-
 @Author:
     G. D'Alessio [1,2]
     [1]: Université Libre de Bruxelles, Aero-Thermo-Mechanics Laboratory, Bruxelles, Belgium
     [2]: CRECK Modeling Lab, Department of Chemistry, Materials and Chemical Engineering, Politecnico di Milano
-
 @Contacts:
     giuseppe.dalessio@ulb.ac.be
-
 @Details:
     This module contains a set of functions which are useful for reduced-order modelling with PCA.
     A detailed description is available under the definition of each function.
-
 @Additional notes:
     This code is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
     Please report any bug to: giuseppe.dalessio@ulb.ac.be
-
 '''
 
 
@@ -25,12 +20,12 @@ from numpy import linalg as LA
 import functools
 import time
 
-import model_order_reduction
+
 
 
 import matplotlib
 import matplotlib.pyplot as plt
-__all__ = ["unscale", "uncenter", "center", "scale", "center_scale", "PHC_index", "get_centroids", "get_cluster", "get_all_clusters", "explained_variance", "evaluate_clustering_DB", "NRMSE", "PCA_fit", "accepts", "readCSV", "allowed_centering","allowed_scaling"]
+__all__ = ["unscale", "uncenter", "center", "scale", "center_scale", "PHC_index", "get_centroids", "get_cluster", "get_all_clusters", "explained_variance", "evaluate_clustering_DB", "NRMSE", "PCA_fit", "accepts", "readCSV", "allowed_centering","allowed_scaling", "PHC_robustTrim", "PHC_median"]
 
 
 # ------------------------------
@@ -78,11 +73,8 @@ def center_scale(X, mu, sig):
     observations. Scaling is achieved by dividing each variable by a given scaling factor. Therefore, the
     i-th observation of the j-th variable, x_{i,j} can be
     centered and scaled by means of:
-
     \tilde{x_{i,j}} = (x_{i,j} - mu_{j}) / (sig_{j}),
-
     where mu_{j} and sig_{j} are the centering and scaling factor for the considered j-th variable, respectively.
-
     AUTO: the standard deviation of each variable is used as a scaling factor.
     PARETO: the squared root of the standard deviation is used as a scaling f.
     RANGE: the difference between the minimum and the maximum value is adopted as a scaling f.
@@ -256,7 +248,6 @@ def PCA_fit(X, n_eig):
     - Output:
     evecs: eigenvectors from the covariance matrix decomposition (PCs)
     evals: eigenvalues from the covariance matrix decomposition (lambda)
-
     !!! WARNING !!! the PCs are already ordered (decreasing, for importance)
     because the eigenvalues are also ordered in terms of magnitude.
     '''
@@ -346,6 +337,8 @@ def PHC_median(X, idx):
 
 def PHC_robustTrim(X,idx):
 
+    import model_order_reduction
+
     k = np.max(idx) +1
     TOL = 1E-16
     PHC_coeff=[None] *k
@@ -364,11 +357,11 @@ def PHC_robustTrim(X,idx):
 
         for jj in range(0,cluster_.shape[0]):
             t_sq = 0
-                lam_j = 0
-                for jj in range(0, cluster_.shape[1]-1):
-                    t_sq += scores[ii,jj]**2
-                    lam_j += eigval[jj]
-                mahalanobis_[ii] = t_sq/(lam_j + TOL)
+            lam_j = 0
+            for jj in range(0, cluster_.shape[1]-1):
+                t_sq += scores[ii,jj]**2
+                lam_j += eigval[jj]
+            mahalanobis_[ii] = t_sq/(lam_j + TOL)
             
         #A fraction alpha (typically 0.01%-0.1%) of the data points characterized by the largest 
         #value of DM are classified as outliers and removed.
