@@ -269,6 +269,7 @@ class lpca:
             os.mkdir(newDirName)
             os.chdir(newDirName)
         except FileExistsError:
+            print("Folder already existing. Skipping folder creation step.")
             pass
 
 
@@ -345,10 +346,10 @@ class lpca:
                 PHC_coefficients, PHC_std = PHC_median(self.X, idx)
             elif self._correction == 'phc_robust':
                 PHC_coefficients, PHC_std = PHC_robustTrim(self.X, idx)
+            else:
+                pass
             for ii in range(0, self._k):
                 cluster = get_cluster(self.X_tilde, idx, ii)
-                if self._correction.lower() == 'phc_standard' or self._correction.lower() == 'phc_median' or self._correction.lower() == 'phc_robust':
-                    local_homogeneity = PHC_coefficients[ii]
                 centroids = get_centroids(cluster)
                 local_model = model_order_reduction.PCA(cluster)
                 local_model.to_center = False
@@ -362,21 +363,23 @@ class lpca:
                 rec_err_os = (self.X_tilde - C_mat) - (self.X_tilde - C_mat) @ modes[0] @ modes[0].T
                 sq_rec_oss = np.power(rec_err_os, 2)
                 sq_rec_err[:,ii] = sq_rec_oss.sum(axis=1)
-                if self._correction.lower() != "off" and self._correction.lower() != "phc_standard" and self._correction.lower() == 'phc_median' and self._correction.lower() == 'phc_robust':
-                    if self.correction.lower() == "mean":
-                        correction_[:,ii] = np.mean(np.var((self.X_tilde - C_mat) @ modes[0], axis=0))
-                    elif self._correction.lower() == "max":
-                        correction_[:,ii] = np.max(np.var((self.X_tilde - C_mat) @ modes[0], axis=0))
-                    elif self._correction.lower() == "min":
-                        correction_[:,ii] = np.min(np.var((self.X_tilde - C_mat) @ modes[0], axis=0))
-                    elif self._correction.lower() == "std":
-                        correction_[:,ii] = np.std(np.var((self.X_tilde - C_mat) @ modes[0], axis=0))
-                    else:
-                        raise Exception("Correction method" + self._correction + "not supported. Exiting with error..")
-                        exit()
+                if self.correction.lower() == "mean":
+                    correction_[:,ii] = np.mean(np.var((self.X_tilde - C_mat) @ modes[0], axis=0))
+                    scores_factor = np.multiply(sq_rec_err, correction_)
+                elif self._correction.lower() == "max":
+                    correction_[:,ii] = np.max(np.var((self.X_tilde - C_mat) @ modes[0], axis=0))
+                    scores_factor = np.multiply(sq_rec_err, correction_)
+                elif self._correction.lower() == "min":
+                    correction_[:,ii] = np.min(np.var((self.X_tilde - C_mat) @ modes[0], axis=0))
+                    scores_factor = np.multiply(sq_rec_err, correction_)
+                elif self._correction.lower() == "std":
+                    correction_[:,ii] = np.std(np.var((self.X_tilde - C_mat) @ modes[0], axis=0))
                     scores_factor = np.multiply(sq_rec_err, correction_)
                 elif self._correction.lower() == 'phc_standard' or self._correction.lower() == 'phc_median' or self._correction.lower() == 'phc_robust':
+                    local_homogeneity = PHC_coefficients[ii]
                     scores_factor = np.add(sq_rec_err, local_homogeneity)
+                else:
+                    pass
             # Update idx
             if self._correction.lower() != "off":
                 idx = np.argmin(scores_factor, axis = 1)
@@ -600,8 +603,8 @@ class fpca:
 
         delta_step = (max_interval - min_interval) / self._k
 
-        self.idx = 0
-        bin = np.empty((len(self.condVec),))
+        counter = 0
+        self.idx = np.empty((len(self.condVec),))
         var_left = min_interval
 
         #Find the observations in each bin (find the idx, where the classes are
@@ -609,8 +612,8 @@ class fpca:
         while self.idx <= self._k:
             var_right = var_left + delta_step
             mask = np.logical_and(self.condVec >= var_left, self.condVec < var_right)
-            bin[np.where(mask)] = self.idx
-            self.idx += 1
+            self.idx[np.where(mask)] = counter
+            counter += 1
             var_left += delta_step
 
         return self.idx
@@ -887,6 +890,110 @@ class KMeans:
         return idx
 
 
+class multistageLPCA(lpca):
+    def __init__(self,X, conditioning):
+        self.X = X
+        self.condVec = conditioning
+
+        super().__init__(X)
+
+    def partition(self):
+        #First of all, center and scale the data matrix
+        self.X_tilde = self.preprocess_training(self.X, self._center, self._scale, self._centering, self._scaling)
+        
+        #Compute the bin width (delta_step), after calculating the max and the min of the
+        #conditioning vector, condVec. An additional 1% is subtracted (resp. added) to the
+        #interval, because in this process few points at the interval limits could be lost otherwise
+        min_interval = np.min(self.condVec) -0.01*np.min(self.condVec)
+        max_interval = np.max(self.condVec) +0.01*np.max(self.condVec)
+        delta_step = (max_interval - min_interval) / self._k
+
+        #Declare an id vector, to keep track of the observations which will be split into
+        #the clusters.
+        id = np.linspace(1,self.X.shape[0], self.X.shape[0])
+
+        #Start the conditioning by means of condVec
+        counter = 0 
+        self.idxF = np.empty((len(self.condVec),), dtype=int)
+        var_left = min_interval
+
+        #Put the observations in the bin where they belong, until the max number of
+        #bins is reached:
+        while counter <= self._k:
+            var_right = var_left + delta_step
+            mask = np.logical_and(self.condVec >= var_left, self.condVec < var_right)
+            self.idxF[np.where(mask)] = counter
+            counter += 1
+            var_left += delta_step
+
+        #In each bin, compute the iterative VQPCA algorithm. In this way, each bin of
+        #condVec is split in two:
+        for ii in range(0,self._k):
+            #Get the cluster's observations
+            cluster_ = get_cluster(self.X_tilde, self.idxF, ii)
+            #Get the number of the observation in the original matrix
+            id_ = get_cluster(id, self.idxF, ii)
+
+            #Perform VQPCA in the cluster, using k = 2.
+            modelVQ = lpca(cluster_)
+            modelVQ.to_center = False
+            modelVQ.to_scale = False
+            modelVQ.clusters = 2
+            modelVQ.eigens = self.eigens
+            modelVQ.initialization = 'observations'
+            idxLoc = modelVQ.fit()
+            #There is need to have 1 as k_min in each cluster, so increase the python 
+            #enumeration
+            idxLoc = idxLoc +1 #now the indeces are [1,2] 
+
+            #The following code makes sure that all the integers between 1 and k, with k
+            #equal to the selected number of clusters, are covered. So that:
+            #Bin1 --> k = 1,2
+            #Bin2 --> k = 3,4
+            #Bin3 --> k = 4,5
+            #etc..
+            ii+=1
+            if ii > 1:
+                mask1 = np.where(idxLoc == 1) 
+                idxLoc[mask1] = ii + (ii-1)
+                mask2 = np.where(idxLoc == 2)
+                idxLoc[mask2] = 2*ii
+            else:
+                mask1 = np.where(idxLoc == 1) 
+                idxLoc[mask1] = ii 
+                mask2 = np.where(idxLoc == 2)
+                idxLoc[mask2] = ii+1
+            ii-=1
+
+            #Now we temporarely merge the observation id vector with the cluster, because
+            #later we'll have to reassemble the original matrix in the exact same order, so
+            #in the end the 'tracking' matrix is obtained, whose dimensions are (n x (p+1)).
+            tracking = np.hstack([id_.reshape((-1,1)), cluster_])
+            
+            #As soon as the matrix cluster_ is partitioned via VQPCA, rebuild the training
+            #matrix. For now, the training matrix will still be not ordered as the original
+            #one.
+            if ii == 0:
+                X_yo = tracking
+                idx_yo = idxLoc
+            else:
+                X_yo = np.concatenate((X_yo, tracking), axis=0)
+                idx_yo = np.concatenate((idx_yo, idxLoc), axis=0)
+
+
+        #To order again the observations of the clustered matrix in the exact same way as 
+        #the original one, isolate and sort in ascending order the previous id vector which 
+        #was put in the matrix first column.
+        id_back = X_yo[:,0]
+        mask = np.argsort(id_back)
+
+        #Sort the matrix and the idx:
+        X_yo = X_yo[mask,:]
+        idx_yo = idx_yo[mask]
+  
+
+        return idx_yo
+
 
 def main():
     import clustering
@@ -944,10 +1051,14 @@ def main():
 
 
     if settings["plot_on_mesh"]:
+        matplotlib.rcParams.update({'font.size' : 6, 'text.usetex' : True})
         mesh = np.genfromtxt(mesh_options["path_to_file"] + "/" + mesh_options["mesh_file_name"], delimiter= ',')
-        plt.scatter(mesh[:,0], mesh[:,1], c=index,alpha=0.5)
-        plt.xlabel("X [m]")
-        plt.ylabel("Y [m]")
+
+        fig = plt.figure()
+        axes = fig.add_axes([0.2,0.15,0.7,0.7], frameon=True)
+        axes.scatter(mesh[:,0], mesh[:,1], c=index,alpha=0.5)
+        axes.set_xlabel('X [m]')
+        axes.set_ylabel('Y [m]')
         plt.show()
 
 
@@ -1018,8 +1129,51 @@ def mainK():
     plt.ylabel("Y [m]")
     plt.show()
 
+def main_comb():
+    import clustering
+
+    file_options = {
+        "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data",
+        "input_file_name"           : "f10A25.csv",
+    }
+
+
+    settings = {
+        "centering_method"          : "MEAN",
+        "scaling_method"            : "AUTO",
+        "number_of_clusters"        : 12,
+    }
+
+
+    mesh_options = {
+        "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data",
+        "mesh_file_name"            : "meshf10A25.csv",
+    }
+
+
+    X = readCSV(file_options["path_to_file"], file_options["input_file_name"])
+    
+    T = X[:,0]
+    X = X[:,1:]
+    
+    model = clustering.multistageLPCA(X, T)
+    model.clusters = 4
+    model.eigens = 11
+    idx= model.partition()
+
+
+    unique, counts = np.unique(idx, return_counts=True)
+    print("UNIQUE: {}".format(unique))
+    print("COUNTS: {}".format(counts))
+
+    
+    mesh = np.genfromtxt(mesh_options["path_to_file"] + "/" + mesh_options["mesh_file_name"], delimiter= ',')
+    plt.scatter(mesh[:,0], mesh[:,1], c=idx,alpha=0.5)
+    plt.xlabel("X [m]")
+    plt.ylabel("Y [m]")
+    plt.show()
 
 
 
 if __name__ == '__main__':
-    main()
+    main_comb()
