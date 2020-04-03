@@ -496,6 +496,8 @@ class fpca:
         self.X = X
         self.condVec = condVec
 
+        self._nPCs = self.X.shape[1]-1
+
         #Decide if the input matrix must be centered:
         self._center = True
         #Set the centering method:
@@ -604,12 +606,12 @@ class fpca:
         delta_step = (max_interval - min_interval) / self._k
 
         counter = 0
-        self.idx = np.empty((len(self.condVec),))
+        self.idx = np.empty((len(self.condVec),),dtype=int)
         var_left = min_interval
 
         #Find the observations in each bin (find the idx, where the classes are
         #the different bins number)
-        while self.idx <= self._k:
+        while counter <= self._k:
             var_right = var_left + delta_step
             mask = np.logical_and(self.condVec >= var_left, self.condVec < var_right)
             self.idx[np.where(mask)] = counter
@@ -990,6 +992,8 @@ class multistageLPCA(lpca):
         #Sort the matrix and the idx:
         X_yo = X_yo[mask,:]
         idx_yo = idx_yo[mask]
+
+        idx_yo = idx_yo-1
   
 
         return idx_yo
@@ -1155,6 +1159,8 @@ def main_comb():
     
     T = X[:,0]
     X = X[:,1:]
+
+    X_tilde = center_scale(X, center(X, method=settings["centering_method"]), scale(X, method=settings["scaling_method"]))
     
     model = clustering.multistageLPCA(X, T)
     model.clusters = 4
@@ -1172,6 +1178,37 @@ def main_comb():
     plt.xlabel("X [m]")
     plt.ylabel("Y [m]")
     plt.show()
+
+    
+    
+    DB = evaluate_clustering_DB(X_tilde, idx) #evaluate the clustering solutions by means of the Davies-Bouldin algorithm
+    print("The DB index value for the multi is: {}".format(DB))
+
+    PHC_coeff, PHC_deviations = PHC_robustTrim(X, idx)
+    print("The PHC index value for the multi is: {}".format(np.mean(PHC_coeff)))
+    
+
+
+    model2= clustering.fpca(X,T)
+    model2.clusters = 8
+
+    idFPCA = model2.condition()
+
+    unique2, counts2 = np.unique(idFPCA, return_counts=True)
+    print("UNIQUE: {}".format(unique2))
+    print("COUNTS: {}".format(counts2))
+
+    mesh = np.genfromtxt(mesh_options["path_to_file"] + "/" + mesh_options["mesh_file_name"], delimiter= ',')
+    plt.scatter(mesh[:,0], mesh[:,1], c=idFPCA,alpha=0.5)
+    plt.xlabel("X [m]")
+    plt.ylabel("Y [m]")
+    plt.show()
+
+    DB2 = evaluate_clustering_DB(X_tilde, idFPCA) #evaluate the clustering solutions by means of the Davies-Bouldin algorithm
+    print("The DB index value for the condT is: {}".format(DB2))
+
+    PHC_coeff2, PHC_deviations = PHC_robustTrim(X, idFPCA)
+    print("The PHC index value for the condT is: {}".format(np.mean(PHC_coeff2)))
 
 
 
