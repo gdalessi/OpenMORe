@@ -1042,7 +1042,7 @@ def main():
 
     PHC_coeff, PHC_deviations = PHC_index(X, index)
 
-    DB = evaluate_clustering_DB(X_tilde, index) #evaluate the clustering solutions by means of the Davies-Bouldin algorithm
+    DB = evaluate_clustering_DB(X_tilde, index) #evaluate the clustering solution by means of the Davies-Bouldin index
     print(DB)
 
     text_file = open("stats_training_correction_.txt", "wt")
