@@ -49,7 +49,7 @@ class PCA:
         self._plot_explained_variance = True
         #Automatically assess the number of PCs to retain with one of the available methods
         self._assessPCs = 'var'                                                                     #False (bool) = skip; 'var' = explained variance criterion; 'nrmse' = average reconstruction error
-        self._threshold_var = 0.99                                                                  # threshold in case of explained variance assessment criterion
+        self._threshold_var = 0.95                                                                  # threshold in case of explained variance assessment criterion
         self._threshold_nrmse = 0.1                                                                 # treshold in case of reconstruction error criterion
         #Set the PC number to plot or the variable's number to plot
         self._num_to_plot = 1
@@ -185,10 +185,10 @@ class PCA:
         #Compute the covariance matrix
         C = np.cov(self.X_tilde, rowvar=False) #rowvar=False because the X matrix is (observations x variables)
 
-        evals, evecs = LA.eig(C)
-        mask = np.argsort(evals)[::-1]
-        self.evecs = evecs[:,mask]
-        self.evals = evals[mask]
+        self.ALLevals, self.ALLevecs = LA.eig(C)
+        mask = np.argsort(self.ALLevals)[::-1]
+        self.evecs = self.ALLevecs[:,mask]
+        self.evals = self.ALLevals[mask]
 
         self.evecs = self.evecs[:,:self._nPCs]
         self.evals = self.evals[:self._nPCs]
@@ -227,15 +227,15 @@ class PCA:
         - Output:
         explained: percentage of explained variance -- dim: (scalar)
         '''
-        explained_variance = np.cumsum(self.evals)/sum(self.evals)
-        explained = explained_variance[self.eigens]
+        explained_variance = np.cumsum(self.evals)/sum(self.ALLevals)
+        explained = explained_variance[-1]
         #If the plot boolean is True, produce an image to show the explained variance curve.
         if self._plot_explained_variance:
             matplotlib.rcParams.update({'font.size' : 18, 'text.usetex' : True})
             fig = plt.figure()
             axes = fig.add_axes([0.15,0.15,0.7,0.7], frameon=True)
-            axes.plot(np.linspace(1, self.X_tilde.shape[1]+1, self.X_tilde.shape[1]), explained_variance, color='b', marker='s', linestyle='-', linewidth=2, markersize=4, markerfacecolor='b', label='Cumulative explained')
-            axes.plot([self.eigens, self.eigens], [explained_variance[0], explained_variance[self.eigens]], color='r', marker='s', linestyle='-', linewidth=2, markersize=4, markerfacecolor='r', label='Explained by {} PCs'.format(self.eigens))
+            axes.plot(np.linspace(1, len(explained_variance), len(explained_variance)), explained_variance, color='b', marker='s', linestyle='-', linewidth=2, markersize=4, markerfacecolor='b', label='Cumulative explained')
+            axes.plot([self.eigens, self.eigens], [explained_variance[0], explained_variance[-1]], color='r', marker='s', linestyle='-', linewidth=2, markersize=4, markerfacecolor='r', label='Explained by {} PCs'.format(self.eigens))
             axes.set_xlabel('Number of PCs [-]')
             axes.set_ylabel('Explained variance [-]')
             axes.set_title('Variance explained by {} PCs: {}'.format(self.eigens, round(explained,3)))
@@ -321,7 +321,7 @@ class PCA:
 
         matplotlib.rcParams.update({'font.size' : 18, 'text.usetex' : True})
         fig = plt.figure()
-        axes = fig.add_axes([0.15,0.15,0.7,0.7], frameon=True)
+        axes = fig.add_axes([0.25,0.15,0.7,0.7], frameon=True)
         axes.plot(self.X[:,self._num_to_plot], self.X[:,self._num_to_plot], color='r', linestyle='-', linewidth=2, markerfacecolor='b')
         axes.scatter(self.X[:,self._num_to_plot], reconstructed_[:,self._num_to_plot], 1, color= 'k')
         axes.set_xlabel('Original variable')
