@@ -1,0 +1,6 @@
+In this folder, the following data are available to test the pyMORe libraries:
+
+- flameD.csv: matrix (10613x37) representing the thermochemical space (T + Yi) spanned by the flameD detailed simulation with the GRI mechanism (with edcSMOKE); 
+- labels.csv: variables name for the flameD thermochemical space. The first variable is the temperature, and after there are the species names ordered as in the chemical mechanism;
+- mesh.csv: grid points for the CFD simulation. This file can be used to plot the clustering solution on the mesh;
+- fluid_var.csv: matrix (10613x7) containing the variables which are related to the fluid dynamics of the turbulent jet. They are: [Ux, Uy, Uz, epsilon, k, nut, P].
