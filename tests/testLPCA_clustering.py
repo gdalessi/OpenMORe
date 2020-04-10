@@ -1,19 +1,23 @@
 import sys
 sys.path.insert(1, '../src')
 
+import numpy as np
+import matplotlib
+import matplotlib.pyplot as plt
+
 import clustering
 from utilities import *
 
 file_options = {
-    "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data",
-    "input_file_name"           : "dns_syngas_thermochemical.csv",
+    "path_to_file"              : "../data",
+    "input_file_name"           : "flameD.csv",
 }
 
 
 mesh_options = {
-    #set the mesh file options
-    "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data",
-    "mesh_file_name"            : "dns_syngas_mesh.csv",
+    #set the mesh file options (the path goes up twice - it's ok)
+    "path_to_file"              : "../../data",
+    "mesh_file_name"            : "mesh.csv",
 
     #eventually enable the clustering solution plot on the mesh
     "plot_on_mesh"              : True,
@@ -26,7 +30,7 @@ settings = {
     "scaling_method"            : "auto",
 
     #set the initialization method (random, observations, kmeans)
-    "initialization_method"     : "observations",
+    "initialization_method"     : "kmeans",
 
     #set the number of clusters and PCs in each cluster
     "number_of_clusters"        : 8,
@@ -42,8 +46,8 @@ settings = {
 
 algorithm = {
     #enable eventual corrective coefficients for the LPCA algorithm:
-    #(mean, min, max, std, phc_standard, phc_median, phc_robust are available)
-    "correction_factor"         : "mean"
+    #(off, mean, min, max, std, phc_standard, phc_median, phc_robust are available)
+    "correction_factor"         : "off"
 }
 
 X = readCSV(file_options["path_to_file"], file_options["input_file_name"])
@@ -68,6 +72,7 @@ if settings["evaluate_clustering"]:
     PHC_coeff, PHC_deviations = PHC_index(X, index)
     
     #evaluate the clustering solution by means of the Davies-Bouldin index
+    X_tilde = center_scale(X, center(X, method=settings["centering_method"]), scale(X, method=settings["scaling_method"]))
     DB = evaluate_clustering_DB(X_tilde, index) 
 
 
@@ -79,12 +84,12 @@ if settings["evaluate_clustering"]:
 
 #eventually plot the clustering solution on the mesh
 if mesh_options["plot_on_mesh"]:
-    matplotlib.rcParams.update({'font.size' : 6, 'text.usetex' : True})
+    matplotlib.rcParams.update({'font.size' : 12, 'text.usetex' : True})
     mesh = np.genfromtxt(mesh_options["path_to_file"] + "/" + mesh_options["mesh_file_name"], delimiter= ',')
 
     fig = plt.figure()
     axes = fig.add_axes([0.2,0.15,0.7,0.7], frameon=True)
-    axes.scatter(mesh[:,0], mesh[:,1], c=index,alpha=0.5)
+    axes.scatter(mesh[:,0], mesh[:,1], c=index,alpha=0.5, cmap='gnuplot')
     axes.set_xlabel('X [m]')
     axes.set_ylabel('Y [m]')
     plt.show()

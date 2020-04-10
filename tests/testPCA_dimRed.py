@@ -6,14 +6,15 @@ from utilities import *
     
     
 file_options = {
-    "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data",
-    "input_file_name"           : "pasr_raw.csv",
+    "path_to_file"              : "../data",
+    "input_file_name"           : "flameD.csv",
 }
 
 settings ={
     #centering and scaling options
     "centering"                 : "mean",
     "scaling"                   : "auto",
+
     #set the number of PCs: it can be done automatically, or it can be 
     #decided by the user.
     "number_of_PCs"             : "auto",
