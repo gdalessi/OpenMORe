@@ -880,6 +880,8 @@ class variables_selection(PCA):
         import pandas as pd
         try:
             self.labels= np.array(pd.read_csv(self._path + '/' + self._labels_name, sep = ',', header = None))
+            print("YO: {}".format(len(self.labels)))
+            print(self.labels)
         except OSError:
             print("Could not open/read the selected file: " + self._labels_name)
             exit()
@@ -888,7 +890,7 @@ class variables_selection(PCA):
     @staticmethod
     def check_sanity_input(X, labels, retained):
         #print(labels)
-        if X.shape[1] != labels.shape[1]:
+        if X.shape[1] != len(labels):
             print("Variables number: {}, Labels length: {}".format(X.shape[1], labels.shape[1]))
             raise Exception("The number of variables does not match the labels.")
             exit()
@@ -942,7 +944,7 @@ class variables_selection(PCA):
                         var_tmp = ii
                 #Remove the variable from the matrix and the labels list
                 self.X_tilde = np.delete(self.X_tilde, var_tmp, axis=1)
-                self.labels = np.delete(self.labels, var_tmp, axis=1)
+                self.labels = np.delete(self.labels, var_tmp, axis=0)
                 print("Current number of variables: {}".format(self.X_tilde.shape[1]))
 
             return self.labels
@@ -968,19 +970,20 @@ class variables_selection(PCA):
                 argmax_on_last = np.max(np.abs(PCs[:,self._nPCs-1]))
                 #Delete the selected variable
                 self.X_tilde = np.delete(self.X_tilde, argmax_on_last, axis=1)
-                self.labels = np.delete(self.labels, argmax_on_last, axis=1)
+                self.labels = np.delete(self.labels, argmax_on_last, axis=0)
                 print("Current number of variables: {}".format(self.X_tilde.shape[1]))
                 #Get the current number of variables for the while loop
                 max_var = self.X_tilde.shape[1]
 
+
             return self.labels
 
-        
+        '''
         elif self._method == 'B4':
-            '''
-            The variables associated with the largest weights on each of the 'm' first PCs are 
-            selected. This is not an iterative algorithm.
-            '''
+            
+            #The variables associated with the largest weights on each of the 'm' first PCs are 
+            #elected. This is not an iterative algorithm.
+            
             model = PCA(self.X)
             model.eigens = self._nPCs
             PCs,eigvals = model.fit()
@@ -989,12 +992,12 @@ class variables_selection(PCA):
             for ii in range(0, self.retained):
                 #Check the largest weight on the first 'm' PCs and add it to the PVs list.
                 argmax_= np.argmax(np.abs(PCs[:,ii]))
-                PVs.append(self.labels[0][argmax_])
+                PVs.append(self.labels[argmax_])
                 #Set the variable weight to zero on all the PCs, to avoid repetition in the PVs list.
                 PCs[argmax_,:]= 0
             
             return PVs 
-
+        '''
 
 class SamplePopulation():
     '''
