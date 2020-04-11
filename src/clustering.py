@@ -642,50 +642,6 @@ class fpca:
             return self.LPCs, self.u_scores, self.Leigen, self.centroids
 
 
-class spectral:
-    '''
-    The spectral clustering algorithm is based on the following steps:
-    1) Construct a similarity graph, with A its weighted adjacency matrix.
-    2) Compute the unnormalized laplacian matrix L from A.
-    3) Decompose the L matrix, computing its eigenvalues and eigenvectors.
-    4) Compute the matrix U (n x k), where the columns are the first 'k' eigenvectors from the decomposition.
-    5) Apply k-Means on the U matrix.
-
-    WARNING: It is extremely expensive from a CPU point of view. It cannot be applied to large matrices.sr
-    '''
-    def __init__(self, X, k, sigma=False):
-        self.X = X
-        self.k = k
-        if not sigma:                       # sigma is the neighborhood radius. Generally its value must be optimized by means of a grid search.
-            self.sigma = 0.5
-        else:
-            self.sigma = sigma
-
-
-    def fit(self):
-        from sklearn.neighbors import radius_neighbors_graph
-        from scipy.sparse import csgraph
-
-        # Compute the adjancency matrix from the training dataset (epsilon-neighborhood graph)
-        print("Computing Adjacency matrix..")
-        A = radius_neighbors_graph(self.X, self.sigma, mode='distance', metric='euclidean')
-        A = A.toarray()
-
-        # Compute the unnormalized Laplacian
-        L = csgraph.laplacian(A, normed=False)
-
-        # Laplacian decomposition - retain only the first 'k' eigenvectors
-        eigval, eigvec = np.linalg.eig(L)
-        eigvec = eigvec[:, :self.k]
-
-        # Apply k-Means on the new points representation
-        kmeans = KMeans(n_clusters=self.k, random_state=0).fit(eigvec)
-        idx = kmeans.labels_
-        centroids = kmeans.cluster_centers_
-
-        return idx, centroids, eigvec
-
-
 class KMeans:
     '''
     X must be centered and scaled --- to change ---
