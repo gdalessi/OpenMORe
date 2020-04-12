@@ -21,11 +21,9 @@ import functools
 import time
 
 
-
-
 import matplotlib
 import matplotlib.pyplot as plt
-__all__ = ["unscale", "uncenter", "center", "scale", "center_scale", "PHC_index", "get_centroids", "get_cluster", "get_all_clusters", "explained_variance", "evaluate_clustering_DB", "NRMSE", "PCA_fit", "accepts", "readCSV", "allowed_centering","allowed_scaling", "PHC_robustTrim", "PHC_median"]
+__all__ = ["unscale", "uncenter", "center", "scale", "center_scale", "PHC_index", "get_centroids", "get_cluster", "get_all_clusters", "explained_variance", "evaluate_clustering_DB", "NRMSE", "PCA_fit", "accepts", "readCSV", "allowed_centering","allowed_scaling", "PHC_robustTrim", "PHC_median", "varimax_rotation"]
 
 
 # ------------------------------
@@ -513,7 +511,75 @@ def unscale(X_tilde, sigma):
         raise Exception("The matrix to be unscaled and the scaling vector must have the same dimensionality.")
         exit()
 
+def varimax_rotation(X, b, normalize=True):
+    '''
+    STILL UNDER CONSTRUCTION
+    Warning: has not been tested, yet -- there is still something to be checked.
+    '''
+    eigens = b.shape[1]
+    norm_factor = np.std(b)
+    loadings = np.empty((b.shape[0], b.shape[1]), dtype=float)
+    rot_loadings = np.empty((b.shape[0], b.shape[1]), dtype=float)
 
+    for ii in range(0, eigens):
+        loadings[:,ii] = b[:,ii]/norm_factor
+
+    C = np.cov(loadings, rowvar=False) 
+
+    iter_max = 1000
+    convergence_tolerance = 1E-16
+    iter = 1
+    convergence = False
+
+    variance_explained = np.sum(loadings**2)
+
+    while not convergence:
+        for ii in range(0,eigens):
+            for jj in range(ii+1, eigens):
+                x_j = loadings[:,ii]
+                y_j = loadings[:,jj]
+
+                u_j = x_j**2 - y_j**2
+                v_j = 2*x_j * y_j
+
+                A = np.sum(u_j)
+                B = np.sum(v_j)
+                C = u_j.T * u_j - v_j.T *v_j
+                D = 2 * u_j.T * v_j 
+
+                num = D - 3*A*B/X.shape[0]
+                den = C - (A**2 - B**2)/X.shape[0]
+
+                phi = np.arctan2(num, den)/4
+                angle = phi *180/3.141592653589793238462643383279502
+
+                if np.mean(np.abs(phi)) > 0.00001:
+                    X_j = np.cos(phi) *x_j + np.sin(phi) *y_j
+                    Y_j = -np.sin(phi) *x_j + np.cos(phi) *y_j
+
+                    loadings[:,ii] = X_j
+                    loadings[:,jj] = Y_j
+
+        var_old = variance_explained
+        variance_explained = np.sum(loadings**2)
+        check = np.abs((variance_explained - var_old)/(variance_explained + 1E-16))
+
+        if check < convergence_tolerance or iter > iter_max:
+            convergence = True 
+        else:
+            iter += 1
+        
+        print("Iteration number: {}".format(iter))
+        print("Convergence residuals: {}".format(check))
+
+    
+    for ii in range(0, eigens):
+        rot_loadings[:,ii] = loadings[:,ii] * norm_factor
+
+    return rot_loadings
+
+
+                    
 # ------------------------------
 # Decorators (alphabetical order)
 # ------------------------------
