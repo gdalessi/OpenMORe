@@ -351,10 +351,12 @@ class lpca:
                 pass
             for ii in range(0, self._k):
                 cluster = get_cluster(self.X_tilde, idx, ii)
-                if self._correction.lower() != 'medianoids':
+                if self._correction.lower() != 'medianoids' and self._correction.lower() != 'medoids':
                     centroids = get_centroids(cluster)
                 elif self.correction.lower() == 'medianoids':
                     centroids = get_medianoids(cluster)
+                elif self.correction.lower() == 'medoids':
+                    centroids = get_medoids(cluster)
                 local_model = model_order_reduction.PCA(cluster)
                 local_model.to_center = False
                 local_model.to_scale = False

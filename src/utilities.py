@@ -23,7 +23,7 @@ import time
 
 import matplotlib
 import matplotlib.pyplot as plt
-__all__ = ["unscale", "uncenter", "center", "scale", "center_scale", "PHC_index", "get_centroids", "get_cluster", "get_all_clusters", "explained_variance", "evaluate_clustering_DB", "NRMSE", "PCA_fit", "accepts", "readCSV", "allowed_centering","allowed_scaling", "PHC_robustTrim", "PHC_median", "varimax_rotation", "get_medianoids"]
+__all__ = ["unscale", "uncenter", "center", "scale", "center_scale", "PHC_index", "get_centroids", "get_cluster", "get_all_clusters", "explained_variance", "evaluate_clustering_DB", "NRMSE", "PCA_fit", "accepts", "readCSV", "allowed_centering","allowed_scaling", "PHC_robustTrim", "PHC_median", "varimax_rotation", "get_medianoids", "get_medoids"]
 
 
 # ------------------------------
@@ -194,6 +194,30 @@ def get_medianoids(X):
     '''
     medianoid = np.median(X, axis = 0)
     return medianoid
+
+def get_medoids(X):
+    '''
+    Given a matrix (or a cluster), calculate its
+    medoid: the point which minimize the sum of distances
+    with respect to the other observations.
+    - Input:
+    X = data matrix -- dim: (observations x variables)
+    - Output:
+    medoid = medoid vector -- dim: (1 x variables)
+    '''
+    from scipy.spatial.distance import euclidean, cdist
+    #Compute the distances between each point of the matrix
+    dist = cdist(X, X)
+    #Sum all the distances along the columns, to have the 
+    #cumulative sum of distances.
+    cumSum = np.sum(dist, axis=1)
+    #Pick up the point which minimize the distances from
+    #all the other points as a medoid
+    mask = np.argmin(cumSum)
+    medoid = X[mask,:]
+
+    return medoid
+
 
 
 def get_cluster(X, idx, index, write=False):

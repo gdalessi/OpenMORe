@@ -34,7 +34,7 @@ settings = {
 
     #set the number of clusters and PCs in each cluster
     "number_of_clusters"        : 8,
-    "number_of_eigenvectors"    : 4,
+    "number_of_eigenvectors"    : 5,
 
     #enable additional options:
     "adaptive_PCs"              : False,    #use a different number of PCs in each cluster (to test)
@@ -47,7 +47,7 @@ settings = {
 algorithm = {
     #enable eventual corrective coefficients for the LPCA algorithm:
     #'off', 'mean', 'min', 'max', 'std', 'phc_standard', 'phc_median', 'phc_robust', 'medianoids' are available
-    "correction_factor"         : "off"
+    "correction_factor"         : "medoids"
 }
 
 X = readCSV(file_options["path_to_file"], file_options["input_file_name"])
