@@ -1,15 +1,15 @@
 from distutils.core import setup
 
-setup(name='Machine_Learning: Model Order Reduction and ANN',
+setup(name='pyMORe',
   version= '1.0.0',
-  description='Model Order Reduction and ANN - Université Libre de Bruxelles',
+  description='Python libraries for Principal Component Analysis-based (PCA) model order reduction, clustering and data analysis.',
   author='Giuseppe D Alessio',
   author_email= 'giuseppe.dalessio@ulb.ac.be',
   packages = ['src'],
   scripts = ['my_exec.py'],
-  url = 'https://github.com/gdalessi/Machine_Learning',
-  download_url = 'https://github.com/gdalessi/Machine_Learning.git',
-  keywords = ['machine learning', 'neural networks', 'clustering', 'dimentionality reduction', 'model order reduction'])
+  url = 'https://gitlab.com/gdalessi/pyMORe',
+  download_url = 'https://gitlab.com/gdalessi/pyMORe.git',
+  keywords = ['Principal Component Analysis', 'clustering', 'dimentionality reduction', 'model order reduction'])
 
 
 

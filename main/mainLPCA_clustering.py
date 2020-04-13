@@ -46,7 +46,7 @@ settings = {
 
 algorithm = {
     #enable eventual corrective coefficients for the LPCA algorithm:
-    #'off', 'mean', 'min', 'max', 'std', 'phc_standard', 'phc_median', 'phc_robust', 'medianoids' are available
+    #'off', 'mean', 'min', 'max', 'std', 'phc_standard', 'phc_median', 'phc_robust', 'medianoids', 'medoids' are available
     "correction_factor"         : "medoids"
 }
 
