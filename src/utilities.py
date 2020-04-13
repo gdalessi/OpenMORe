@@ -23,7 +23,7 @@ import time
 
 import matplotlib
 import matplotlib.pyplot as plt
-__all__ = ["unscale", "uncenter", "center", "scale", "center_scale", "PHC_index", "get_centroids", "get_cluster", "get_all_clusters", "explained_variance", "evaluate_clustering_DB", "NRMSE", "PCA_fit", "accepts", "readCSV", "allowed_centering","allowed_scaling", "PHC_robustTrim", "PHC_median", "varimax_rotation"]
+__all__ = ["unscale", "uncenter", "center", "scale", "center_scale", "PHC_index", "get_centroids", "get_cluster", "get_all_clusters", "explained_variance", "evaluate_clustering_DB", "NRMSE", "PCA_fit", "accepts", "readCSV", "allowed_centering","allowed_scaling", "PHC_robustTrim", "PHC_median", "varimax_rotation", "get_medianoids"]
 
 
 # ------------------------------
@@ -181,6 +181,19 @@ def get_centroids(X):
     '''
     centroid = np.mean(X, axis = 0)
     return centroid
+
+
+def get_medianoids(X):
+    '''
+    Given a matrix (or a cluster), calculate its
+    medianoid (same as centroid, but with median).
+    - Input:
+    X = data matrix -- dim: (observations x variables)
+    - Output:
+    medianoid = medianoid vector -- dim: (1 x variables)
+    '''
+    medianoid = np.median(X, axis = 0)
+    return medianoid
 
 
 def get_cluster(X, idx, index, write=False):

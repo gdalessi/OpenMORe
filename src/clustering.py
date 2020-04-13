@@ -57,6 +57,7 @@ class lpca:
         self._method = 'KMEANS'                                             #Available options: 'KMEANS' or 'RANDOM'
         #Set the (eventual) corrector for the rec error computation:
         self._correction = "off"                                            #Available options: 'off', 'mean', 'max', 'std', 'var'
+        self.__activateCorrection = False
         #Adaptive PCs per cluster:
         self._adaptive = False                                              #Available options: True or False (boolean)
         
@@ -350,7 +351,10 @@ class lpca:
                 pass
             for ii in range(0, self._k):
                 cluster = get_cluster(self.X_tilde, idx, ii)
-                centroids = get_centroids(cluster)
+                if self._correction.lower() != 'medianoids':
+                    centroids = get_centroids(cluster)
+                elif self.correction.lower() == 'medianoids':
+                    centroids = get_medianoids(cluster)
                 local_model = model_order_reduction.PCA(cluster)
                 local_model.to_center = False
                 local_model.to_scale = False
@@ -366,22 +370,27 @@ class lpca:
                 if self.correction.lower() == "mean":
                     correction_[:,ii] = np.mean(np.var((self.X_tilde - C_mat) @ modes[0], axis=0))
                     scores_factor = np.multiply(sq_rec_err, correction_)
+                    self.__activateCorrection = True
                 elif self._correction.lower() == "max":
                     correction_[:,ii] = np.max(np.var((self.X_tilde - C_mat) @ modes[0], axis=0))
                     scores_factor = np.multiply(sq_rec_err, correction_)
+                    self.__activateCorrection = True
                 elif self._correction.lower() == "min":
                     correction_[:,ii] = np.min(np.var((self.X_tilde - C_mat) @ modes[0], axis=0))
                     scores_factor = np.multiply(sq_rec_err, correction_)
+                    self.__activateCorrection = True
                 elif self._correction.lower() == "std":
                     correction_[:,ii] = np.std(np.var((self.X_tilde - C_mat) @ modes[0], axis=0))
                     scores_factor = np.multiply(sq_rec_err, correction_)
+                    self.__activateCorrection = True
                 elif self._correction.lower() == 'phc_standard' or self._correction.lower() == 'phc_median' or self._correction.lower() == 'phc_robust':
                     local_homogeneity = PHC_coefficients[ii]
                     scores_factor = np.add(sq_rec_err, local_homogeneity)
+                    self.__activateCorrection = True
                 else:
                     pass
             # Update idx
-            if self._correction.lower() != "off":
+            if self.__activateCorrection == True:
                 idx = np.argmin(scores_factor, axis = 1)
             else:
                 idx = np.argmin(sq_rec_err, axis = 1)

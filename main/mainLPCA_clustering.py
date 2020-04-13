@@ -30,7 +30,7 @@ settings = {
     "scaling_method"            : "auto",
 
     #set the initialization method (random, observations, kmeans)
-    "initialization_method"     : "kmeans",
+    "initialization_method"     : "observations",
 
     #set the number of clusters and PCs in each cluster
     "number_of_clusters"        : 8,
@@ -46,7 +46,7 @@ settings = {
 
 algorithm = {
     #enable eventual corrective coefficients for the LPCA algorithm:
-    #(off, mean, min, max, std, phc_standard, phc_median, phc_robust are available)
+    #'off', 'mean', 'min', 'max', 'std', 'phc_standard', 'phc_median', 'phc_robust', 'medianoids' are available
     "correction_factor"         : "off"
 }
 
