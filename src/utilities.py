@@ -23,7 +23,7 @@ import time
 
 import matplotlib
 import matplotlib.pyplot as plt
-__all__ = ["unscale", "uncenter", "center", "scale", "center_scale", "PHC_index", "get_centroids", "get_cluster", "get_all_clusters", "explained_variance", "evaluate_clustering_DB", "NRMSE", "PCA_fit", "accepts", "readCSV", "allowed_centering","allowed_scaling", "PHC_robustTrim", "PHC_median", "varimax_rotation", "get_medianoids", "get_medoids"]
+__all__ = ["unscale", "uncenter", "center", "scale", "center_scale", "evaluate_clustering_PHC", "get_centroids", "get_cluster", "get_all_clusters", "explained_variance", "evaluate_clustering_DB", "NRMSE", "PCA_fit", "accepts", "readCSV", "allowed_centering","allowed_scaling", "varimax_rotation", "get_medianoids", "get_medoids"]
 
 
 # ------------------------------
@@ -169,6 +169,109 @@ def evaluate_clustering_DB(X, idx):
 
     return DB
 
+def evaluate_clustering_PHC(X, idx, method='PHC_standard'):
+    '''
+    Computes the PHC (Physical Homogeneity of the Cluster) index.
+    For many applications, more than a pure mathematical tool to assess the quality of the clustering solution,
+    such as the Silhouette Coefficient, a measure of the variables variation is more suitable. This coefficient
+    assess the quality of the clustering solution measuring the variables variation in each cluster. The more the PHC
+    approaches to zero, the better the clustering. 
+    - Input:
+    X = UNCENTERED/UNSCALED data matrix -- dim: (observations x variables)
+    idx = class membership vector -- dim: (obs x 1)
+    method = method to be used for the PHC computation:'PHC_standard', 'PHC_median', 'PHC_robust' are available. 
+    - Output:
+    PHC_coeff = vector with the PHC scores for each cluster -- dim: (number_of_cluster)
+    '''
+
+    k = max(idx) +1
+    TOL = 1E-16
+    PHC_coeff=[None] *k
+    PHC_deviations=[None] *k
+
+    if method == 'PHC_standard':
+        #The standard PHC for one variable is computed as: (max - min)/ mean
+        #If the training matrix has many variables, the PHCs are stored in a list PHC_coeff.
+        
+        for ii in range (0,k):
+            cluster_ = get_cluster(X, idx, ii)
+
+            maxima = np.max(cluster_, axis = 0)
+            minima = np.min(cluster_, axis = 0)
+            media = np.mean(cluster_, axis=0)
+
+            dev = np.std(cluster_, axis=0)
+
+            PHC_coeff[ii] = np.mean((maxima-minima)/(media +TOL))
+            PHC_deviations[ii] = np.mean(dev)
+    elif method == "PHC_median":
+        #It's very similar to the standard PHC, with the exception that the 
+        #median is used instead of the mean, as it is considered to be more robust
+        #for many statistical applications
+
+        for ii in range (0,k):
+            cluster_ = get_cluster(X, idx, ii)
+
+            maxima = np.max(cluster_, axis = 0)
+            minima = np.min(cluster_, axis = 0)
+            media = np.median(cluster_, axis=0)
+
+            dev = np.std(cluster_, axis=0)
+
+            PHC_coeff[ii] = np.mean((maxima-minima)/(media +TOL))
+            PHC_deviations[ii] = np.mean(dev)
+    elif method == "PHC_robust":
+        #Mahalanobis distance is computed in each cluster and a small fraction of observations is removed
+        #from the PHC computation, as they can be considered outliers. The aforementioned distance is 
+        #computed via PCA (see Jolliffe for details)
+        
+        import model_order_reduction
+
+        for ii in range(0,k):
+            cluster_ = get_cluster(X, idx, ii)
+
+            model = model_order_reduction.PCA(cluster_)
+            model.centering = 'mean'
+            model.scaling = 'auto'
+            model.eigens = cluster_.shape[1] -1
+            PCs, eigval = model.fit()
+            scores = model.get_scores()
+            mahalanobis_ = np.empty((cluster_.shape[0],),dtype=float)
+
+            for jj in range(0,cluster_.shape[0]):
+                t_sq = 0
+                lam_j = 0
+                for jj in range(0, cluster_.shape[1]-1):
+                    t_sq += scores[ii,jj]**2
+                    lam_j += eigval[jj]
+                mahalanobis_[ii] = t_sq/(lam_j + TOL)
+                
+            #A fraction alpha (typically 0.01%-0.1%) of the data points characterized by the largest 
+            #value of DM are classified as outliers and removed.
+            
+            alpha = 0.000007
+            
+            #compute the new number of observations after the trim factor:
+            trim = int((1-alpha)*cluster_.shape[0])
+            to_trim = np.argsort(mahalanobis_)
+        
+            new_mask = to_trim[:trim]
+            cluster_ = cluster_[new_mask,:]
+
+            maxima = np.max(cluster_, axis = 0)
+            minima = np.min(cluster_, axis = 0)
+            media = np.mean(cluster_, axis=0)
+
+            dev = np.std(cluster_, axis=0)
+
+            PHC_coeff[ii] = np.mean((maxima-minima)/(media +TOL))
+            PHC_deviations[ii] = np.mean(dev)
+    else:
+        raise Exception("PHC method not supported. Available PHCs: 'PHC_standard', 'PHC_median', 'PHC_robust'. Exiting with error..")
+        exit()
+    
+    return PHC_coeff, PHC_deviations
+
 
 def get_centroids(X):
     '''
@@ -194,6 +297,7 @@ def get_medianoids(X):
     '''
     medianoid = np.median(X, axis = 0)
     return medianoid
+
 
 def get_medoids(X):
     '''
@@ -300,127 +404,6 @@ def PCA_fit(X, n_eig):
 
     else:
         raise Exception("The number of PCs exceeds the number of variables in the data-set.")
-
-
-def PHC_index(X, idx):
-    '''
-    Computes the PHC (Physical Homogeneity of the Cluster) index.
-    For many applications, more than a pure mathematical tool to assess the quality of the clustering solution,
-    such as the Silhouette Coefficient, a measure of the variables variation is more suitable. This coefficient
-    assess the quality of the clustering solution measuring the variables variation in each cluster. The more the PHC
-    approaches to zero, the better the clustering.
-    - Input:
-    X = UNCENTERED/UNSCALED data matrix -- dim: (observations x variables)
-    idx = class membership vector -- dim: (obs x 1)
-    - Output:
-    PHC_coeff = vector with the PHC scores for each cluster -- dim: (number_of_cluster)
-    '''
-
-    k = max(idx) +1
-    TOL = 1E-16
-    PHC_coeff=[None] *k
-    PHC_deviations=[None] *k
-
-    for ii in range (0,k):
-        cluster_ = get_cluster(X, idx, ii)
-
-        maxima = np.max(cluster_, axis = 0)
-        minima = np.min(cluster_, axis = 0)
-        media = np.mean(cluster_, axis=0)
-
-        dev = np.std(cluster_, axis=0)
-
-        PHC_coeff[ii] = np.mean((maxima-minima)/(media +TOL))
-        PHC_deviations[ii] = np.mean(dev)
-
-    return PHC_coeff, PHC_deviations
-
-
-def PHC_median(X, idx):
-    '''
-    Computes the PHC (Physical Homogeneity of the Cluster) index.
-    For many applications, more than a pure mathematical tool to assess the quality of the clustering solution,
-    such as the Silhouette Coefficient, a measure of the variables variation is more suitable. This coefficient
-    assess the quality of the clustering solution measuring the variables variation in each cluster. The more the PHC
-    approaches to zero, the better the clustering.
-    - Input:
-    X = UNCENTERED/UNSCALED data matrix -- dim: (observations x variables)
-    idx = class membership vector -- dim: (obs x 1)
-    - Output:
-    PHC_coeff = vector with the PHC scores for each cluster -- dim: (number_of_cluster)
-    '''
-
-    k = max(idx) +1
-    TOL = 1E-16
-    PHC_coeff=[None] *k
-    PHC_deviations=[None] *k
-
-    for ii in range (0,k):
-        cluster_ = get_cluster(X, idx, ii)
-
-        maxima = np.max(cluster_, axis = 0)
-        minima = np.min(cluster_, axis = 0)
-        media = np.mean(cluster_, axis=0)
-
-        dev = np.std(cluster_, axis=0)
-
-        PHC_coeff[ii] = np.mean((maxima-minima)/(media +TOL))
-        PHC_deviations[ii] = np.median(dev)
-
-    return PHC_coeff, PHC_deviations
-
-
-def PHC_robustTrim(X,idx):
-
-    import model_order_reduction
-
-    k = np.max(idx) +1
-    TOL = 1E-16
-    PHC_coeff=[None] *k
-    PHC_deviations=[None] *k
-
-    for ii in range(0,k):
-        cluster_ = get_cluster(X, idx, ii)
-
-        model = model_order_reduction.PCA(cluster_)
-        model.centering = 'mean'
-        model.scaling = 'auto'
-        model.eigens = cluster_.shape[1] -1
-        PCs, eigval = model.fit()
-        scores = model.get_scores()
-        mahalanobis_ = np.empty((cluster_.shape[0],),dtype=float)
-
-        for jj in range(0,cluster_.shape[0]):
-            t_sq = 0
-            lam_j = 0
-            for jj in range(0, cluster_.shape[1]-1):
-                t_sq += scores[ii,jj]**2
-                lam_j += eigval[jj]
-            mahalanobis_[ii] = t_sq/(lam_j + TOL)
-            
-        #A fraction alpha (typically 0.01%-0.1%) of the data points characterized by the largest 
-        #value of DM are classified as outliers and removed.
-        
-        alpha = 0.000007
-        
-        
-        #compute the new number of observations after the trim factor:
-        trim = int((1-alpha)*cluster_.shape[0])
-        to_trim = np.argsort(mahalanobis_)
-    
-        new_mask = to_trim[:trim]
-        cluster_ = cluster_[new_mask,:]
-
-        maxima = np.max(cluster_, axis = 0)
-        minima = np.min(cluster_, axis = 0)
-        media = np.mean(cluster_, axis=0)
-
-        dev = np.std(cluster_, axis=0)
-
-        PHC_coeff[ii] = np.mean((maxima-minima)/(media +TOL))
-        PHC_deviations[ii] = np.mean(dev)
-
-    return PHC_coeff, PHC_deviations
 
 
 def readCSV(path, name):
