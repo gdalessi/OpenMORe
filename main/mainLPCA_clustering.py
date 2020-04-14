@@ -72,7 +72,7 @@ if settings["write_on_txt"]:
 if settings["evaluate_clustering"]:
 
     #evaluate the clustering solution
-    PHC_coeff, PHC_deviations = PHC_index(X, index)
+    PHC_coeff, PHC_deviations = evaluate_clustering_PHC(X, index, method='PHC_standard')
     
     #evaluate the clustering solution by means of the Davies-Bouldin index
     X_tilde = center_scale(X, center(X, method=settings["centering_method"]), scale(X, method=settings["scaling_method"]))

@@ -1202,6 +1202,15 @@ class SamplePopulation():
                         if miniX.shape[0] < self._dimensions and ii == max(id):
                             delta = self._dimensions - miniX.shape[0]
                             miniX= np.concatenate((miniX, cluster_[(self.__batchSize+1):(self.__batchSize+1+delta),:]), axis=0)
+            
+            #it can happen that few observations are missing to reach the prescribed number of observations of
+            #the sampled matrix. In this case, fill the gap with random observations from the training matrix
+            if miniX.shape[0] < self._dimensions:
+                np.random.shuffle(self.X)
+                delta = self._dimensions - miniX.shape[0]
+
+                miniX = np.concatenate((miniX, self.X[:delta,:]), axis=0)
+
 
             return miniX
 
