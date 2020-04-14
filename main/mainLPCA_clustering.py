@@ -47,7 +47,7 @@ settings = {
 algorithm = {
     #enable eventual corrective coefficients for the LPCA algorithm:
     #'off', 'mean', 'min', 'max', 'std', 'phc_standard', 'phc_median', 'phc_robust', 'medianoids', 'medoids' are available
-    "correction_factor"         : "medoids"
+    "correction_factor"         : "off"
 }
 
 X = readCSV(file_options["path_to_file"], file_options["input_file_name"])
@@ -63,6 +63,9 @@ model.adaptivePCs = settings["adaptive_PCs"]
 model.correction = algorithm["correction_factor"] 
 
 index = model.fit()
+
+if settings["write_on_txt"]:
+    np.savetxt("idx.txt", index)
 
 
 #eventually evaluate the goodness of the clustering solution
