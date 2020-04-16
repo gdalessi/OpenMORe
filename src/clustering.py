@@ -760,16 +760,26 @@ class KMeans:
         '''
         Remove a cluster if it is empty, or not statistically meaningful.
         '''
-        for jj in range(0, max(idx)+1):
+        k = np.max(idx) +1
+        jj = 0
+        while jj < k:
             cluster_ = get_cluster(X, idx, jj)
-            if cluster_.shape[0] < 2: #cluster_.shape[1]:
-                pos = np.where(idx != 0)
-                idx[pos] -= 1
+            if cluster_.shape[0] < cluster_.shape[1]: #2:
+                if jj > 0:
+                    mask = np.where(idx >=jj)
+                    idx[mask] -= 1
+                else:
+                    mask = np.where(idx >jj)
+                    idx[mask] -= 1
                 print("WARNING:")
                 print("\tAn empty cluster was found:")
                 print("\tThe number of cluster was lowered to ensure statistically meaningful results.")
                 print("\tThe current number of clusters is equal to: {}".format(max(idx)))
-                break
+                k = np.max(idx) +1
+                jj = 0 
+            else:
+                jj += 1
+                
         return idx
 
     
