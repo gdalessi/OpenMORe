@@ -35,7 +35,7 @@ settings = {
     "initialization_method"     : "observations",
 
     #set the number of clusters and PCs in each cluster
-    "number_of_clusters"        : 16,
+    "number_of_clusters"        : 8,
     "number_of_eigenvectors"    : 5,
 
     #enable additional options:

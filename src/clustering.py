@@ -184,7 +184,7 @@ class lpca:
         '''
         if method.lower() == 'random':
             #Assign randomly an integer between 0 and k to each observation.
-            idx = np.random.random_integers(0, k, size=(X.shape[0], 1))
+            idx = np.random.random_integers(0, k, size=(X.shape[0],))
         
         elif method.lower() == 'kmeans':
             #call the KMeans class from the very same module. Set the number of clusters and
@@ -287,7 +287,7 @@ class lpca:
         import os
 
         now = datetime.datetime.now()
-        newDirName = "Clustering LPCA - " + now.strftime("%Y_%m_%d-%H%M")
+        newDirName = "Clustering LPCA - " + now.strftime("%Y_%m_%d-%H%M%S")
         
         try:
             os.mkdir(newDirName)
