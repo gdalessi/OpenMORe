@@ -47,7 +47,7 @@ class lpca:
     criterion is that the variation of the global mean reconstruction error between two consecutive
     iterations must be below a fixed threshold.
     '''
-    def __init__(self, X):
+    def __init__(self, X, *dictionary):
         self.X = np.array(X)
         #Initialize the number of clusters:
         self._k = 2
@@ -69,6 +69,20 @@ class lpca:
         self._scale = True
         #Set the scaling method:
         self._scaling = 'auto' 
+        
+        if dictionary:
+            settings = dictionary[0]
+
+            self._k = settings["number_of_clusters"]
+            self._nPCs = settings["number_of_eigenvectors"]
+            self._method = settings["initialization_method"]
+            self._correction = settings["correction_factor"]
+            self._adaptive = settings["adaptive_PCs"]
+            self._center = settings["center"]
+            self._centering = settings["centering_method"]
+            self._scale = settings["scale"]
+            self._scaling = settings["scaling_method"]
+
 
     @property
     def clusters(self):

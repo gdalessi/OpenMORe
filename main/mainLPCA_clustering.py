@@ -26,42 +26,32 @@ mesh_options = {
 
 settings = {
     #centering and scaling options
+    "center"                    : True,
     "centering_method"          : "mean",
+    "scale"                     : True,        
     "scaling_method"            : "auto",
 
     #set the initialization method (random, observations, kmeans)
     "initialization_method"     : "observations",
 
     #set the number of clusters and PCs in each cluster
-    "number_of_clusters"        : 8,
+    "number_of_clusters"        : 16,
     "number_of_eigenvectors"    : 5,
 
     #enable additional options:
-    "adaptive_PCs"              : False,    #use a different number of PCs in each cluster (to test)
-    "classify"                  : False,    #classify a new matrix Y on the basis of the lpca clustering
-    "write_on_txt"              : True,     #write the idx vector with the class for each observation
-    
-    "evaluate_clustering"       : True,     #enable the calculation of indeces to evaluate the goodness of the clustering
+    "adaptive_PCs"              : False,    # --> use a different number of PCs in each cluster (to test)
+    "correction_factor"         : "off",    # --> enable eventual corrective coefficients for the LPCA algorithm:
+                                            #     'off', 'mean', 'min', 'max', 'std', 'phc_standard', 'phc_median', 'phc_robust', 'medianoids', 'medoids' are available
+
+    "classify"                  : False,    # --> classify a new matrix Y on the basis of the lpca clustering
+    "write_on_txt"              : True,     # --> write the idx vector with the class for each observation
+    "evaluate_clustering"       : True,     # --> enable the calculation of indeces to evaluate the goodness of the clustering
 }
 
-algorithm = {
-    #enable eventual corrective coefficients for the LPCA algorithm:
-    #'off', 'mean', 'min', 'max', 'std', 'phc_standard', 'phc_median', 'phc_robust', 'medianoids', 'medoids' are available
-    "correction_factor"         : "off"
-}
 
 X = readCSV(file_options["path_to_file"], file_options["input_file_name"])
 
-model = clustering.lpca(X)
-
-model.centering = settings["centering_method"]
-model.scaling = settings["scaling_method"]
-model.initialization = settings["initialization_method"]
-model.clusters = settings["number_of_clusters"]
-model.eigens = settings["number_of_eigenvectors"]
-model.adaptivePCs = settings["adaptive_PCs"]
-model.correction = algorithm["correction_factor"] 
-
+model = clustering.lpca(X, settings)
 index = model.fit()
 
 if settings["write_on_txt"]:
