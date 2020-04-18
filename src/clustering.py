@@ -680,7 +680,7 @@ class KMeans:
     '''
     X must be centered and scaled --- to change ---
     '''
-    def __init__(self,X):
+    def __init__(self,X, *dictionary):
         #Initialize matrix and number of clusters.
         self.X = X
         self._k = 2
@@ -702,6 +702,14 @@ class KMeans:
         self._scale = True
         #Set the scaling method:
         self._scaling = 'auto' 
+
+        if dictionary:
+            settings = dictionary[0]
+            self._k = settings["number_of_clusters"]
+            self._center = settings["center"]
+            self._centering = settings["centering_method"]
+            self._scale = settings["scale"]
+            self._scaling = settings["scaling_method"]
 
 
     @property
@@ -841,7 +849,7 @@ class KMeans:
         while iter < self.__iterMax:
             #Compute the euclidean distances between the matrix and all the
             #centroids. The function cdist returns a matrix 'dist' = (nObs x k)
-            dist = cdist(self.X, C_mat)
+            dist = cdist(self.X, C_mat)**2
             #For each observation, choose the nearest centroid.
             #The vector idx contains the corresponding class, while the minDist_
             #vector contains the numerical value of the distance, which will
@@ -871,6 +879,8 @@ class KMeans:
             iter += 1
             if not self._initMode:
                 print("Iteration number: {}".format(iter))
+                print("The SSE over all cluster is equal to: {}".format(minDist_sum))
+                print("The SSE variance is equal to: {}".format(varDist))
 
             #Consider only statistical meaningful groups of points: if there
             #are empty cluster, delete them. The algorithm's iterations will
