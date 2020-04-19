@@ -508,7 +508,7 @@ class lpca:
         return idx
 
 
-class VQclassifier:
+class VQclassifier(lpca):
     '''
     For the classification task the following steps are accomplished:
     0. Preprocessing: The set of new observations Y is centered and scaled with the centering and scaling factors
@@ -523,25 +523,9 @@ class VQclassifier:
         self.idx = idx
         self.k = max(self.idx) +1
         self.Y = Y
+
+        super().__init__(X)
         self.nPCs = round(self.Y.shape[1] - (self.Y.shape[1]) /5) #Use a very high number of PCs to classify,removing only the last 20% which contains noise
-
-    @property
-    def centering(self):
-        return self._cent_crit
-
-    @centering.setter
-    def centering(self, new_centering):
-        self._cent_crit = new_centering
-
-    @property
-    def scaling(self):
-        return self._scal_crit
-
-    @scaling.setter
-    def scaling(self, new_scaling):
-        self._scal_crit = new_scaling
-
-
 
     def fit(self):
         '''
@@ -740,7 +724,7 @@ class fpca:
             return self.LPCs, self.u_scores, self.Leigen, self.centroids
 
 
-class KMeans:
+class KMeans(lpca):
     '''
     X must be centered and scaled --- to change ---
     '''
@@ -748,6 +732,7 @@ class KMeans:
         #Initialize matrix and number of clusters.
         self.X = X
         self._k = 2
+        super().__init__(X)
         #This option must be set to 'True' if the kMeans is used only to
         #initialize other clustering algorithms, therefore a lower tolerance
         #is required for convergence.
@@ -774,116 +759,6 @@ class KMeans:
             self._centering = settings["centering_method"]
             self._scale = settings["scale"]
             self._scaling = settings["scaling_method"]
-
-
-    @property
-    def clusters(self):
-        return self._k
-
-    @clusters.setter
-    @accepts(object, int)
-    def clusters(self, new_number):
-        self._k = new_number
-
-        if self._k <= 0:
-            raise Exception("The number of clusters in input must be a positive integer. Exiting..")
-            exit()
-
-    @property
-    def initMode(self):
-        return self._initMode
-
-    @initMode.setter
-    @accepts(object, bool)
-    def initMode(self, new_bool):
-        self._initMode = new_bool
-
-        if self._initMode:
-            self.__convergeTol = 1E-08
-
-    @property
-    def to_center(self):
-        return self._center
-
-    @to_center.setter
-    @accepts(object, bool)
-    def to_center(self, new_bool):
-        self._center = new_bool
-
-
-    @property
-    def centering(self):
-        return self._centering
-
-    @centering.setter
-    @allowed_centering
-    def centering(self, new_string):
-        self._centering = new_string
-
-
-    @property
-    def to_scale(self):
-        return self._scale
-
-    @to_scale.setter
-    @accepts(object, bool)
-    def to_scale(self, new_bool):
-        self._scale = new_bool
-
-
-    @property
-    def scaling(self):
-        return self._scaling
-
-    @scaling.setter
-    @allowed_scaling
-    def scaling(self, new_string):
-        self._scaling = new_string
-
-
-    @staticmethod
-    def merge_clusters(X, idx):
-        '''
-        Remove a cluster if it is empty, or not statistically meaningful.
-        '''
-        k = np.max(idx) +1
-        jj = 0
-        while jj < k:
-            cluster_ = get_cluster(X, idx, jj)
-            if cluster_.shape[0] < cluster_.shape[1]: #2:
-                if jj > 0:
-                    mask = np.where(idx >=jj)
-                    idx[mask] -= 1
-                else:
-                    mask = np.where(idx >jj)
-                    idx[mask] -= 1
-                print("WARNING:")
-                print("\tAn empty cluster was found:")
-                print("\tThe number of cluster was lowered to ensure statistically meaningful results.")
-                print("\tThe current number of clusters is equal to: {}".format(max(idx)))
-                k = np.max(idx) +1
-                jj = 0 
-            else:
-                jj += 1
-                
-        return idx
-
-    
-    @staticmethod
-    def preprocess_training(X, centering_decision, scaling_decision, centering_method, scaling_method):
-
-        if centering_decision and scaling_decision:
-            mu, X_ = center(X, centering_method, True)
-            sigma, X_tilde = scale(X_, scaling_method, True)
-        elif centering_decision and not scaling_decision:
-            mu, X_tilde = center(X, centering_method, True)
-        elif scaling_decision and not centering_decision:
-            sigma, X_tilde = scale(X, scaling_method, True)
-        else:
-            X_tilde = X
-
-        return X_tilde
-    
 
 
     def fit(self):
@@ -1072,219 +947,3 @@ class multistageLPCA(lpca):
 
         return idx_yo
 
-
-def main():
-    import clustering
-
-    file_options = {
-        "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data",
-        "input_file_name"           : "dns_syngas_thermochemical.csv",
-    }
-
-    mesh_options = {
-        "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data",
-        "mesh_file_name"            : "dns_syngas_mesh.csv",
-    }
-
-    settings = {
-        "centering_method"          : "MEAN",
-        "scaling_method"            : "AUTO",
-        "initialization_method"     : "observations",
-        "number_of_clusters"        : 8,
-        "number_of_eigenvectors"    : 4,
-        "adaptive_PCs"              : False,
-        "classify"                  : False,
-        "write_on_txt"              : False,
-        "plot_on_mesh"              : True,
-    }
-
-
-    X = readCSV(file_options["path_to_file"], file_options["input_file_name"])
-    X_tilde = center_scale(X, center(X, method=settings["centering_method"]), scale(X, method=settings["scaling_method"]))
-
-
-    model = clustering.lpca(X)
-    model.centering = 'mean'
-    model.scaling = 'auto'
-    model.clusters = settings["number_of_clusters"]
-    model.eigens = settings["number_of_eigenvectors"]
-    model.initialization = settings["initialization_method"]
-    model.correction = "mean" # 'phc'
-    model.adaptivePCs = settings["adaptive_PCs"]
-
-    index = model.fit()
-
-    PHC_coeff, PHC_deviations = PHC_index(X, index)
-
-    DB = evaluate_clustering_DB(X_tilde, index) #evaluate the clustering solution by means of the Davies-Bouldin index
-    print(DB)
-
-    text_file = open("stats_training_correction_.txt", "wt")
-    DB_index = text_file.write("DB index equal to: {} \n".format(DB))
-    PHC_coeff = text_file.write("Average PHC is: {} \n".format(np.mean(PHC_coeff)))
-    text_file.close()
-
-    if settings["write_on_txt"]:
-        np.savetxt("idx_training.txt", index)
-
-
-    if settings["plot_on_mesh"]:
-        matplotlib.rcParams.update({'font.size' : 6, 'text.usetex' : True})
-        mesh = np.genfromtxt(mesh_options["path_to_file"] + "/" + mesh_options["mesh_file_name"], delimiter= ',')
-
-        fig = plt.figure()
-        axes = fig.add_axes([0.2,0.15,0.7,0.7], frameon=True)
-        axes.scatter(mesh[:,0], mesh[:,1], c=index,alpha=0.5)
-        axes.set_xlabel('X [m]')
-        axes.set_ylabel('Y [m]')
-        plt.show()
-
-
-    if settings["classify"]:
-
-        file_options_classifier = {
-            "path_to_file"              : "/home/peppe/Dropbox/GitHub/data",
-            "test_file_name"            : "thermoC_timestep.csv",
-        }
-
-        try:
-            print("Reading test matrix..")
-            Y = np.genfromtxt(file_options_classifier["path_to_file"] + "/" + file_options_classifier["test_file_name"], delimiter= ',')
-        except OSError:
-            print("Could not open/read the selected file: " + "/" + file_options["test_file_name"])
-            exit()
-
-        # Input to the classifier: X = training matrix, Y = test matrix
-        classifier = clustering.VQclassifier(X, index, Y)
-
-        classifier.centering = settings["centering_method"]
-        classifier.scaling = settings["scaling_method"]
-
-        classification_vector = classifier.fit()
-
-        if settings["write_on_txt"]:
-            np.savetxt("idx_test.txt", classification_vector)
-
-
-def mainK():
-    import clustering
-
-    file_options = {
-        "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data",
-        "input_file_name"           : "concentrations.csv",
-    }
-
-
-    settings = {
-        "centering_method"          : "MEAN",
-        "scaling_method"            : "AUTO",
-        "number_of_clusters"        : 24,
-    }
-
-
-    mesh_options = {
-        "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data",
-        "mesh_file_name"           : "mesh.csv",
-    }
-
-
-    X = readCSV(file_options["path_to_file"], file_options["input_file_name"])
-    X_tilde = center_scale(X, center(X, method=settings["centering_method"]), scale(X, method=settings["scaling_method"]))
-
-
-    model = clustering.KMeans(X_tilde)
-    model.clusters = settings["number_of_clusters"]
-    index = model.fit()
-    print(index)
-    print("MIN IDX: {}".format(np.min(index)))
-    print("MAX IDX: {}".format(np.max(index)))
-
-    print("YO END")
-
-    mesh = np.genfromtxt(mesh_options["path_to_file"] + "/" + mesh_options["mesh_file_name"], delimiter= ',')
-    plt.scatter(mesh[:,0], mesh[:,1], c=index,alpha=0.5)
-    plt.xlabel("X [m]")
-    plt.ylabel("Y [m]")
-    plt.show()
-
-def main_comb():
-    import clustering
-
-    file_options = {
-        "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data",
-        "input_file_name"           : "f10A25.csv",
-    }
-
-
-    settings = {
-        "centering_method"          : "MEAN",
-        "scaling_method"            : "AUTO",
-        "number_of_clusters"        : 12,
-    }
-
-
-    mesh_options = {
-        "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data",
-        "mesh_file_name"            : "meshf10A25.csv",
-    }
-
-
-    X = readCSV(file_options["path_to_file"], file_options["input_file_name"])
-    
-    T = X[:,0]
-    X = X[:,1:]
-
-    X_tilde = center_scale(X, center(X, method=settings["centering_method"]), scale(X, method=settings["scaling_method"]))
-    
-    model = clustering.multistageLPCA(X, T)
-    model.clusters = 4
-    model.eigens = 11
-    idx= model.partition()
-
-
-    unique, counts = np.unique(idx, return_counts=True)
-    print("UNIQUE: {}".format(unique))
-    print("COUNTS: {}".format(counts))
-
-    
-    mesh = np.genfromtxt(mesh_options["path_to_file"] + "/" + mesh_options["mesh_file_name"], delimiter= ',')
-    plt.scatter(mesh[:,0], mesh[:,1], c=idx,alpha=0.5)
-    plt.xlabel("X [m]")
-    plt.ylabel("Y [m]")
-    plt.show()
-
-    
-    
-    DB = evaluate_clustering_DB(X_tilde, idx) #evaluate the clustering solutions by means of the Davies-Bouldin algorithm
-    print("The DB index value for the multi is: {}".format(DB))
-
-    PHC_coeff, PHC_deviations = PHC_robustTrim(X, idx)
-    print("The PHC index value for the multi is: {}".format(np.mean(PHC_coeff)))
-    
-
-
-    model2= clustering.fpca(X,T)
-    model2.clusters = 8
-
-    idFPCA = model2.condition()
-
-    unique2, counts2 = np.unique(idFPCA, return_counts=True)
-    print("UNIQUE: {}".format(unique2))
-    print("COUNTS: {}".format(counts2))
-
-    mesh = np.genfromtxt(mesh_options["path_to_file"] + "/" + mesh_options["mesh_file_name"], delimiter= ',')
-    plt.scatter(mesh[:,0], mesh[:,1], c=idFPCA,alpha=0.5)
-    plt.xlabel("X [m]")
-    plt.ylabel("Y [m]")
-    plt.show()
-
-    DB2 = evaluate_clustering_DB(X_tilde, idFPCA) #evaluate the clustering solutions by means of the Davies-Bouldin algorithm
-    print("The DB index value for the condT is: {}".format(DB2))
-
-    PHC_coeff2, PHC_deviations = PHC_robustTrim(X, idFPCA)
-    print("The PHC index value for the condT is: {}".format(np.mean(PHC_coeff2)))
-
-
-
-if __name__ == '__main__':
-    main_comb()
