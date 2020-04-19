@@ -179,8 +179,8 @@ class lpca:
     @staticmethod
     def initialize_clusters(X, k, method):
         '''
-        The clustering solution must be initialized. Two methods are available,
-        a random allocation (RANDOM) or a previous clustering solution (KMEANS).
+        The clustering solution must be initialized to start the lpca iterative algorithm.
+        Several initialization are available, and they can lead to different clustering solutions.
         '''
         if method.lower() == 'random':
             #Assign randomly an integer between 0 and k to each observation.
@@ -205,13 +205,77 @@ class lpca:
             
             #Compute the euclidean distances between the matrix and all the random vectors
             #chosen as centroids. The function cdist returns a matrix 'dist' = (nObs x k)
-            dist = cdist(X, C_mat)
+            dist = cdist(X, C_mat)**2
         
             #For each observation, choose the nearest centroid (cdist --> Euclidean dist).
             #and compute the idx for the initialization.
             for ii in range(0, X.shape[0]):
                 idx[ii] = np.argmin(dist[ii,:])
-        
+
+        elif method.lower() == 'pkcia':
+            #Initialize the centroids with the method described in:
+            #Manochandar, S., M. Punniyamoorthy, and R. K. Jeyachitra. Computers & Industrial Engineering (2020): 106290.
+            from numpy import linalg as LA
+            from scipy.spatial.distance import euclidean, cdist
+            
+            #compute the positive definite matrix Y (n x n) from the training data matrix (n x p),
+            #with n = observations and p = variables
+            Y = X @ X.T
+            
+            #compute the eigenvectors and the eigenvalues associated to the new matrix
+            evals, evecs = LA.eig(Y)
+            
+            #order the eigens in descending order, as done in PCA
+            mask = np.argsort(evals)[::-1]
+            evecs = evecs[:,mask]
+            evals = evals[mask]
+            
+            #consider only the eigenvector associated to the largest eigenvalue, V = (n x 1)
+            V = evecs[:,0]
+            
+            #the min and the max of V squared will be useful later
+            v_min = np.min(V**2)
+            v_max = np.max(V**2)
+ 
+            G = np.empty((len(V),), dtype=float)
+            idx = np.empty((X.shape[0],), dtype=int)
+            
+            #computation of G is the first step to initialize the centroids:
+            for ii in range(0, len(G)):
+                G[ii] = 1 + ((V[ii]**2-v_min)/(v_max - v_min) + 1E-16) *k
+
+            #compute the range of G and the delta step:
+            RG = np.max(G) - np.min(G)
+            CPC = RG/k
+
+            counter = 0
+            left_bound = 0
+            C_mat = np.empty((k, X.shape[1]), dtype=float)
+
+            #Partition the observations on the basis of their G value. Basically the G vector is
+            #partitioned in k bins, and the observations are assigned to each bin to form a cluster.
+            #The bin width is chosen on the basis of the CPC coefficient.
+            #After that, in each cluster the centroid is computed.
+            while counter < k:
+                right_bound = (left_bound + CPC) + 0.01* (left_bound + CPC)
+                try:
+                    mask = np.logical_and(G >= left_bound, G < right_bound)
+                    cluster_ = X[mask,:]
+                    C_mat[counter,:] = np.mean(cluster_, axis=0)
+                    left_bound = right_bound
+                    counter += 1
+                except:
+                    left_bound = right_bound
+                    counter += 1
+
+            #Compute the squared euclidean distances between the matrix and all the random vectors
+            #chosen as centroids. The function cdist returns a matrix 'dist' = (nObs x k)
+            dist = cdist(X, C_mat)**2
+
+            #For each observation, choose the nearest centroid and compute the idx for the initialization.
+            for ii in range(0, X.shape[0]):
+                idx[ii] = np.argmin(dist[ii,:])
+
         else:
             raise Exception("Initialization option not supported. Please choose one between RANDOM or KMEANS.")
         

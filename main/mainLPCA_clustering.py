@@ -20,7 +20,7 @@ mesh_options = {
     "mesh_file_name"            : "mesh.csv",
 
     #eventually enable the clustering solution plot on the mesh
-    "plot_on_mesh"              : True,
+    "plot_on_mesh"              : False,
 }
 
 
@@ -31,8 +31,8 @@ settings = {
     "scale"                     : True,        
     "scaling_method"            : "auto",
 
-    #set the initialization method (random, observations, kmeans)
-    "initialization_method"     : "observations",
+    #set the initialization method (random, observations, kmeans, pkcia)
+    "initialization_method"     : "pkcia",
 
     #set the number of clusters and PCs in each cluster
     "number_of_clusters"        : 8,
