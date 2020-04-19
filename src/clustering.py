@@ -558,7 +558,7 @@ class VQclassifier(lpca):
         return idx_classification
 
 
-class fpca:
+class fpca(lpca):
     '''
     Supervised partitioning based on an a-priori conditioning (and subsequent dim reduction), by means
     of a selected variable which is known to be important for the process. As it
@@ -574,9 +574,11 @@ class fpca:
     condVec = the vector to be used in the partitioning phase
 
     '''
-    def __init__(self, X, condVec):
+    def __init__(self, X, condVec, *dictionary):
         self.X = X
         self.condVec = condVec
+
+        super().__init__(X)
 
         self._nPCs = self.X.shape[1]-1
 
@@ -589,88 +591,19 @@ class fpca:
         #Set the scaling method:
         self._scaling = 'auto'
 
-    @property
-    def clusters(self):
-        return self._k
+        if dictionary:
+            settings = dictionary[0]
 
-    @clusters.setter
-    @accepts(object, int)
-    def clusters(self, new_number):
-        self._k = new_number
+            self._k = settings["number_of_clusters"]
+            self._nPCs = settings["number_of_eigenvectors"]
+            self._method = settings["initialization_method"]
+            self._correction = settings["correction_factor"]
+            self._adaptive = settings["adaptive_PCs"]
+            self._center = settings["center"]
+            self._centering = settings["centering_method"]
+            self._scale = settings["scale"]
+            self._scaling = settings["scaling_method"]
 
-        if self._nPCs <= 0:
-            raise Exception("The number of clusters must be a positive integer. Exiting..")
-            exit()
-
-    @property
-    def eigens(self):
-        return self._nPCs
-
-    @eigens.setter
-    @accepts(object, int)
-    def eigens(self, new_value):
-        self._nPCs = new_value
-
-        if self._nPCs <= 0:
-            raise Exception("The number of Principal Components must be a positive integer. Exiting..")
-            exit()
-        elif self._nPCs >= self.n_var:
-            raise Exception("The number of PCs exceeds (or is equal to) the number of variables in the data-set. Exiting..")
-            exit()
-
-    @property
-    def to_center(self):
-        return self._center
-
-    @to_center.setter
-    @accepts(object, bool)
-    def to_center(self, new_bool):
-        self._center = new_bool
-
-
-    @property
-    def centering(self):
-        return self._centering
-
-    @centering.setter
-    @allowed_centering
-    def centering(self, new_string):
-        self._centering = new_string
-
-
-    @property
-    def to_scale(self):
-        return self._scale
-
-    @to_scale.setter
-    @accepts(object, bool)
-    def to_scale(self, new_bool):
-        self._scale = new_bool
-
-
-    @property
-    def scaling(self):
-        return self._scaling
-
-    @scaling.setter
-    @allowed_scaling
-    def scaling(self, new_string):
-        self._scaling = new_string
-
-    @staticmethod
-    def preprocess_training(X, centering_decision, scaling_decision, centering_method, scaling_method):
-
-        if centering_decision and scaling_decision:
-            mu, X_ = center(X, centering_method, True)
-            sigma, X_tilde = scale(X_, scaling_method, True)
-        elif centering_decision and not scaling_decision:
-            mu, X_tilde = center(X, centering_method, True)
-        elif scaling_decision and not centering_decision:
-            sigma, X_tilde = scale(X, scaling_method, True)
-        else:
-            X_tilde = X
-
-        return X_tilde
 
 
     def condition(self):
