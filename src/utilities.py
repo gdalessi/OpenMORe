@@ -189,7 +189,7 @@ def evaluate_clustering_PHC(X, idx, method='PHC_standard'):
     PHC_coeff=[None] *k
     PHC_deviations=[None] *k
 
-    if method == 'PHC_standard':
+    if method.lower() == 'phc_standard':
         #The standard PHC for one variable is computed as: (max - min)/ mean
         #If the training matrix has many variables, the PHCs are stored in a list PHC_coeff.
         
@@ -204,7 +204,7 @@ def evaluate_clustering_PHC(X, idx, method='PHC_standard'):
 
             PHC_coeff[ii] = np.mean((maxima-minima)/(media +TOL))
             PHC_deviations[ii] = np.mean(dev)
-    elif method == "PHC_median":
+    elif method.lower() == "phc_median":
         #It's very similar to the standard PHC, with the exception that the 
         #median is used instead of the mean, as it is considered to be more robust
         #for many statistical applications
@@ -220,7 +220,7 @@ def evaluate_clustering_PHC(X, idx, method='PHC_standard'):
 
             PHC_coeff[ii] = np.mean((maxima-minima)/(media +TOL))
             PHC_deviations[ii] = np.mean(dev)
-    elif method == "PHC_robust":
+    elif method.lower() == "phc_robust":
         #Mahalanobis distance is computed in each cluster and a small fraction of observations is removed
         #from the PHC computation, as they can be considered outliers. The aforementioned distance is 
         #computed via PCA (see Jolliffe for details)
