@@ -429,11 +429,11 @@ class lpca:
             sq_rec_oss = np.zeros((rows, cols), dtype=float)
             sq_rec_err = np.zeros((rows, self._k), dtype=float)
             if self._correction == 'phc_standard':
-                PHC_coefficients, PHC_std = PHC_index(self.X, idx)   #PHC_index(self.X, idx) or PHC_robustTrim(self.X, idx)
+                PHC_coefficients, PHC_std = evaluate_clustering_PHC(self.X, idx, method='phc_standard')   #PHC_index(self.X, idx) or PHC_robustTrim(self.X, idx)
             elif self._correction == 'phc_median':
-                PHC_coefficients, PHC_std = PHC_median(self.X, idx)
+                PHC_coefficients, PHC_std = evaluate_clustering_PHC(self.X, idx, method='phc_median')
             elif self._correction == 'phc_robust':
-                PHC_coefficients, PHC_std = PHC_robustTrim(self.X, idx)
+                PHC_coefficients, PHC_std = evaluate_clustering_PHC(self.X, idx, method='phc_robust')
             else:
                 pass
             for ii in range(0, self._k):
