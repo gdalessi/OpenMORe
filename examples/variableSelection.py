@@ -16,7 +16,14 @@ file_options = {
 }
 
 settings = {
-    "method"                    : "Procustes",
+    #centering and scaling options
+    "center"                    : True,
+    "centering_method"          : "mean",
+    "scale"                     : True,        
+    "scaling_method"            : "auto",
+
+    #variables selection options
+    "method"                    : "procustes_rotation",
     "number_of_PCs"             : 8,
     "number_of_variables"       : 15,       
 }
