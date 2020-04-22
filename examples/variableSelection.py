@@ -10,9 +10,7 @@ from utilities import *
 
 file_options = {
     "path_to_file"              : "../data",
-    "input_file_name"           : "flameD.csv",
-
-    "labels_name"               : "labels.csv",    
+    "input_file_name"           : "flameD.csv",    
 }
 
 settings = {
@@ -23,22 +21,17 @@ settings = {
     "scaling_method"            : "auto",
 
     #variables selection options
-    "method"                    : "procustes_rotation",
+    "method"                    : "procustes",
     "number_of_PCs"             : 8,
-    "number_of_variables"       : 15,       
+    "number_of_variables"       : 15,     
+    "path_to_labels"            : "../data",
+    "labels_name"               : "labels.csv",
 }
 
 X = readCSV(file_options["path_to_file"], file_options["input_file_name"])
 
 
-PVs = model_order_reduction.variables_selection(X)
-
-PVs.method = settings["method"]
-PVs.path_to_labels = file_options["path_to_file"]
-PVs.labels_file_name = file_options["labels_name"]
-PVs.eigens = settings["number_of_PCs"]
-PVs.retained = settings["number_of_variables"]
-
+PVs = model_order_reduction.variables_selection(X, settings)
 labels = PVs.fit()
 
 print(labels)
