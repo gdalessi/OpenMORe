@@ -21,7 +21,7 @@ settings = {
     "scaling_method"            : "auto",
 
     #variables selection options
-    "method"                    : "procustes",
+    "method"                    : "b4",
     "number_of_PCs"             : 8,
     "number_of_variables"       : 15,     
     "path_to_labels"            : "../data",

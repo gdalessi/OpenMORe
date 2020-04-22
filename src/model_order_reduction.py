@@ -9,12 +9,6 @@ MODULE: model_order_reduction.py
 @Contacts:
     giuseppe.dalessio@ulb.ac.be
 
-@Brief:
-    Class PCA: PCA-based (linear method) functions to get reduced-order models.
-    Class LPCA: LPCA-based (piecewise-linear method) functions to get ROMs.
-    Class KPCA: Kernel-based PCA (non-linear method) function to get ROM.
-
-    More detailed descriptions are available under each function's declaration.
 
 @Additional notes:
     This code is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
@@ -829,7 +823,7 @@ class variables_selection(PCA):
 
         super().__init__(self.X)
 
-        self._method = 'B2' #'B2', 'B4', "Procustes"
+        self._method = 'B2' #'B2', 'B4', "Procustes", "procustes_rotation"
 
         if dictionary:
             settings = dictionary[0]
@@ -841,6 +835,8 @@ class variables_selection(PCA):
             self._scale = settings["scale"]
             self._scaling = settings["scaling_method"]
             self._n_ret = settings["number_of_variables"]
+            self._path = settings["path_to_labels"]
+            self._labels_name = settings["labels_name"]
 
 
     @property
@@ -886,8 +882,6 @@ class variables_selection(PCA):
         import pandas as pd
         try:
             self.labels= np.array(pd.read_csv(self._path + '/' + self._labels_name, sep = ',', header = None))
-            print("YO: {}".format(len(self.labels)))
-            print(self.labels)
         except OSError:
             print("Could not open/read the selected file: " + self._labels_name)
             exit()
@@ -1022,26 +1016,24 @@ class variables_selection(PCA):
                 print("Current number of variables: {}".format(self.X_tilde.shape[1]))
 
             return self.labels
-        
-        else:
-            raise Exception("Variables selection method not supported. Please choose one between 'B2', 'Procustes', 'Procustes_rotation'.")
-            print("Exiting with error..")
-            exit()
 
-        
-
-        '''
-        elif self._method == 'B4':
+        elif self._method.lower() == 'b4':
             
             #The variables associated with the largest weights on each of the 'm' first PCs are 
-            #elected. This is not an iterative algorithm.
+            #selected. This is not an iterative algorithm.
             
             model = PCA(self.X)
+            if self._nPCs < self._n_ret:
+                print("For the B4 it is not possible to choose a number of PCs lower than the required number of variables.")
+                print("The number of PCs will be set equal to the required number of variables.")
+                print(" ")
+                self._nPCs = self._n_ret
+
             model.eigens = self._nPCs
             PCs,eigvals = model.fit()
             PVs = []
 
-            for ii in range(0, self.retained):
+            for ii in range(0, self._n_ret):
                 #Check the largest weight on the first 'm' PCs and add it to the PVs list.
                 argmax_= np.argmax(np.abs(PCs[:,ii]))
                 PVs.append(self.labels[argmax_])
@@ -1049,7 +1041,13 @@ class variables_selection(PCA):
                 PCs[argmax_,:]= 0
             
             return PVs 
-        '''
+        
+        else:
+            raise Exception("Variables selection method not supported. Please choose one between 'B2', 'Procustes', 'Procustes_rotation'.")
+            print("Exiting with error..")
+            exit()
+
+        
 
 class SamplePopulation():
     '''
