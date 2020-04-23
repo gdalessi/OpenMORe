@@ -20,8 +20,8 @@ MODULE: clustering.py
 
 '''
 
-from pyMORe.utilities import *
-import pyMORe.model_order_reduction as model_order_reduction
+from .utilities import *
+from . import model_order_reduction
 
 import numpy as np
 import numpy.matlib

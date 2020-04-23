@@ -21,8 +21,8 @@ from numpy import linalg as LA
 import matplotlib
 import matplotlib.pyplot as plt
 
-from pyMORe.utilities import *
-import pyMORe.clustering as clustering
+from .utilities import *
+from . import clustering
 
 class PCA:
     def __init__(self, X):

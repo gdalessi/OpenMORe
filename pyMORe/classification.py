@@ -15,9 +15,9 @@ MODULE: classification.py
     Please report any bug to: giuseppe.dalessio@ulb.ac.be
 
 '''
-from pyMORe.utilities import *
-import pyMORe.model_order_reduction as model_order_reduction
-import pyMORe.clustering as clustering
+from .utilities import *
+from . import model_order_reduction
+from . import clustering
 
 import numpy as np
 import numpy.matlib
