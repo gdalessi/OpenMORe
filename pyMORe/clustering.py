@@ -828,3 +828,54 @@ class multistageLPCA(lpca):
 
 
         return idx_yo
+
+if __name__ == '__main__':
+    
+    file_options = {
+        "path_to_file"              : "../data",
+        "input_file_name"           : "flameD.csv",
+    }
+
+
+    mesh_options = {
+        #set the mesh file options (the path goes up twice - it's ok)
+        "path_to_file"              : "../../data",
+        "mesh_file_name"            : "mesh.csv",
+
+        #eventually enable the clustering solution plot on the mesh
+        "plot_on_mesh"              : False,
+    }
+
+
+    settings = {
+        #centering and scaling options
+        "center"                    : True,
+        "centering_method"          : "mean",
+        "scale"                     : True,
+        "scaling_method"            : "auto",
+
+        #set the initialization method (random, observations, kmeans, pkcia)
+        "initialization_method"     : "observations",
+
+        #set the number of clusters and PCs in each cluster
+        "number_of_clusters"        : 8,
+        "number_of_eigenvectors"    : 5,
+
+        #enable additional options:
+        "adaptive_PCs"              : False,    # --> use a different number of PCs in each cluster (to test)
+        "correction_factor"         : "off",    # --> enable eventual corrective coefficients for the LPCA algorithm:
+                                                #     'off', 'mean', 'min', 'max', 'std', 'phc_standard', 'phc_median', 'phc_robust', 'medianoids', 'medoids' are available
+
+        "classify"                  : False,    # --> classify a new matrix Y on the basis of the lpca clustering
+        "write_on_txt"              : True,     # --> write the idx vector with the class for each observation
+        "evaluate_clustering"       : True,     # --> enable the calculation of indeces to evaluate the goodness of the clustering
+    }
+
+
+    X = readCSV(file_options["path_to_file"], file_options["input_file_name"])
+
+    model = clustering.lpca(X, settings)
+    index = model.fit()
+
+    if settings["write_on_txt"]:
+        np.savetxt("idx.txt", index)

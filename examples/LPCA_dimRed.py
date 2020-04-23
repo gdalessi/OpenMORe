@@ -1,5 +1,3 @@
-import sys
-sys.path.insert(1, '../src')
 import numpy as np
 
 import pyMORe.model_order_reduction as model_order_reduction

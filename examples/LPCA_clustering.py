@@ -1,12 +1,10 @@
-import sys
-sys.path.insert(1, '../src')
-
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 
 import pyMORe.clustering as clustering
 from pyMORe.utilities import *
+
 
 file_options = {
     "path_to_file"              : "../data",
@@ -32,7 +30,7 @@ settings = {
     "scaling_method"            : "auto",
 
     #set the initialization method (random, observations, kmeans, pkcia)
-    "initialization_method"     : "pkcia",
+    "initialization_method"     : "observations",
 
     #set the number of clusters and PCs in each cluster
     "number_of_clusters"        : 8,

@@ -1,6 +1,3 @@
-import sys
-sys.path.insert(1, '../src')
-
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
