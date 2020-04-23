@@ -5,8 +5,8 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 
-import clustering
-from utilities import *
+import pyMORe.clustering as clustering
+from pyMORe.utilities import *
 
 file_options = {
     "path_to_file"              : "../data",
@@ -28,7 +28,7 @@ settings = {
     #centering and scaling options
     "center"                    : True,
     "centering_method"          : "mean",
-    "scale"                     : True,        
+    "scale"                     : True,
     "scaling_method"            : "auto",
 
     #clustering options: choose the number of clusters
@@ -54,10 +54,10 @@ if settings["evaluate_clustering"]:
 
     #evaluate the clustering solution
     PHC_coeff, PHC_deviations = evaluate_clustering_PHC(X, index, method='PHC_standard')
-    
+
     #evaluate the clustering solution by means of the Davies-Bouldin index
     X_tilde = center_scale(X, center(X, method=settings["centering_method"]), scale(X, method=settings["scaling_method"]))
-    DB = evaluate_clustering_DB(X_tilde, index) 
+    DB = evaluate_clustering_DB(X_tilde, index)
 
 
     text_file = open("stats_clustering_solution.txt", "wt")

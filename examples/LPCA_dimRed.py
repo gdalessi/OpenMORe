@@ -2,10 +2,10 @@ import sys
 sys.path.insert(1, '../src')
 import numpy as np
 
-import model_order_reduction
-from utilities import * 
-    
-    
+import pyMORe.model_order_reduction as model_order_reduction
+from pyMORe.utilities import *
+
+
 file_options = {
     "path_to_file"                  :   "../data",
     "input_file_name"               :   "flameD.csv",
@@ -25,7 +25,7 @@ settings ={
 plotting_options = {
     #the number of cluster where you want to plot:
     "cluster_to_plot"               :   1,
-    
+
     #the local principal component you want to plot:
     "PC_to_plot"                    :   1,
 }

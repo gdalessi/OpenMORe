@@ -508,6 +508,56 @@ class lpca:
         return idx
 
 
+class VQclassifier(lpca):
+    '''
+    For the classification task the following steps are accomplished:
+    0. Preprocessing: The set of new observations Y is centered and scaled with the centering and scaling factors
+    computed from the training dataset, X.
+    1. For each cluster of the training matrix, computes the Principal Components.
+    2. Assign each observation y \in Y to the cluster which minimizes the local reconstruction error.
+    '''
+    def __init__(self, X, idx, Y):
+        self.X = X
+        self._cent_crit = 'mean'
+        self._scal_crit = 'auto'
+        self.idx = idx
+        self.k = max(self.idx) +1
+        self.Y = Y
+
+        super().__init__(X)
+        self.nPCs = round(self.Y.shape[1] - (self.Y.shape[1]) /5) #Use a very high number of PCs to classify,removing only the last 20% which contains noise
+
+    def fit(self):
+        '''
+        Classify a new set of observations on the basis of a previous
+        LPCA partitioning.
+        '''
+        print("Classifying the new observations...")
+        # Compute the centering/scaling factors of the training matrix
+        mu = center(self.X, self._cent_crit)
+        sigma = scale(self.X, self._scal_crit)
+        # Scale the new matrix with these factors
+        Y_tilde = center_scale(self.Y, mu, sigma)
+        # Initialize arrays
+        rows, cols = np.shape(self.Y)
+        sq_rec_oss = np.zeros((rows, cols), dtype=float)
+        sq_rec_err = np.zeros((rows, self.k), dtype=float)
+        # Compute the reconstruction errors
+        for ii in range (0, self.k):
+            cluster = get_cluster(self.X, self.idx, ii)
+            centroids = get_centroids(cluster)
+            modes = PCA_fit(cluster, self.nPCs)
+            C_mat = np.matlib.repmat(centroids, rows, 1)
+            rec_err_os = (self.Y - C_mat) - (self.Y - C_mat) @ modes[0] @ modes[0].T
+            sq_rec_oss = np.power(rec_err_os, 2)
+            sq_rec_err[:,ii] = sq_rec_oss.sum(axis=1)
+
+        # Assign the label
+        idx_classification = np.argmin(sq_rec_err, axis = 1)
+
+        return idx_classification
+
+
 class fpca(lpca):
     '''
     Supervised partitioning based on an a-priori conditioning (and subsequent dim reduction), by means

@@ -5,31 +5,31 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 
-import model_order_reduction
-from utilities import * 
+import pyMORe.model_order_reduction as model_order_reduction
+from pyMORe.utilities import *
 
 file_options = {
     "path_to_file"              : "../data",
     "input_file_name"           : "flameD.csv",
 
-    "labels_name"               : "labels.csv",    
+    "labels_name"               : "labels.csv",
 }
 
 settings = {
-    #set the method which has to be used for the sampling. 
+    #set the method which has to be used for the sampling.
     #available options: "random", "cluster", "stratified", "multistage"
     "method"                    : "multistage",
-    
+
     #set the final size of the sampled dataset
     "final_size"                : 5000,
-    
+
     #enable the option to plot the accessed space (mkdir and save the images in the folder)
     "plot_accessed"             : True,
 }
 
 X = readCSV(file_options["path_to_file"], file_options["input_file_name"])
 
-#In this case, we use the temperature vector as a conditioning variable for our multistage 
+#In this case, we use the temperature vector as a conditioning variable for our multistage
 #approach. Other conditioning variables (e.g. mixture fraction) can be loaded separately.
 Temperature = X[:,0]
 
@@ -101,7 +101,3 @@ if settings["plot_accessed"]:
         plt.savefig('sampledVar' + str(names_var[ii]) + '.png')
         plt.show()
         plt.close(fig)
-
-
-
-

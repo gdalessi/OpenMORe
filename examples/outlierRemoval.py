@@ -5,12 +5,12 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 
-import model_order_reduction
-from utilities import *
+import pyMORe.model_order_reduction as model_order_reduction
+from pyMORe.utilities import *
 
 file_options = {
     "path_to_file"              : "../data",
-    "input_file_name"           : "flameD.csv",  
+    "input_file_name"           : "flameD.csv",
 }
 
 settings ={
@@ -18,7 +18,7 @@ settings ={
     "centering"                 : "mean",
     "scaling"                   : "auto",
 
-    #set the number of PCs: it can be done automatically, or it can be 
+    #set the number of PCs: it can be done automatically, or it can be
     #decided by the user.
     "number_of_PCs"             : 15,
 

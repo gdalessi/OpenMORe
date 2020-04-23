@@ -9,6 +9,12 @@ MODULE: model_order_reduction.py
 @Contacts:
     giuseppe.dalessio@ulb.ac.be
 
+@Brief:
+    Class PCA: PCA-based (linear method) functions to get reduced-order models.
+    Class LPCA: LPCA-based (piecewise-linear method) functions to get ROMs.
+    Class KPCA: Kernel-based PCA (non-linear method) function to get ROM.
+
+    More detailed descriptions are available under each function's declaration.
 
 @Additional notes:
     This code is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
@@ -48,7 +54,7 @@ class PCA:
         #Set the PC number to plot or the variable's number to plot
         self._num_to_plot = 1
         #Initialize the number of PCs
-        self._nPCs = X.shape[1] -1
+        self._nPCs = X.shape[1]
 
     @property
     def eigens(self):
@@ -811,32 +817,20 @@ class variables_selection(PCA):
                 automatically.
 
     '''
-    def __init__(self, X, *dictionary):
+    def __init__(self, X):
         self.X = X
 
 
         #Initialize the number of variables to select and the PCs to retain
 
         self._n_ret = 1
+
         self._path = ' '
         self._labels_name = ' '
 
         super().__init__(self.X)
 
-        self._method = 'B2' #'B2', 'B4', "Procustes", "procustes_rotation"
-
-        if dictionary:
-            settings = dictionary[0]
-
-            self._nPCs = settings["number_of_PCs"]
-            self._method = settings["method"]
-            self._center = settings["center"]
-            self._centering = settings["centering_method"]
-            self._scale = settings["scale"]
-            self._scaling = settings["scaling_method"]
-            self._n_ret = settings["number_of_variables"]
-            self._path = settings["path_to_labels"]
-            self._labels_name = settings["labels_name"]
+        self._method = 'B2' #'B2', 'B4', "Procustes"
 
 
     @property
@@ -877,11 +871,17 @@ class variables_selection(PCA):
     def method(self, new_string):
         self._method = new_string
 
+        if self._method.lower() != 'procustes' and self.method.lower() !='b2' and self.method.lower() != 'b4':
+            raise Exception("Variables selection method not supported: choose one between 'procustes', 'b2' and 'b4'. Exiting..")
+            exit()
+
 
     def load_labels(self):
         import pandas as pd
         try:
             self.labels= np.array(pd.read_csv(self._path + '/' + self._labels_name, sep = ',', header = None))
+            print("YO: {}".format(len(self.labels)))
+            print(self.labels)
         except OSError:
             print("Could not open/read the selected file: " + self._labels_name)
             exit()
@@ -906,7 +906,7 @@ class variables_selection(PCA):
 
         self.X_tilde = PCA.preprocess_training(self.X, self.to_center, self.to_scale, self.centering, self.scaling)
 
-        if self._method.lower() == 'procustes':
+        if self._method == 'Procustes':
             '''
             The iterative variable algorithm introduced by Krzanovski [a] is based on the following steps (1-3):
             0.  Preprocessing: The training matrix X is centered and scaled, after being loaded.
@@ -949,7 +949,7 @@ class variables_selection(PCA):
 
             return self.labels
 
-        elif self._method.lower() == 'b2':
+        elif self._method == 'B2':
             '''
             The variable with the largest weight is found on the last PC, and then it is deleted.
             This is accomplished via iterative backward elimination algorithm, until the number of 
@@ -978,62 +978,18 @@ class variables_selection(PCA):
 
             return self.labels
 
-        if self._method.lower() == 'procustes_rotation':
-            '''
-            It's basically the same of standard Procustes, but this time the scores 
-            are rotated via Varimax.
-            '''
-            #Start with PCA, and compute the scores (Z)
-            eigenvec = PCA_fit(self.X_tilde, self._nPCs)
-            Z = self.X_tilde @ eigenvec[0]
-            #Start the backward elimination:
-            while self.X_tilde.shape[1] > self._n_ret:
-                M2 = 1E12
-                M2_tmp = 0
-                var_tmp = 0
-
-                for ii in range(0,self.X_tilde.shape[1]):
-                    #Delete each variable from the original matrix (one at the time)
-                    X_cut = np.delete(self.X_tilde, ii, axis=1)
-                    #Compute the scores of the reduced matrix, after PCA
-                    eigenvec = PCA_fit(X_cut, self._nPCs)
-                    Z_tilde = X_cut @ eigenvec[0]
-                    #ROTATE THE SCORES VIA VARIMAX 
-                    Z_tilde = varimax_rotation(self.X_tilde, Z_tilde, normalize=True)
-                    #Compute the reduced scores covariance matrix, and then apply SVD
-                    covZZ = np.transpose(Z_tilde) @ Z
-                    u, s, vh = np.linalg.svd(covZZ, full_matrices=True)
-                    #Compute the Procustes Analysis score M2 for the matrix without the 'ii' variable
-                    M2_tmp = np.trace((np.transpose(Z) @ Z) + (np.transpose(Z_tilde) @ Z_tilde) - 2*s)
-                    #If the Silhouette score M2 is lower than the previous one in M2_tmp, store the 
-                    #variable 'ii' to remove it after the for loop
-                    if M2_tmp < M2:
-                        M2 = M2_tmp
-                        var_tmp = ii
-                #Remove the variable from the matrix and the labels list
-                self.X_tilde = np.delete(self.X_tilde, var_tmp, axis=1)
-                self.labels = np.delete(self.labels, var_tmp, axis=0)
-                print("Current number of variables: {}".format(self.X_tilde.shape[1]))
-
-            return self.labels
-
-        elif self._method.lower() == 'b4':
+        '''
+        elif self._method == 'B4':
             
             #The variables associated with the largest weights on each of the 'm' first PCs are 
-            #selected. This is not an iterative algorithm.
+            #elected. This is not an iterative algorithm.
             
             model = PCA(self.X)
-            if self._nPCs < self._n_ret:
-                print("For the B4 it is not possible to choose a number of PCs lower than the required number of variables.")
-                print("The number of PCs will be set equal to the required number of variables.")
-                print(" ")
-                self._nPCs = self._n_ret
-
             model.eigens = self._nPCs
             PCs,eigvals = model.fit()
             PVs = []
 
-            for ii in range(0, self._n_ret):
+            for ii in range(0, self.retained):
                 #Check the largest weight on the first 'm' PCs and add it to the PVs list.
                 argmax_= np.argmax(np.abs(PCs[:,ii]))
                 PVs.append(self.labels[argmax_])
@@ -1041,13 +997,7 @@ class variables_selection(PCA):
                 PCs[argmax_,:]= 0
             
             return PVs 
-        
-        else:
-            raise Exception("Variables selection method not supported. Please choose one between 'B2', 'Procustes', 'Procustes_rotation'.")
-            print("Exiting with error..")
-            exit()
-
-        
+        '''
 
 class SamplePopulation():
     '''

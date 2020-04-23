@@ -15,9 +15,9 @@ MODULE: classification.py
     Please report any bug to: giuseppe.dalessio@ulb.ac.be
 
 '''
-from utilities import *
-import model_order_reduction
-import clustering 
+from pyMORe.utilities import *
+import pyMORe.model_order_reduction as model_order_reduction
+import pyMORe.clustering as clustering
 
 import numpy as np
 import numpy.matlib
@@ -72,14 +72,14 @@ class VQclassifier(clustering.lpca):
 
         return idx_classification
 
-    
+
 
 if __name__ == '__main__':
 
     file_options = {
         "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data",
         "input_file_name"           : "cfdf.csv",
-        
+
         "idx_name"                  : "idx.txt",
     }
 
