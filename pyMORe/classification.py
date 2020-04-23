@@ -19,13 +19,14 @@ from .utilities import *
 from . import model_order_reduction
 from . import clustering
 
+
 import numpy as np
 import numpy.matlib
 import matplotlib
 import matplotlib.pyplot as plt
 
 
-class VQclassifier(clustering.lpca):
+class VQPCA(clustering.lpca):
     '''
     For the classification task the following steps are accomplished:
     0. Preprocessing: The set of new observations Y is centered and scaled with the centering and scaling factors
@@ -49,8 +50,8 @@ class VQclassifier(clustering.lpca):
         '''
         print("Classifying the new observations...")
         # Compute the centering/scaling factors of the training matrix
-        mu = center(self.X, self._cent_crit)
-        sigma = scale(self.X, self._scal_crit)
+        mu = center(self.X, self._centering)
+        sigma = scale(self.X, self._scaling)
         # Scale the new matrix with these factors
         Y_tilde = center_scale(self.Y, mu, sigma)
         # Initialize arrays
@@ -70,50 +71,4 @@ class VQclassifier(clustering.lpca):
         # Assign the label
         idx_classification = np.argmin(sq_rec_err, axis = 1)
 
-        return idx_classification
-
-
-
-if __name__ == '__main__':
-
-    file_options = {
-        "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data",
-        "input_file_name"           : "cfdf.csv",
-
-        "idx_name"                  : "idx.txt",
-    }
-
-    X = readCSV(file_options["path_to_file"], file_options["input_file_name"])
-    idx = np.genfromtxt(file_options["path_to_file"] + "/" + file_options["idx_name"], delimiter= '\n')
-
-
-    file_options_classifier = {
-        "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data",
-        "test_file_name"            : "laminar2D.csv",
-    }
-
-    mesh_options = {
-        "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data",
-        "mesh_file_name"            : "mesh.csv",
-    }
-
-    try:
-        print("Reading test matrix..")
-        Y = np.genfromtxt(file_options_classifier["path_to_file"] + "/" + file_options_classifier["test_file_name"], delimiter= ',')
-    except OSError:
-        print("Could not open/read the selected file: " + "/" + file_options_classifier["test_file_name"])
-        exit()
-
-
-    classifier = VQclassifier(X, idx, Y)
-    classification_vector = classifier.fit()
-
-    matplotlib.rcParams.update({'font.size' : 6, 'text.usetex' : True})
-    mesh = np.genfromtxt(mesh_options["path_to_file"] + "/" + mesh_options["mesh_file_name"], delimiter= ',')
-
-    fig = plt.figure()
-    axes = fig.add_axes([0.2,0.15,0.7,0.7], frameon=True)
-    axes.scatter(mesh[:,0], mesh[:,1], c=classification_vector, alpha=0.5)
-    axes.set_xlabel('X [m]')
-    axes.set_ylabel('Y [m]')
-    plt.show()
+        return idx_classification  

@@ -9,10 +9,6 @@ MODULE: clustering.py
 @Contacts:
     giuseppe.dalessio@ulb.ac.be
 
-@Brief:
-    Class lpca: Clustering via Local Principal Component Analysis (LPCA).
-    Class VQclassifier: Classify new observations via LPCA on the basis of a previous clustering solution.
-    Class spectral: Clustering via unnormalized spectral clustering.
 
 @Additional notes:
     This code is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
