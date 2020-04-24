@@ -340,7 +340,7 @@ def get_cluster(X, idx, index, write=False):
         cluster = X[positions]
         
         if write:
-        np.savetxt("Observations in cluster number{}.txt".format(index), cluster)
+            np.savetxt("Observations in cluster number{}.txt".format(index), cluster)
 
         return cluster
     

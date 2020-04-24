@@ -1285,7 +1285,7 @@ class NMF():
         self._scale = True
 
         #private properties for iterative algorithm
-        self.__iterMax = 100
+        self.__iterMax = 300
         self.__convergence = False
 
     @property
@@ -1385,6 +1385,10 @@ class NMF():
             X_star2 = np.r_[self.X_tilde.T, np.zeros((self.W.shape))]                   #dim: (p x n) + (k X n) = [(p+k) x n]
             coeffW = np.sqrt(self._beta) * np.ones((1, self.W.shape[0]))                #dim: (1 x k)
             coeffH = np.sqrt(self._eta) * np.eye(self.H.shape[0])                       #dim: (k x k)
+
+
+            W_star = np.c_[self.W, coeffW.T]                                            #dim: (k x n) + (k x 1) = [k x (n+1)] --> OK
+            H_star = np.r_[self.H.T, coeffH]                                            #dim: (p x k) + (k x k) = [(p+k) x k] --> OK
             print("### WARNING ###")
             print("### SPARSE IS SELECTED --> IT WAS NOT TESTED, THEREFORE IT'S NOT 100% SURE IT WORKS WELL###")
 
@@ -1408,9 +1412,6 @@ class NMF():
                 self.W[mask] = 0
 
             elif self._method.lower() == 'sparse':      
-
-                W_star = np.c_[self.W, coeffW.T]                                            #dim: (k x n) + (k x 1) = [k x (n+1)] --> OK
-                H_star = np.r_[self.H.T, coeffH]                                            #dim: (p x k) + (k x k) = [(p+k) x k] --> OK
 
                 self.W= lstsq(H_star, X_star2, rcond=None)[0]                               #dim: [(p+k) x k] ; [(p+k) x n]
                 mask = np.where(self.W < 0)
@@ -1438,9 +1439,20 @@ class NMF():
 
             if eps_rec_var > convTol and iteration < self.__iterMax:
                 print("Iteration number: {}".format(iteration))
+                print("\tReconstruction error: {}".format(eps_rec_new))
                 print("\tReconstruction error variance: {}".format(eps_rec_var))
                 iteration +=1
             else:
+                print("\tReconstruction error: {}".format(eps_rec_new))
+                print("\tReconstruction error variance: {}".format(eps_rec_var))
                 print("Convergence has been reached after {} iterations.".format(iteration))
+                break
 
         return self.W, self.H
+
+    def cluster(self):
+        idx = np.empty((self.rows,), dtype=int)
+        idx = np.argmax(self.W.T, axis=1)
+
+        return idx
+

@@ -7,14 +7,14 @@ import pyMORe.model_order_reduction as model_order_reduction
 from pyMORe.utilities import *
 
 file_options = {
-    "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data",
-    "input_file_name"           : "concentrations.csv",
+    "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitLab/pyMORe/data",
+    "input_file_name"           : "flameD.csv",
 
     "mesh_file_name"            : "mesh.csv",
 }
 
 
-num_of_features = 8
+num_of_features = 5
 
 X = readCSV(file_options["path_to_file"], file_options["input_file_name"])
 mesh = np.genfromtxt(file_options["path_to_file"] + "/" + file_options["mesh_file_name"], delimiter= ',')
@@ -23,11 +23,10 @@ model = model_order_reduction.NMF(X)
 model.encoding = num_of_features
 model.eta = 0.01
 model.beta = 0.01
-model.method = 'sparse'
+model.method = 'standard' #choose 'standard' or 'sparse'
 
 W,H = model.fit()
-
-idx = np.argmax(W.T, axis=1)
+idx = model.cluster()
 
 for ii in range(0, num_of_features):
     fig = plt.figure()
