@@ -335,13 +335,20 @@ def get_cluster(X, idx, index, write=False):
     - Output:
     cluster: matrix with the grouped observations -- dim: (p x var)
     '''
-    positions = np.where(idx == index)
-    cluster = X[positions]
-
-    if write:
+    try:
+        positions = np.where(idx == index)
+        cluster = X[positions]
+        
+        if write:
         np.savetxt("Observations in cluster number{}.txt".format(index), cluster)
 
-    return cluster
+        return cluster
+    
+    except:
+        print("No observations in cluster number: {}. Passing by.".format(index))
+        pass
+
+    
 
 
 def get_all_clusters(X, idx):

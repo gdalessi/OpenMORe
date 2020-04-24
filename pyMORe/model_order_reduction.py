@@ -1380,6 +1380,14 @@ class NMF():
         self.W = np.random.rand(self._dim, self.rows)
         self.H = np.random.rand(self._dim, self.cols)
 
+        if self._method.lower() == 'sparse':
+            X_star = np.r_[self.X_tilde, np.zeros((1,self.X_tilde.shape[1]))]           #dim: (n x p) + (1 x p) = [(n+1) x p] 
+            X_star2 = np.r_[self.X_tilde.T, np.zeros((self.W.shape))]                   #dim: (p x n) + (k X n) = [(p+k) x n]
+            coeffW = np.sqrt(self._beta) * np.ones((1, self.W.shape[0]))                #dim: (1 x k)
+            coeffH = np.sqrt(self._eta) * np.eye(self.H.shape[0])                       #dim: (k x k)
+            print("### WARNING ###")
+            print("### SPARSE IS SELECTED --> IT WAS NOT TESTED, THEREFORE IT'S NOT 100% SURE IT WORKS WELL###")
+
         #Initialize the param for the iterative algorithm
         iteration = 0
         eps_rec = 1.0
@@ -1389,7 +1397,6 @@ class NMF():
         while not self.__convergence and iteration < self.__iterMax:
 
             if self._method.lower() == 'standard':
-            
                 #optimize H, and after that delete negative coefficients
                 self.H = lstsq(self.W.T, self.X_tilde, rcond=None)[0]
                 mask = np.where(self.H < 0)
@@ -1400,37 +1407,16 @@ class NMF():
                 mask = np.where(self.W < 0)
                 self.W[mask] = 0
 
-                print("W dim: {}".format(self.W.shape))
-                print("H dim: {}".format(self.H.shape))
-                print("X dim: {}".format(self.X_tilde.shape))
+            elif self._method.lower() == 'sparse':      
 
-            
-            elif self._method.lower() == 'sparse':
-                ### WARNING ###
-                ### THIS IS NOT WORKING - THERE IS A MAJOR BUG SOMEWHERE ###
-                ### STILL UNDER CONSTRUCTION ###
-                X_star = np.r_[self.X_tilde, np.zeros((1,self.X_tilde.shape[1]))]    #dim: (n x p) + (1 x p) = [(n+1) x p] 
-                X_star2 = np.r_[self.X_tilde.T, np.zeros((self.W.shape))]          #dim: (p x n) + (k X n) = [(p+k) x n]
-                
-                
-                coeffW = np.sqrt(self._beta) * np.ones((1, self.W.shape[0]))         #dim: (1 x k)
-                coeffH = np.sqrt(self._eta) * np.eye(self.H.shape[0])                #dim: (k x k)
-                print("W dim: {}".format(self.W.shape))
-                print("coeff dim: {}".format(coeffW.shape))
+                W_star = np.c_[self.W, coeffW.T]                                            #dim: (k x n) + (k x 1) = [k x (n+1)] --> OK
+                H_star = np.r_[self.H.T, coeffH]                                            #dim: (p x k) + (k x k) = [(p+k) x k] --> OK
 
-                W_star = np.c_[self.W, coeffW.T]                                     #dim: (k x n) + (k x 1) = [k x (n+1)] --> OK
-                H_star = np.r_[self.H.T, coeffH]                                     #dim: (p x k) + (k x k) = [(p+k) x k] --> OK
-
-                print("Wstar dim: {}".format(W_star.shape))
-                print("Hstar dim: {}".format(H_star.shape))
-                print("Xstar dim: {}".format(X_star.shape))
-                print("Xstar2 dim: {}".format(X_star2.shape))
-                
-                self.W= lstsq(H_star, X_star2, rcond=None)[0]                       #dim: [(p+k) x k] ; [(p+k) x n]
+                self.W= lstsq(H_star, X_star2, rcond=None)[0]                               #dim: [(p+k) x k] ; [(p+k) x n]
                 mask = np.where(self.W < 0)
                 self.W[mask] = 0
                 
-                self.H = lstsq(W_star.T, X_star, rcond=None)[0]                       #dim: [k x (n+1)] ; [(n+1) x p]
+                self.H = lstsq(W_star.T, X_star, rcond=None)[0]                             #dim: [k x (n+1)] ; [(n+1) x p]
                 mask = np.where(self.H < 0)
                 self.H[mask] = 0
 
