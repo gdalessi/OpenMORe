@@ -1264,67 +1264,121 @@ class SamplePopulation():
 
             return miniX
 
+class NMF():
+    def __init__(self, X):
+        #standard construction
+        self.X = X 
+        self.rows, self.cols = self.X.shape
+        self._dim = self.cols -1
 
-def main():
+        #tell to the algorithm if the matrix must be centered/scaled.
+        #only Range scaling is possible, so no setter for the method 
+        #is prescribed.
+        self._center = True
+        self._scale = True
 
-    file_options = {
-        "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data",
-        "input_file_name"           : "concentrations.csv",
-        "labels_name"               : "labels_species.csv",
-    }
+        #private properties for iterative algorithm
+        self.__iterMax = 100
+        self.__convergence = False
 
+    @property
+    def to_center(self):
+        return self._center
 
+    @to_center.setter
+    @accepts(object, bool)
+    def to_center(self, new_bool):
+        self._center = new_bool
 
-    X = readCSV(file_options["path_to_file"], file_options["input_file_name"])
+    @property
+    def to_scale(self):
+        return self._scale
 
+    @to_scale.setter
+    @accepts(object, bool)
+    def to_scale(self, new_bool):
+        self._scale = new_bool
 
-    model = PCA(X)
-    model.eigens = 15
+    @property
+    def encoding(self):
+        return self._dim
 
-    PCs = model.fit()                                      # OK
+    @encoding.setter
+    @accepts(object, int)
+    def encoding(self, new_int):
+        self._dim = new_int
 
+    @staticmethod
+    def preprocess_training(X, centering_decision, scaling_decision):
 
-    X_recovered = model.recover()                          # OK
+        centering_method = 'min'
+        scaling_method = 'range'
 
+        if centering_decision and scaling_decision:
+            mu, X_ = center(X, centering_method, True)
+            sigma, X_tilde = scale(X_, scaling_method, True)
+        elif centering_decision and not scaling_decision:
+            mu, X_tilde = center(X, centering_method, True)
+        elif scaling_decision and not centering_decision:
+            sigma, X_tilde = scale(X, scaling_method, True)
+        else:
+            X_tilde = X
 
-    model.set_PCs_method = False
-    model.set_PCs()                                        # OK
-    model.get_explained()                                  # OK
-    model.set_num_to_plot = 5
-    model.plot_PCs()                                       # OK
-    model.plot_parity()                                    # OK
+        return X_tilde
 
-    local_model = LPCA(X)
+    def fit(self):
+        '''
+        The alternating least squares algorithm has been implemented in this function.
+        The algorithm description and general NMF infos can be found here:
 
-    local_model.eigens = 10
-    local_model.centering = 'mean'
-    local_model.scaling = 'auto'
-    local_model.path_to_idx = '/Users/giuseppedalessio/Dropbox/GitHub/Clustering_and_Red_Ord_Modelling/src'
-    local_model.set_num_to_plot = 7
-    LPCs, u_scores, Leigen, centroids = local_model.fit()
-    X_rec_lpca = local_model.recover()
+        https://www.mpi-inf.mpg.de/fileadmin/inf/d5/teaching/ss15_dmm/lectures/2015-05-26-intro-to-nmf.pdf
+        '''
 
-    recon_local = NRMSE(X, X_rec_lpca)
+        from numpy.linalg import lstsq
 
-    print(np.mean(recon_local))
+        #Center and scale the matrix. The only criterion is Range, because the matrix elements
+        #must be all positive
+        self.X_tilde = self.preprocess_training(self.X, self._center, self._scale)
 
-    local_model.plot_parity()
-    local_model.clust_to_plot = 3
-    local_model.plot_PCs()
+        #Initialize matrices for low-rank approximation
+        self.W = np.random.rand(self._dim, self.rows)
+        self.H = np.random.rand(self._dim, self.cols)
 
-    ##### VARIABLES SELECTION #####
+        #Initialize the param for the iterative algorithm
+        iteration = 0
+        eps_rec = 1.0
+        convTol = 1E-8
+        eps_tol = 1E-16
 
-    Procustes = variables_selection(X)
+        while not self.__convergence and iteration < self.__iterMax:
+            
+            #optimize H, and after that delete negative coefficients
+            self.H = lstsq(self.W.T, self.X_tilde, rcond=None)[0]
+            mask = np.where(self.H < 0)
+            self.H[mask] = 0
 
-    Procustes.path_to_labels = file_options["path_to_file"]
-    Procustes.labels_file_name = file_options["labels_name"]
-    Procustes.eigens = 5
-    Procustes.retained = 15
-    retained_variables = Procustes.fit()
-    print(retained_variables)
+            #optimize W, and after that delete negative coefficients
+            self.W = lstsq(self.H.T, self.X_tilde.T, rcond=None)[0]
+            mask = np.where(self.W < 0)
+            self.W[mask] = 0
 
-    print("done")
+            #Compute the reconstructed matrix from the reduced-order basis
+            X_rec = self.W.T @ self.H
 
+            #Compute the error between the original and the reconstructed
+            #via Frobenius norm
+            eps_rec_new = np.linalg.norm((self.X_tilde - X_rec), 'fro')
 
-if __name__ =='__main__':
-    main()
+            #Check the reconstruction error variation to see if the convergence
+            #has been reached
+            eps_rec_var = np.abs((eps_rec_new - eps_rec) / (eps_rec_new) + eps_tol)
+            eps_rec = eps_rec_new
+
+            if eps_rec_var > convTol and iteration < self.__iterMax:
+                print("Iteration number: {}".format(iteration))
+                print("\tReconstruction error variance: {}".format(eps_rec_var))
+                iteration +=1
+            else:
+                print("Convergence has been reached after {} iterations.".format(iteration))
+
+        return self.W, self.H
