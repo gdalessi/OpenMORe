@@ -1271,6 +1271,13 @@ class NMF():
         self.rows, self.cols = self.X.shape
         self._dim = self.cols -1
 
+        #select the method: standard/sparse
+        self._method = "standard"
+        
+        #default coefficient initialized for sparse correction
+        self._eta = 0.01
+        self._beta = 0.01
+
         #tell to the algorithm if the matrix must be centered/scaled.
         #only Range scaling is possible, so no setter for the method 
         #is prescribed.
@@ -1308,6 +1315,30 @@ class NMF():
     def encoding(self, new_int):
         self._dim = new_int
 
+    @property
+    def method(self):
+        return self._method
+
+    @method.setter
+    def method(self, new_string):
+        self._method = new_string
+
+    @property
+    def eta(self):
+        return self._eta
+
+    @eta.setter
+    def eta(self, new_value):
+        self._eta = new_value
+
+    @property
+    def beta(self):
+        return self._beta
+
+    @beta.setter
+    def beta(self, new_value):
+        self._beta = new_value
+
     @staticmethod
     def preprocess_training(X, centering_decision, scaling_decision):
 
@@ -1329,9 +1360,14 @@ class NMF():
     def fit(self):
         '''
         The alternating least squares algorithm has been implemented in this function.
-        The algorithm description and general NMF infos can be found here:
+        The "standard" algorithm is available, as well as the one for sparse NMF.
+        The std algorithm description and general NMF infos can be found here:
 
         https://www.mpi-inf.mpg.de/fileadmin/inf/d5/teaching/ss15_dmm/lectures/2015-05-26-intro-to-nmf.pdf
+
+        And the info for the sparse NMF (and other general info regarding NMF) are available here:
+        
+        Türkmen, Ali Caner. "A review of nonnegative matrix factorization methods for clustering." arXiv preprint arXiv:1507.03194 (2015).
         '''
 
         from numpy.linalg import lstsq
@@ -1351,16 +1387,56 @@ class NMF():
         eps_tol = 1E-16
 
         while not self.__convergence and iteration < self.__iterMax:
-            
-            #optimize H, and after that delete negative coefficients
-            self.H = lstsq(self.W.T, self.X_tilde, rcond=None)[0]
-            mask = np.where(self.H < 0)
-            self.H[mask] = 0
 
-            #optimize W, and after that delete negative coefficients
-            self.W = lstsq(self.H.T, self.X_tilde.T, rcond=None)[0]
-            mask = np.where(self.W < 0)
-            self.W[mask] = 0
+            if self._method.lower() == 'standard':
+            
+                #optimize H, and after that delete negative coefficients
+                self.H = lstsq(self.W.T, self.X_tilde, rcond=None)[0]
+                mask = np.where(self.H < 0)
+                self.H[mask] = 0
+
+                #optimize W, and after that delete negative coefficients
+                self.W = lstsq(self.H.T, self.X_tilde.T, rcond=None)[0]
+                mask = np.where(self.W < 0)
+                self.W[mask] = 0
+
+                print("W dim: {}".format(self.W.shape))
+                print("H dim: {}".format(self.H.shape))
+                print("X dim: {}".format(self.X_tilde.shape))
+
+            
+            elif self._method.lower() == 'sparse':
+                ### WARNING ###
+                ### THIS IS NOT WORKING - THERE IS A MAJOR BUG SOMEWHERE ###
+                ### STILL UNDER CONSTRUCTION ###
+                X_star = np.r_[self.X_tilde, np.zeros((1,self.X_tilde.shape[1]))]    #dim: (n x p) + (1 x p) = [(n+1) x p] 
+                X_star2 = np.r_[self.X_tilde.T, np.zeros((self.W.shape))]          #dim: (p x n) + (k X n) = [(p+k) x n]
+                
+                
+                coeffW = np.sqrt(self._beta) * np.ones((1, self.W.shape[0]))         #dim: (1 x k)
+                coeffH = np.sqrt(self._eta) * np.eye(self.H.shape[0])                #dim: (k x k)
+                print("W dim: {}".format(self.W.shape))
+                print("coeff dim: {}".format(coeffW.shape))
+
+                W_star = np.c_[self.W, coeffW.T]                                     #dim: (k x n) + (k x 1) = [k x (n+1)] --> OK
+                H_star = np.r_[self.H.T, coeffH]                                     #dim: (p x k) + (k x k) = [(p+k) x k] --> OK
+
+                print("Wstar dim: {}".format(W_star.shape))
+                print("Hstar dim: {}".format(H_star.shape))
+                print("Xstar dim: {}".format(X_star.shape))
+                print("Xstar2 dim: {}".format(X_star2.shape))
+                
+                self.W= lstsq(H_star, X_star2, rcond=None)[0]                       #dim: [(p+k) x k] ; [(p+k) x n]
+                mask = np.where(self.W < 0)
+                self.W[mask] = 0
+                
+                self.H = lstsq(W_star.T, X_star, rcond=None)[0]                       #dim: [k x (n+1)] ; [(n+1) x p]
+                mask = np.where(self.H < 0)
+                self.H[mask] = 0
+
+            else:
+                raise Exception("NMF method not supported, please choose one between STANDARD or SPARSE.")
+                exit()
 
             #Compute the reconstructed matrix from the reduced-order basis
             X_rec = self.W.T @ self.H
