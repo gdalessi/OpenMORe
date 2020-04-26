@@ -3,7 +3,7 @@ from pyMORe.utilities import *
 
 
 file_options = {
-    "path_to_file"              : "../data",
+    "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitLab/pyMORe/data",
     "input_file_name"           : "flameD.csv",
 }
 
@@ -14,7 +14,7 @@ settings ={
 
     #set the number of PCs: it can be done automatically, or it can be
     #decided by the user.
-    "number_of_PCs"             : "auto",
+    "number_of_PCs"             : 5,
 }
 
 

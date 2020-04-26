@@ -25,6 +25,47 @@ from .utilities import *
 from . import clustering
 
 class PCA:
+    '''
+    Perfom model order reduction via Principal Component Analysis (PCA).
+    PCA is a statistical technique for the dimensionality reduction of a matrix
+    X (n_observations x n_variables), by means of an eigendecomposition of 
+    its covariance matrix, C. 
+
+    The eigenvectors obtained from the decomposition are called Principal
+    Components (PCs), while the eigenvalues represent the percentage of information
+    they account for.
+
+
+    --- PARAMETERS ---
+    X:          RAW data matrix, uncentered and unscaled. It must be organized
+                with the structure: (observations x variables).
+    type X :    numpy array
+
+
+    --- SETTERS ---
+    _center:            Enable the centering function
+    type   _center:     boolean True/False
+
+    _centering:             set the centering method. Available choices for scaling
+                            are 'mean' or 'min'.
+    type   _centering:      string
+
+    _scale:                Enable the scaling function
+    type   _scale:         boolean 
+
+    _scaling:               set the scaling method. Available choices for scaling
+                            are 'auto' or 'vast' or 'range' or 'pareto'.
+    type _scaling:          string
+
+    _plot_explained_variance:          enable plotting for the explained variance function
+    type   _plot_explained_variance:   boolean
+
+    _assessPCs:             automatically set the number of PCs to retain. Available choices 
+                            are: False (skip this option), 'var': explained variance criterion (> 95%)
+                            'nrmse' set the num of PCs considering the reconstruction error, which
+                            has to be < 10% on average
+    type _assessPCs:        boolean or string
+    '''
     def __init__(self, X):
         #Useful variables from training dataset
         self.X = X
@@ -160,18 +201,19 @@ class PCA:
     def fit(self):
         '''
         Perform Principal Component Analysis on the dataset X,
-        and retain 'n' Principal Components. The covariance matrix
-        is firstly calculated, then it is decomposed in eigenvalues
-        and eigenvectors. Lastly, the eigenvalues are ordered depending
-        on their magnitude and the associated eigenvectors (the PCs)
-        are retained.
+        and retain 'n' Principal Components. 
 
-        - Output:
-        evecs: eigenvectors from the covariance matrix decomposition (PCs)
-        evals: eigenvalues from the covariance matrix decomposition (lambda)
+        The eigenvectors are returned already ordered in decreasing
+        order of importance.
 
-        !!! WARNING !!! the PCs are already ordered (decreasing, for importance)
-        because the eigenvalues are also ordered in terms of magnitude.
+
+        --- RETURNS ---
+        evecs:      eigenvectors from the covariance matrix decomposition (PCs)
+        type evecs: list
+
+        evals:      eigenvalues from the covariance matrix decomposition (lambda)
+        type evecs: list
+
         '''
         #Center and scale the original training dataset
         self.X_tilde = self.preprocess_training(self.X, self._center, self._scale, self._centering, self._scaling)
@@ -179,11 +221,15 @@ class PCA:
         #Compute the covariance matrix
         C = np.cov(self.X_tilde, rowvar=False) #rowvar=False because the X matrix is (observations x variables)
 
+        #All the eigenvectors and eigenvalues are firstly calculated
         self.ALLevals, self.ALLevecs = LA.eig(C)
+        
+        #After that, they are ordered in decreasing order of magnitude
         mask = np.argsort(self.ALLevals)[::-1]
         self.evecs = self.ALLevecs[:,mask]
         self.evals = self.ALLevals[mask]
 
+        #Cut the last PCs and consider only the prescribed number of eigenvectors
         self.evecs = self.evecs[:,:self._nPCs]
         self.evals = self.evals[:self._nPCs]
 
@@ -194,8 +240,10 @@ class PCA:
         '''
         Reconstruct the original matrix from the reduced PCA-manifold.
 
-        - Output:
-        X_rec = uncentered and unscaled reconstructed matrix with PCA modes -- dim: (observations x variables)
+
+        --- RETURNS ---
+        X_rec:      uncentered and unscaled reconstructed matrix with PCA modes 
+        type X_rec: numpy array    
         '''
 
         #Compute the centering and the scaling factors. Later they will be useful.
@@ -218,8 +266,10 @@ class PCA:
         Usually, it is considered accepted a percentage of explained variable
         above 95%.
 
-        - Output:
-        explained: percentage of explained variance -- dim: (scalar)
+
+        --- RETURNS ---
+        explained:      percentage of explained variance 
+        type explained: scalar  
         '''
         explained_variance = np.cumsum(self.evals)/sum(self.ALLevals)
         explained = explained_variance[-1]
@@ -244,6 +294,11 @@ class PCA:
         Project the original data matrix (cent and scaled) X_tilde
         on the low dimensional manifold spanned by the first 'n'
         Principal Components and obtain the scores matrix (Z).
+
+
+        --- RETURNS ---
+        scores:      matrix of the scores 
+        type scores: numpy matrix  
         '''
         self.scores = self.X_tilde @ self.evecs
 
@@ -251,6 +306,17 @@ class PCA:
 
 
     def set_PCs(self):
+        '''
+        Automatically assess the number of PCs to be retained. This can be done in two different ways, the first one is
+        the explained variance criterion: retain nPCs such that the 95% of the original data variance is explained; the 
+        second one is the nrmse criterion: retain nPCs such that the difference between the original and the reconstructed
+        matrix is lower than the 10%.
+
+
+        --- RETURNS ---
+        optimalPCs:         number of PCs required to satisfy the chosen criterion
+        type optimalPCs:    scalar  
+        '''
         optimalPCs = None
         if self._assessPCs != False:
             self.plot_explained_variance = False
@@ -345,6 +411,14 @@ class PCA:
         i = index to count the observations
         k = index to count the PCs
 
+
+        --- RETURNS ---
+        X:         the matrix without leverage outliers
+        type X:    numpy matrix
+
+        bin:        the 'clusters' of the Cumulative Density Function
+        new_mask:   the vector containing the ID of the non-outlier observations 
+
         '''
         #Leverage points removal:
         #Compute the PCA scores. Override the eventual number of PCs: ALL the
@@ -417,6 +491,13 @@ class PCA:
 
         Hubert, Mia, Peter Rousseeuw, and Tim Verdonck. Computational Statistics & Data Analysis 53.6 (2009): 2264-2274.
 
+
+        --- RETURNS ---
+        X:         the matrix without leverage outliers
+        type X:    numpy matrix
+
+        bin:        the 'clusters' of the Cumulative Density Function
+        new_mask:   the vector containing the ID of the non-outlier observations
         '''
         #Orthogonal outliers removal:
         PCs, eigval = self.fit()
@@ -476,7 +557,17 @@ class PCA:
         Parente, Alessandro, and James C. Sutherland. Combustion and flame 160.2 (2013): 340-350.
 
 
-        This function has not been tested yet, but it's running correctly.
+        This function removes the outlier via PCA. Firstly, the input matrix is trimmed by means of
+        the calculation of the Mahalanobis distance: a very small percentage (0.01 - 0.1%) of the 
+        observations are discarded.
+        After that, an iterative algorithm is started for outlier removal, and the convergence is reached
+        when the data kurtosis' change is below a fixed threshold between two consecutive iterations.
+
+
+        --- RETURNS ---
+        X:         the matrix without outliers
+        type X:    numpy matrix
+        
         '''
 
         from scipy.stats import kurtosis
@@ -592,6 +683,33 @@ class PCA:
 
 
 class LPCA(PCA):
+    '''
+    Perfom model order reduction via Local Principal Component Analysis (LPCA).
+    LPCA is a statistical technique for the dimensionality reduction and reduced
+    order modelling which was introduced to extend the applicability of PCA also
+    to non-linear applications. In fact, LPCA is a piecewise linear: different
+    manifold are found for different groups of points. 
+    The partitioning of the data matrix can be calculated via LPCA clustering
+    algorithm (implemented in the clustering module) or can be given in input.
+
+    This function direcly inherits all the properties from PCA, so for many
+    of the parameters and setters a detailed description can be found in PCA.
+
+
+    --- PARAMETERS ---
+    X:          RAW data matrix, uncentered and unscaled. It must be organized
+                with the structure: (observations x variables).
+    type X :    numpy array
+
+
+    --- SETTERS ---
+    _path_to_idx:           path to the .txt file containing the class assignment for the matrix
+    type _path_to_idx:      string
+
+    _clust_to_plot:          number of cluster where the chosen LPCs must be plotted
+    type   _clust_to_plot:   scalar
+
+    '''
     def __init__(self,X):
         #Set the path where the file 'idx.txt' (containing the partitioning solution) is located
         self._path_to_idx = 'path'
@@ -639,11 +757,19 @@ class LPCA(PCA):
         in each cluster found by the lpca iterative algorithm, given a previous clustering
         solution.
 
-        - Output:
-        LPCs = list with the LPCs in each cluster -- dim: [k]
-        u_scores = list with the scores in each cluster -- dim: [k]
-        Leigen = list with the eigenvalues in each cluster -- dim: [k]
-        centroids = list with the centroids in each cluster -- dim: [k]
+
+        --- RETURNS ---
+        LPCs:       LPCs in each cluster 
+        type LPCs:  list of k elements
+
+        u_scores:       scores in each cluster 
+        type u_scores:  list of k elements
+
+        Leigen:         eigenvalues in each cluster
+        type Leigen:    list of k elements
+
+        centroids:      centroids in each cluster 
+        type centroids:  list of k elements
         '''
         #Load the idx (from a previous clustering partitioning) from the given path.
         #after that, compute the number of clusters and preprocess the training matrix
@@ -674,6 +800,11 @@ class LPCA(PCA):
         Reconstruct the original matrix from the 'k' local reduced PCA-manifolds.
         Given the idx vector, for each cluster the points are reconstructed from the
         local manifolds spanned by the local PCs.
+
+
+        --- RETURNS ---
+        X_rec:      matrix reconstructed by means of the LPCs 
+        type X_rec: numpy matrix
         '''
 
         #Initialize the reconstructed matrix, and center the input matrix
@@ -796,17 +927,64 @@ class variables_selection(PCA):
     In many applications, rather than reducing the dimensionality considering a new set of coordinates
     which are linear combination of the original ones, the main interest is to achieve a dimensionality
     reduction selecting a subset of m variables from the original set of p variables.
-    This can be done via PCA, as also explained in [a].
-    Three methods for variables selection are implemented in this class:
+    
+    Three methods for variables selection via PCA are implemented in this class:
     i) Method B2 backward;
     ii) Method B4 forward;
     iii) Variables selection via PCA and Procustes Analysis, by means of the Krzanovski iterative algorithm [b]
 
     Additional info about the methods are available in the fit method.
 
+    This function direcly inherits all the properties from PCA, so for many
+    of the parameters and setters a detailed description can be found in PCA.
 
-    WARNING --> the input matrix must be the original (uncentered, unscaled) one. The code centers and scales
-                automatically.
+
+    --- PARAMETERS ---
+    X:          RAW data matrix, uncentered and unscaled. It must be organized
+                with the structure: (observations x variables).
+    type X :    numpy array
+
+    *dictionary:    instruction for the PVs algorithm. (Optional)
+    type *dic:      Python dictionary
+
+
+    --- SETTERS ---
+    _n_ret:                 number of variables to retain
+    type _n_ret:            scalar
+
+    _path:                  path to the file containing the variables' labels
+    type   _path:           string
+
+    _labels_name:           variables' labels
+    type   _labels_name:    csv file
+
+    _method:                method to be used for variables selection
+    type   _method:         string
+
+
+    --- METHODS ---
+
+    i)      B2:
+    The variable with the largest weight is found on the last PC, and then it is deleted.
+    This is accomplished via iterative backward elimination algorithm, until the number of
+    variables is equal to the selected number of variables.
+
+    ii)     B4:
+    The variables associated with the largest weights on each of the 'm' first PCs are
+    selected. This is not an iterative algorithm.
+
+    iii)    Variables selection via PCA and Procustes Analysis:
+    The iterative variable selection algorithm introduced by Krzanovski is based on the following steps (1-3):
+    1.  The dimensionality of m is initially set equal to p.
+    2.  Each variable is deleted from the matrix X, obtaining p ~X matrices. The
+        corresponding scores matrices are computed by means of PCA. For each of them, a Procustes Analysis
+        is performed with respect to the scores of the original matrix X, and the corresponding M2 coeffcient is computed.
+    3.  The variable which, once excluded, leads to the smallest M2 coefficient is deleted from the matrix.
+    4.  Steps 2 and 3 are repeated until m variables are left.
+
+    iv)  Variables selection via PCA, Procustes Analysis and Varimax rotation:
+    It follows the same steps of the method iii), but Varimax rotation is performed before Procustes analysis.
+
 
     '''
     def __init__(self, X, *dictionary):
@@ -898,6 +1076,12 @@ class variables_selection(PCA):
 
 
     def fit(self):
+        '''
+        --- RETURNS ---
+        labels:      labels for the retained species
+        type labels: array
+        '''
+
         print("Selecting global variables via PCA and Procustes Analysis...")
         self.load_labels()
         variables_selection.check_sanity_input(self.X, self.labels, self._n_ret)
@@ -905,16 +1089,7 @@ class variables_selection(PCA):
         self.X_tilde = PCA.preprocess_training(self.X, self.to_center, self.to_scale, self.centering, self.scaling)
 
         if self._method.lower() == 'procustes':
-            '''
-            The iterative variable algorithm introduced by Krzanovski [a] is based on the following steps (1-3):
-            0.  Preprocessing: The training matrix X is centered and scaled, after being loaded.
-            1.  The dimensionality of m is initially set equal to p.
-            2.  Each variable is deleted from the matrix X, obtaining p ~X matrices. The
-                corresponding scores matrices are computed by means of PCA. For each of them, a Procustes Analysis
-                is performed with respect to the scores of the original matrix X, and the corresponding M2 coeffcient is computed.
-            3.  The variable which, once excluded, leads to the smallest M2 coefficient is deleted from the matrix.
-            4.  Steps 2 and 3 are repeated until m variables are left.
-            '''
+
             #Start with PCA, and compute the scores (Z)
             eigenvec = PCA_fit(self.X_tilde, self._nPCs)
             Z = self.X_tilde @ eigenvec[0]
@@ -948,11 +1123,7 @@ class variables_selection(PCA):
             return self.labels
 
         elif self._method.lower() == 'b2':
-            '''
-            The variable with the largest weight is found on the last PC, and then it is deleted.
-            This is accomplished via iterative backward elimination algorithm, until the number of
-            variables is equal to the selected number of variables.
-            '''
+
             #Number of variables before the elimination starts:
             max_var = self.X.shape[1]
             #While the number of variables is larger than the number you want to retain 'm', go on
@@ -977,10 +1148,7 @@ class variables_selection(PCA):
             return self.labels
 
         if self._method.lower() == 'procustes_rotation':
-            '''
-            It's basically the same of standard Procustes, but this time the scores
-            are rotated via Varimax.
-            '''
+
             #Start with PCA, and compute the scores (Z)
             eigenvec = PCA_fit(self.X_tilde, self._nPCs)
             Z = self.X_tilde @ eigenvec[0]
@@ -1017,9 +1185,6 @@ class variables_selection(PCA):
 
         elif self._method.lower() == 'b4':
 
-            #The variables associated with the largest weights on each of the 'm' first PCs are
-            #selected. This is not an iterative algorithm.
-
             model = PCA(self.X)
             if self._nPCs < self._n_ret:
                 print("For the B4 it is not possible to choose a number of PCs lower than the required number of variables.")
@@ -1054,25 +1219,44 @@ class SamplePopulation():
     becomes impractical to train the model on the whole training population.
     Three classes of sampling strategies are available:
     i) Simple random sampling; ii) Clustered sampling; iii) Stratified sampling; iv) multistage.
-    The 'clustered' sampling can be accomplished either via miniBatchKMeans, or LPCA.
+    The 'clustered' sampling can be accomplished either via KMeans, or LPCA.
 
     The simple random sampling just shuffle the data and takes the required amount of observations.
     The clustered approach groups the observations in different clusters, and from each of them
     a certain amount of samples are taken.
-    The multistage couples stratified (first stage) and clustered (second stage) sampling
+    The multistage couples stratified (first stage) and clustered (second stage) sampling.
+
+
+    --- PARAMETERS ---
+    X:          RAW data matrix, uncentered and unscaled. It must be organized
+                with the structure: (observations x variables).
+    type X :    numpy array
+
+
+    --- SETTERS ---
+    _dimensions:            final dimensions (number of observations) of the sampled matrix
+    type   _dimensions:     scalar
+
+    _method:                method to be used for sampling
+    type   _method:         string
+
     '''
     def __init__(self, X):
         #Initial training dataset (raw data).
         self.X = X
         self.__nObs = self.X.shape[0]
         self.__nVar = self.X.shape[1]
+        
         #Choose the sampling strategy: random, cluster (KMeans, LPCA), stratifed or multistage.
         self._method = 'KMeans'
         self.__condVec = False
+        
         #Choose the dimensions of the sampled dataset.
         self._dimensions = 1
+        
         #Predefined number of clusters, if 'cluster', 'stratified' or 'multistage' are chosen
         self.__k = 32
+        
         #Variable to use for the matrix conditioning in case of stratified sampling
         self._conditioning =0
 
@@ -1104,6 +1288,11 @@ class SamplePopulation():
             self.__condVec = True
 
     def fit(self):
+            '''
+            --- RETURNS ---
+            miniX:      sampled matrix with the prescribed number of observations 
+            type miniX: numpy matrix
+            '''
             #Center and scale the matrix (auto preset)
             self.X_tilde = center_scale(self.X, center(self.X,'mean'), scale(self.X, 'auto'))
             self.__batchSize = int(self._dimensions / self.__k)
@@ -1263,6 +1452,63 @@ class SamplePopulation():
             return miniX
 
 class NMF():
+    '''
+    Perform model order reduction via Non-negative Matrix Factorization (NMF).
+    NMF is a technique for low-rank approximation of a matrix X, as the product
+    of two non-negative matrices: V and H.
+    The matrix V, whose dimensions are (observations x k, with the condition: k < var), 
+    is representative for the compressed data (NMF scores). The H matrix, instead,
+    contains the basis for the representation of X in the reduced space. The dimension
+    of the H matrix are, naturally, (k x variables).
+
+    In order to find the matrices V and H which are capable to minimize the difference
+    between the original and the approximated matrix, i.e., which are capable to minimize
+    the quantity ||X - VH||, a biconvex problem has to be solved.
+    In this library for model order reduction, the alternating least squares algorithm
+    has been implemented to solve this task.
+
+    Moreover, NMF can also be used for clustering purposes, given the additivity of
+    the modes which are found. The cluster() function assigns a label to each observation
+    examining the scores values: if an observation has the maximum value on the  j-th scores,
+    this means that its class it 'j'
+
+    Additional details regarding NMF and the implemented algorithm can be found in 
+    refs [1,2].
+    
+    1. https://www.mpi-inf.mpg.de/fileadmin/inf/d5/teaching/ss15_dmm/lectures/2015-05-26-intro-to-nmf.pdf
+    2. Türkmen, Ali Caner. "A review of nonnegative matrix factorization methods for clustering." arXiv preprint arXiv:1507.03194 (2015).
+
+
+    --- PARAMETERS ---
+    X:          RAW data matrix, uncentered and unscaled. It must be organized
+                with the structure: (observations x variables).
+    type X :    numpy array
+    
+
+
+    --- SETTERS ---
+    _dim:                   set the reduced space dimensionality
+    type   _dim:            scalar
+
+    _center:                Enable the centering function
+    type   _center:         boolean 
+    
+    _centering:             set the centering method. Available choices for scaling
+                            are 'mean' or 'min'.
+    type   _centering:      string
+
+    _scale:                 Enable the scaling function
+    type   _scale:          boolean 
+
+    _scaling:               set the scaling method. Available choices for scaling
+                            are 'auto' or 'vast' or 'range' or 'pareto'.
+    type _scaling:          string
+
+    __iterMax:              maximum number of iterations for the iterative algorithm (PRIVATE)
+    type   __iterMax:       scalar
+    
+    '''
+
     def __init__(self, X):
 
         #standard construction - initialize the number of reduced dim
@@ -1351,13 +1597,13 @@ class NMF():
 
     def fit(self):
         '''
-        The alternating least squares algorithm has been implemented to perform NMF.
-        The algorithm description and general NMF infos can be found here:
+        --- RETURNS ---
+        W:          matrix containing the NMF scores, whose shape is (k x observations)
+        type W:     numpy matrix
 
-        1. https://www.mpi-inf.mpg.de/fileadmin/inf/d5/teaching/ss15_dmm/lectures/2015-05-26-intro-to-nmf.pdf
-        2. Türkmen, Ali Caner. "A review of nonnegative matrix factorization methods for clustering." arXiv preprint arXiv:1507.03194 (2015).
+        H:          matrix containing the reduced basis, whose shape is (k x variables) 
+        type H:     numpy matrix
         '''
-
         from numpy.linalg import lstsq
 
         #Center and scale the matrix. The only criterion is Range, because the matrix elements
@@ -1413,6 +1659,11 @@ class NMF():
         return self.W, self.H
 
     def cluster(self):
+        '''
+        --- RETURNS ---
+        idx:            vector containing the cluster assignment, whose shape is (observations x 1)
+        type idx:       numpy vector
+        '''
         idx = np.empty((self.rows,), dtype=int)
         idx = np.argmax(self.W.T, axis=1)
 
