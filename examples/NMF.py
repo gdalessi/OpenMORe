@@ -21,9 +21,7 @@ mesh = np.genfromtxt(file_options["path_to_file"] + "/" + file_options["mesh_fil
 
 model = model_order_reduction.NMF(X)
 model.encoding = num_of_features
-model.eta = 0.01
-model.beta = 0.01
-model.method = 'standard' #choose 'standard' or 'sparse'
+
 
 W,H = model.fit()
 idx = model.cluster()

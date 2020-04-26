@@ -645,16 +645,21 @@ class LPCA(PCA):
         Leigen = list with the eigenvalues in each cluster -- dim: [k]
         centroids = list with the centroids in each cluster -- dim: [k]
         '''
+        #Load the idx (from a previous clustering partitioning) from the given path.
+        #after that, compute the number of clusters and preprocess the training matrix
+        #with the given settings
         self.idx = self.get_idx(self.path_to_idx)
         self.k = int(max(self.idx) +1)
         self.X_tilde = self.preprocess_training(self.X, self.to_center, self.to_scale, self.centering, self.scaling)
 
-
+        #Initialize the lists containing the variables of interest
         self.centroids = [None] *self.k
         self.LPCs = [None] *self.k
         self.u_scores = [None] *self.k
         self.Leigen = [None] *self.k
 
+        #In each cluster, compute the centroid. After that, center inside the cluster (with the centroid)
+        #and perform PCA to obtain the LocalPCs and the LocalEigens.
         for ii in range (0,self.k):
             cluster = get_cluster(self.X_tilde, self.idx, ii)
             self.centroids[ii], cluster_ = center(cluster, self._centering, True)
@@ -669,28 +674,21 @@ class LPCA(PCA):
         Reconstruct the original matrix from the 'k' local reduced PCA-manifolds.
         Given the idx vector, for each cluster the points are reconstructed from the
         local manifolds spanned by the local PCs.
-
-        - Input:
-        X = UNCENTERED/UNSCALED data matrix -- dim: (observations x variables)
-        idx = class membership vector -- dim: (obs x 1)
-        modes = set of eigenvectors (PCs) -- dim: (num_PCs x variables)
-        cent_crit = centering criterion for the X matrix (MEAN or MIN)
-        scal_crit = scaling criterion for the X matrix (AUTO, RANGE, VAST, PARETO)
-        - Output:
-        X_rec = uncentered and unscaled reconstructed matrix with LPCA modes -- dim: (observations x variables)
         '''
 
-
+        #Initialize the reconstructed matrix, and center the input matrix
         self.X_rec = np.empty(self.X.shape, dtype=float)
         self.X_tilde = self.preprocess_training(self.X, self.to_center, self.to_scale, self.centering, self.scaling)
 
+        #The centering and scaling factors are computed from the training matrix
+        #because they will be used in the future.
         mu_global = center(self.X, self.centering)
         sigma_global = scale(self.X, self.scaling)
 
-
+        #Perform LPCA
         self.LPCs, self.u_scores, self.Leigen, self.centroids = self.fit()
 
-
+        #Considering the idx of that set of partitio
         for ii in range (0,self.k):
             cluster_ = get_cluster(self.X_tilde, self.idx, ii)
             centroid_ =self.centroids[ii]
@@ -1266,17 +1264,11 @@ class SamplePopulation():
 
 class NMF():
     def __init__(self, X):
-        #standard construction
+
+        #standard construction - initialize the number of reduced dim
         self.X = X 
         self.rows, self.cols = self.X.shape
         self._dim = self.cols -1
-
-        #select the method: standard/sparse
-        self._method = "standard"
-        
-        #default coefficient initialized for sparse correction
-        self._eta = 0.01
-        self._beta = 0.01
 
         #tell to the algorithm if the matrix must be centered/scaled.
         #only Range scaling is possible, so no setter for the method 
@@ -1359,15 +1351,11 @@ class NMF():
 
     def fit(self):
         '''
-        The alternating least squares algorithm has been implemented in this function.
-        The "standard" algorithm is available, as well as the one for sparse NMF.
-        The std algorithm description and general NMF infos can be found here:
+        The alternating least squares algorithm has been implemented to perform NMF.
+        The algorithm description and general NMF infos can be found here:
 
-        https://www.mpi-inf.mpg.de/fileadmin/inf/d5/teaching/ss15_dmm/lectures/2015-05-26-intro-to-nmf.pdf
-
-        And the info for the sparse NMF (and other general info regarding NMF) are available here:
-        
-        Türkmen, Ali Caner. "A review of nonnegative matrix factorization methods for clustering." arXiv preprint arXiv:1507.03194 (2015).
+        1. https://www.mpi-inf.mpg.de/fileadmin/inf/d5/teaching/ss15_dmm/lectures/2015-05-26-intro-to-nmf.pdf
+        2. Türkmen, Ali Caner. "A review of nonnegative matrix factorization methods for clustering." arXiv preprint arXiv:1507.03194 (2015).
         '''
 
         from numpy.linalg import lstsq
@@ -1377,22 +1365,10 @@ class NMF():
         self.X_tilde = self.preprocess_training(self.X, self._center, self._scale)
 
         #Initialize matrices for low-rank approximation
-        self.W = np.random.rand(self._dim, self.rows)
-        self.H = np.random.rand(self._dim, self.cols)
+        self.W = np.random.rand(self._dim, self.rows)                                       #dim: (k x n)
+        self.H = np.random.rand(self._dim, self.cols)                                       #dim: (k x p)
 
-        if self._method.lower() == 'sparse':
-            X_star = np.r_[self.X_tilde, np.zeros((1,self.X_tilde.shape[1]))]           #dim: (n x p) + (1 x p) = [(n+1) x p] 
-            X_star2 = np.r_[self.X_tilde.T, np.zeros((self.W.shape))]                   #dim: (p x n) + (k X n) = [(p+k) x n]
-            coeffW = np.sqrt(self._beta) * np.ones((1, self.W.shape[0]))                #dim: (1 x k)
-            coeffH = np.sqrt(self._eta) * np.eye(self.H.shape[0])                       #dim: (k x k)
-
-
-            W_star = np.c_[self.W, coeffW.T]                                            #dim: (k x n) + (k x 1) = [k x (n+1)] --> OK
-            H_star = np.r_[self.H.T, coeffH]                                            #dim: (p x k) + (k x k) = [(p+k) x k] --> OK
-            print("### WARNING ###")
-            print("### SPARSE IS SELECTED --> IT WAS NOT TESTED, THEREFORE IT'S NOT 100% SURE IT WORKS WELL###")
-
-        #Initialize the param for the iterative algorithm
+        #Initialize the parameters for the iterative algorithm
         iteration = 0
         eps_rec = 1.0
         convTol = 1E-8
@@ -1400,30 +1376,15 @@ class NMF():
 
         while not self.__convergence and iteration < self.__iterMax:
 
-            if self._method.lower() == 'standard':
-                #optimize H, and after that delete negative coefficients
-                self.H = lstsq(self.W.T, self.X_tilde, rcond=None)[0]
-                mask = np.where(self.H < 0)
-                self.H[mask] = 0
+            #optimize H, and after that delete negative coefficients
+            self.H = lstsq(self.W.T, self.X_tilde, rcond=None)[0]
+            mask = np.where(self.H < 0)
+            self.H[mask] = 0
 
-                #optimize W, and after that delete negative coefficients
-                self.W = lstsq(self.H.T, self.X_tilde.T, rcond=None)[0]
-                mask = np.where(self.W < 0)
-                self.W[mask] = 0
-
-            elif self._method.lower() == 'sparse':      
-
-                self.W= lstsq(H_star, X_star2, rcond=None)[0]                               #dim: [(p+k) x k] ; [(p+k) x n]
-                mask = np.where(self.W < 0)
-                self.W[mask] = 0
-                
-                self.H = lstsq(W_star.T, X_star, rcond=None)[0]                             #dim: [k x (n+1)] ; [(n+1) x p]
-                mask = np.where(self.H < 0)
-                self.H[mask] = 0
-
-            else:
-                raise Exception("NMF method not supported, please choose one between STANDARD or SPARSE.")
-                exit()
+            #optimize W, and after that delete negative coefficients
+            self.W = lstsq(self.H.T, self.X_tilde.T, rcond=None)[0]
+            mask = np.where(self.W < 0)
+            self.W[mask] = 0
 
             #Compute the reconstructed matrix from the reduced-order basis
             X_rec = self.W.T @ self.H
@@ -1437,14 +1398,15 @@ class NMF():
             eps_rec_var = np.abs((eps_rec_new - eps_rec) / (eps_rec_new) + eps_tol)
             eps_rec = eps_rec_new
 
+            #Check if the convergence conditions have been satisfied
             if eps_rec_var > convTol and iteration < self.__iterMax:
                 print("Iteration number: {}".format(iteration))
                 print("\tReconstruction error: {}".format(eps_rec_new))
                 print("\tReconstruction error variance: {}".format(eps_rec_var))
                 iteration +=1
             else:
-                print("\tReconstruction error: {}".format(eps_rec_new))
-                print("\tReconstruction error variance: {}".format(eps_rec_var))
+                print("\tFinal reconstruction error: {}".format(eps_rec_new))
+                print("\tFinal reconstruction error variance: {}".format(eps_rec_var))
                 print("Convergence has been reached after {} iterations.".format(iteration))
                 break
 

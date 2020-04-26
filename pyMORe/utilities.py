@@ -194,81 +194,97 @@ def evaluate_clustering_PHC(X, idx, method='PHC_standard'):
         #If the training matrix has many variables, the PHCs are stored in a list PHC_coeff.
 
         for ii in range (0,k):
-            cluster_ = get_cluster(X, idx, ii)
+            try:
+                cluster_ = get_cluster(X, idx, ii)
 
-            maxima = np.max(cluster_, axis = 0)
-            minima = np.min(cluster_, axis = 0)
-            media = np.mean(cluster_, axis=0)
+                maxima = np.max(cluster_, axis = 0)
+                minima = np.min(cluster_, axis = 0)
+                media = np.mean(cluster_, axis=0)
 
-            dev = np.std(cluster_, axis=0)
+                dev = np.std(cluster_, axis=0)
 
-            PHC_coeff[ii] = np.mean((maxima-minima)/(media +TOL))
-            PHC_deviations[ii] = np.mean(dev)
+                PHC_coeff[ii] = np.mean((maxima-minima)/(media +TOL))
+                PHC_deviations[ii] = np.mean(dev)
+            except ValueError:
+                print("An exception was thrown by Python during the PHC computation. Probably the considered cluster was found empty.")
+                print("Passing..")
+                pass
+
     elif method.lower() == "phc_median":
         #It's very similar to the standard PHC, with the exception that the
         #median is used instead of the mean, as it is considered to be more robust
         #for many statistical applications
+        try:
+            for ii in range (0,k):
+                cluster_ = get_cluster(X, idx, ii)
 
-        for ii in range (0,k):
-            cluster_ = get_cluster(X, idx, ii)
+                maxima = np.max(cluster_, axis = 0)
+                minima = np.min(cluster_, axis = 0)
+                media = np.median(cluster_, axis=0)
 
-            maxima = np.max(cluster_, axis = 0)
-            minima = np.min(cluster_, axis = 0)
-            media = np.median(cluster_, axis=0)
+                dev = np.std(cluster_, axis=0)
 
-            dev = np.std(cluster_, axis=0)
+                PHC_coeff[ii] = np.mean((maxima-minima)/(media +TOL))
+                PHC_deviations[ii] = np.mean(dev)
+        except ValueError:
+                print("An exception was thrown by Python during the PHC computation. Probably the considered cluster was found empty.")
+                print("Passing..")
+                pass
 
-            PHC_coeff[ii] = np.mean((maxima-minima)/(media +TOL))
-            PHC_deviations[ii] = np.mean(dev)
     elif method.lower() == "phc_robust":
         #Mahalanobis distance is computed in each cluster and a small fraction of observations is removed
         #from the PHC computation, as they can be considered outliers. The aforementioned distance is
         #computed via PCA (see Jolliffe for details)
 
         import model_order_reduction
+        
+        try:
+            for ii in range(0,k):
+                cluster_ = get_cluster(X, idx, ii)
 
-        for ii in range(0,k):
-            cluster_ = get_cluster(X, idx, ii)
+                model = model_order_reduction.PCA(cluster_)
+                model.centering = 'mean'
+                model.scaling = 'auto'
+                model.eigens = cluster_.shape[1] -1
+                PCs, eigval = model.fit()
+                scores = model.get_scores()
+                mahalanobis_ = np.empty((cluster_.shape[0],),dtype=float)
 
-            model = model_order_reduction.PCA(cluster_)
-            model.centering = 'mean'
-            model.scaling = 'auto'
-            model.eigens = cluster_.shape[1] -1
-            PCs, eigval = model.fit()
-            scores = model.get_scores()
-            mahalanobis_ = np.empty((cluster_.shape[0],),dtype=float)
+                for jj in range(0,cluster_.shape[0]):
+                    t_sq = 0
+                    lam_j = 0
+                    for jj in range(0, cluster_.shape[1]-1):
+                        t_sq += scores[ii,jj]**2
+                        lam_j += eigval[jj]
+                    mahalanobis_[ii] = t_sq/(lam_j + TOL)
 
-            for jj in range(0,cluster_.shape[0]):
-                t_sq = 0
-                lam_j = 0
-                for jj in range(0, cluster_.shape[1]-1):
-                    t_sq += scores[ii,jj]**2
-                    lam_j += eigval[jj]
-                mahalanobis_[ii] = t_sq/(lam_j + TOL)
+                #A fraction alpha (typically 0.01%-0.1%) of the data points characterized by the largest
+                #value of DM are classified as outliers and removed.
 
-            #A fraction alpha (typically 0.01%-0.1%) of the data points characterized by the largest
-            #value of DM are classified as outliers and removed.
+                alpha = 0.000007
 
-            alpha = 0.000007
+                #compute the new number of observations after the trim factor:
+                trim = int((1-alpha)*cluster_.shape[0])
+                to_trim = np.argsort(mahalanobis_)
 
-            #compute the new number of observations after the trim factor:
-            trim = int((1-alpha)*cluster_.shape[0])
-            to_trim = np.argsort(mahalanobis_)
+                new_mask = to_trim[:trim]
+                cluster_ = cluster_[new_mask,:]
 
-            new_mask = to_trim[:trim]
-            cluster_ = cluster_[new_mask,:]
+                maxima = np.max(cluster_, axis = 0)
+                minima = np.min(cluster_, axis = 0)
+                media = np.mean(cluster_, axis=0)
 
-            maxima = np.max(cluster_, axis = 0)
-            minima = np.min(cluster_, axis = 0)
-            media = np.mean(cluster_, axis=0)
+                dev = np.std(cluster_, axis=0)
 
-            dev = np.std(cluster_, axis=0)
-
-            PHC_coeff[ii] = np.mean((maxima-minima)/(media +TOL))
-            PHC_deviations[ii] = np.mean(dev)
-    else:
-        raise Exception("PHC method not supported. Available PHCs: 'PHC_standard', 'PHC_median', 'PHC_robust'. Exiting with error..")
-        exit()
+                PHC_coeff[ii] = np.mean((maxima-minima)/(media +TOL))
+                PHC_deviations[ii] = np.mean(dev)
+            else:
+                raise Exception("PHC method not supported. Available PHCs: 'PHC_standard', 'PHC_median', 'PHC_robust'. Exiting with error..")
+                exit()
+        except ValueError:
+            print("An exception was thrown by Python during the PHC computation. Probably the considered cluster was found empty.")
+            print("Passing..")
+            pass
 
     return PHC_coeff, PHC_deviations
 
