@@ -21,6 +21,9 @@ mesh = np.genfromtxt(file_options["path_to_file"] + "/" + file_options["mesh_fil
 
 model = model_order_reduction.NMF(X)
 model.encoding = num_of_features
+model.method = 'sparse'
+model.eta = 0.1
+model.beta = 0.03
 
 
 W,H = model.fit()
@@ -29,7 +32,7 @@ idx = model.cluster()
 for ii in range(0, num_of_features):
     fig = plt.figure()
     axes = fig.add_axes([0.2,0.15,0.7,0.7], frameon=True)
-    axes.scatter(mesh[:,0], mesh[:,1], c=W.T[:,ii],alpha=0.5, cmap='gnuplot')
+    axes.scatter(mesh[:,0], mesh[:,1], c=H.T[:,ii],alpha=0.5, cmap='gnuplot')
     axes.set_xlabel('X')
     axes.set_ylabel('Y')
     plt.show()

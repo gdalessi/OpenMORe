@@ -1477,6 +1477,7 @@ class NMF():
     
     1. https://www.mpi-inf.mpg.de/fileadmin/inf/d5/teaching/ss15_dmm/lectures/2015-05-26-intro-to-nmf.pdf
     2. Türkmen, Ali Caner. "A review of nonnegative matrix factorization methods for clustering." arXiv preprint arXiv:1507.03194 (2015).
+    3. Kim, Jingu, and Haesun Park. Sparse nonnegative matrix factorization for clustering. Georgia Institute of Technology, 2008.
 
 
     --- PARAMETERS ---
@@ -1504,6 +1505,13 @@ class NMF():
                             are 'auto' or 'vast' or 'range' or 'pareto'.
     type _scaling:          string
 
+    _method:                set the method for ALS: standard or sparse
+    type   _method:         string
+
+    _beta:                  it's a parameter to control the degree of sparsity. In [3], they suggest
+                            Beta = 0.1 for high-dimensional data-sets, but also in [0.3-0.5] gave good
+                            experimental results.
+
     __iterMax:              maximum number of iterations for the iterative algorithm (PRIVATE)
     type   __iterMax:       scalar
     
@@ -1522,8 +1530,13 @@ class NMF():
         self._center = True
         self._scale = True
 
+        #Info about the method: standard ALS or sparse ALS are implemented:
+        self._method = 'sparse'
+        self._eta = 0.01
+        self._beta = 0.01
+
         #private properties for iterative algorithm
-        self.__iterMax = 300
+        self.__iterMax = 500
         self.__convergence = False
 
     @property
@@ -1605,39 +1618,87 @@ class NMF():
         type H:     numpy matrix
         '''
         from numpy.linalg import lstsq
+        from numpy.linalg import norm
+        from scipy.optimize import nnls
 
         #Center and scale the matrix. The only criterion is Range, because the matrix elements
         #must be all positive
         self.X_tilde = self.preprocess_training(self.X, self._center, self._scale)
 
-        #Initialize matrices for low-rank approximation
-        self.W = np.random.rand(self._dim, self.rows)                                       #dim: (k x n)
-        self.H = np.random.rand(self._dim, self.cols)                                       #dim: (k x p)
+        #To follow the notation in [3], we consider the A matrix with shape: (n_features x n_observations)
+        A = self.X_tilde.T
+        features, observations = A.shape 
+
+        #Initialize weights matrix for low-rank approximation
+        self.W = np.random.rand(features, self._dim)
+        #Remove any negative value as prescribed in [3]
+        mask = np.where(self.W < 0)
+        self.W[mask] = 0
+
+        #scale the W matrix to have unit L2-norm as prescribed in [3]
+        for jj in range(0,self.W.shape[1]):
+            tmp = norm(self.W[:,jj])
+            self.W[:,jj] = self.W[:,jj]/tmp 
+
+
+        if self._method == 'sparse':
+            
+            #Initialize sparsity factors as described in [3], Par. 3.2
+            sparsityW = np.sqrt(self._beta) * np.ones((1,self.W.shape[1]), dtype=float)         #1xk
+            sparsityH = np.sqrt(self._eta) * np.eye(self._dim)                                  #k x k
+            sparsityX1 = np.zeros((1,A.shape[1]), dtype=float)
+            sparsityX2 = np.zeros((self._dim, A.shape[0]), dtype=float)
+
+            modX1 = np.r_[A, sparsityX1]                                                        #(mxn) + (1xn) = (m+1) x n
+            modX2 = np.r_[A.T, sparsityX2]                                                      #(nxm) + (kxm) =(n+k) x m 
+           
 
         #Initialize the parameters for the iterative algorithm
         iteration = 0
         eps_rec = 1.0
-        convTol = 1E-8
+        convTol = 1E-5
         eps_tol = 1E-16
 
         while not self.__convergence and iteration < self.__iterMax:
 
-            #optimize H, and after that delete negative coefficients
-            self.H = lstsq(self.W.T, self.X_tilde, rcond=None)[0]
-            mask = np.where(self.H < 0)
-            self.H[mask] = 0
+            if self._method == 'standard':
+                #optimize H, and after that delete negative coefficients
+                self.H = lstsq(self.W, A, rcond=None)[0]
+                mask = np.where(self.H < 0)
+                self.H[mask] = 0
 
-            #optimize W, and after that delete negative coefficients
-            self.W = lstsq(self.H.T, self.X_tilde.T, rcond=None)[0]
-            mask = np.where(self.W < 0)
-            self.W[mask] = 0
+                #optimize W, and after that delete negative coefficients
+                self.W = lstsq(self.H.T, A.T, rcond=None)[0]
+                mask = np.where(self.W < 0)
+                self.W[mask] = 0
+                self.W = self.W.T
+
+
+            elif self._method == 'sparse':
+                modW = np.r_[self.W, sparsityW]                                                 #(m x k) + (1 x k) = (m+1) x k 
+                self.H = lstsq(modW, modX1, rcond=None)[0]                                      #(m+1)x k ++ (m+1)x n == (k x n) == H
+                mask = np.where(self.H < 0)
+                self.H[mask] = 0
+                
+                modH = np.r_[self.H.T, sparsityH]                                               #(nxk) + (kxk) = (n+k) x k
+
+                self.W = lstsq(modH, modX2, rcond=None)[0]                                      #(n+k) x k ++ (n+k) x m == (k x m)
+                mask = np.where(self.W < 0)
+                self.W[mask] = 0
+                self.W = self.W.T
+
+            else:
+                raise Exception("NMF method not implemented. Please choose one between 'standard' or 'sparse'. Exiting with error..")
+                exit()
+
 
             #Compute the reconstructed matrix from the reduced-order basis
-            X_rec = self.W.T @ self.H
+            X_rec = self.W @ self.H 
+
 
             #Compute the error between the original and the reconstructed
             #via Frobenius norm
-            eps_rec_new = np.linalg.norm((self.X_tilde - X_rec), 'fro')
+            eps_rec_new = np.linalg.norm((A.T - X_rec.T), 'fro')
 
             #Check the reconstruction error variation to see if the convergence
             #has been reached
@@ -1651,6 +1712,11 @@ class NMF():
                 print("\tReconstruction error variance: {}".format(eps_rec_var))
                 iteration +=1
             else:
+                #scale again the W matrix to have unit L2-norm as prescribed in [3]
+                for jj in range(0,self.W.shape[1]):
+                    tmp = norm(self.W[:,jj])
+                    self.W[:,jj] = self.W[:,jj]/tmp 
+                    self.H[jj,:] = self.H[jj,:]/tmp
                 print("\tFinal reconstruction error: {}".format(eps_rec_new))
                 print("\tFinal reconstruction error variance: {}".format(eps_rec_var))
                 print("Convergence has been reached after {} iterations.".format(iteration))
@@ -1665,7 +1731,7 @@ class NMF():
         type idx:       numpy vector
         '''
         idx = np.empty((self.rows,), dtype=int)
-        idx = np.argmax(self.W.T, axis=1)
+        idx = np.argmax(self.H.T, axis=1)
 
         return idx
 
