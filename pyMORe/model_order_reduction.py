@@ -1530,10 +1530,14 @@ class NMF():
         self._center = True
         self._scale = True
 
-        #Info about the method: standard ALS or sparse ALS are implemented:
+        #info about the method: standard ALS or sparse ALS are implemented:
         self._method = 'sparse'
         self._eta = 0.01
         self._beta = 0.01
+
+        #metric to be used to measure convergence criterion. Two settings are
+        #available: "frobenius" and "kld" (Kullback-Leibler)
+        self._metric = 'KLD'
 
         #private properties for iterative algorithm
         self.__iterMax = 500
@@ -1590,6 +1594,14 @@ class NMF():
     def beta(self, new_value):
         self._beta = new_value
 
+    @property
+    def metric(self):
+        return self._metric
+
+    @metric.setter
+    def metric(self, new_string):
+        self._metric = new_string
+
     @staticmethod
     def preprocess_training(X, centering_decision, scaling_decision):
 
@@ -1607,6 +1619,51 @@ class NMF():
             X_tilde = X
 
         return X_tilde
+
+    @staticmethod
+    def KL_divergence(X, Y):
+        '''
+        Compute the generalized Kullback-Leibler Divergence between two
+        matrices, X and Y.
+        KLD is a distance which is often used to quantify the differences 
+        between two probability distributions.
+
+        Two formulations are available, one is for continuous functions
+        (compute the integral) and the other is for discrete functions
+        (compute the sum). In this function, the generalized form is implemented,
+        which is described in [i], formula (2) pag. 3.
+
+        [i]: Blondel, Vincent D., Ngoc-Diep Ho, and Paul Dooren. In Image and Vision Computing. 2008.
+        
+
+        --- PARAMETERS ---
+        X:          Original data matrix (observations x variables). 
+        type X :    numpy array
+
+        Y:          Reconstructed data matrix (observations x variables). 
+        type Y :    numpy array
+
+
+        --- RETURNS ---
+        KLD:        Kullback-Leibler divergence between the two input matrices, X and Y.
+        type KLD:   scalar
+
+        '''
+        
+        #cleaning to remove any value <= 0 (it would be a problem for the log):
+        mask_X = np.where(X <= 0)
+        X[mask_X] = 1E-16
+        mask_Y = np.where(Y <= 0)
+        Y[mask_Y] = 1E-16
+
+        #compute the KLD as described in [i]
+        tmp = np.log(X/Y) 
+        temp = np.multiply(X,tmp)
+        
+        KL = temp - X + Y
+        KLD = np.sum(KL)
+
+        return KLD
 
     def fit(self):
         '''
@@ -1656,12 +1713,12 @@ class NMF():
         #Initialize the parameters for the iterative algorithm
         iteration = 0
         eps_rec = 1.0
-        convTol = 1E-5
+        convTol = 1E-6
         eps_tol = 1E-16
 
         while not self.__convergence and iteration < self.__iterMax:
 
-            if self._method == 'standard':
+            if self._method.lower() == 'standard':
                 #optimize H, and after that delete negative coefficients
                 self.H = lstsq(self.W, A, rcond=None)[0]
                 mask = np.where(self.H < 0)
@@ -1674,7 +1731,7 @@ class NMF():
                 self.W = self.W.T
 
 
-            elif self._method == 'sparse':
+            elif self._method.lower() == 'sparse':
                 modW = np.r_[self.W, sparsityW]                                                 #(m x k) + (1 x k) = (m+1) x k 
                 self.H = lstsq(modW, modX1, rcond=None)[0]                                      #(m+1)x k ++ (m+1)x n == (k x n) == H
                 mask = np.where(self.H < 0)
@@ -1697,8 +1754,12 @@ class NMF():
 
 
             #Compute the error between the original and the reconstructed
-            #via Frobenius norm
-            eps_rec_new = np.linalg.norm((A.T - X_rec.T), 'fro')
+            #via Frobenius norm or with the Kullback-Leibler divergence
+            if self._metric.lower() == 'frobenius':
+                eps_rec_new = np.linalg.norm((A.T - X_rec.T), 'fro')
+            elif self._metric.lower() == 'kld':
+                eps_rec_new = self.KL_divergence(A.T, X_rec.T)
+
 
             #Check the reconstruction error variation to see if the convergence
             #has been reached
@@ -1717,9 +1778,10 @@ class NMF():
                     tmp = norm(self.W[:,jj])
                     self.W[:,jj] = self.W[:,jj]/tmp 
                     self.H[jj,:] = self.H[jj,:]/tmp
+                print("Convergence has been reached after {} iterations.".format(iteration))
                 print("\tFinal reconstruction error: {}".format(eps_rec_new))
                 print("\tFinal reconstruction error variance: {}".format(eps_rec_var))
-                print("Convergence has been reached after {} iterations.".format(iteration))
+                
                 break
 
         return self.W, self.H
@@ -1732,6 +1794,9 @@ class NMF():
         '''
         idx = np.empty((self.rows,), dtype=int)
         idx = np.argmax(self.H.T, axis=1)
+
+        idx = clustering.lpca.merge_clusters(self.X_tilde, idx)
+        print("The final number of clusters is equal to: {}".format(np.max(idx+1)))
 
         return idx
 
