@@ -1455,29 +1455,41 @@ class NMF():
     '''
     Perform model order reduction via Non-negative Matrix Factorization (NMF).
     NMF is a technique for low-rank approximation of a matrix X, as the product
-    of two non-negative matrices: V and H.
-    The matrix V, whose dimensions are (observations x k, with the condition: k < var), 
-    is representative for the compressed data (NMF scores). The H matrix, instead,
+    of two non-negative matrices: W and H.
+    The matrix H, whose dimensions are (observations x k, with the condition: k < var), 
+    is representative for the compressed data (NMF scores). The W matrix, instead,
     contains the basis for the representation of X in the reduced space. The dimension
-    of the H matrix are, naturally, (k x variables).
+    of the W matrix are, naturally, (k x variables).
 
-    In order to find the matrices V and H which are capable to minimize the difference
+    In order to find the matrices W and H which are capable to minimize the difference
     between the original and the approximated matrix, i.e., which are capable to minimize
     the quantity ||X - VH||, a biconvex problem has to be solved.
-    In this library for model order reduction, the alternating least squares algorithm
-    has been implemented to solve this task.
+    In this library for model order reduction, the alternating least squares algorithm [1,2]
+    has been implemented to solve this task, as well as the multiplicative update rule [6].
+    The multiplicative update rules in case of Kullback-Leibler Divergence (KLD) have been 
+    implemented from the detailed derivation, which can be found in [7].
 
     Moreover, NMF can also be used for clustering purposes, given the additivity of
     the modes which are found. The cluster() function assigns a label to each observation
     examining the scores values: if an observation has the maximum value on the  j-th scores,
-    this means that its class it 'j'
+    this means that its class it 'j'.
+
+    With regard to the metric to be used (Frob or KLD), in [5] it is mentioned that for
+    data which are more or less centered around a region, i.e., without outliers, Frob 
+    or MSE could be better. If the input data have a skewed distribution or outliers, instead,
+    it is better to use KLD.
+
 
     Additional details regarding NMF and the implemented algorithm can be found in 
-    refs [1,2].
+    refs [1-5].
     
     1. https://www.mpi-inf.mpg.de/fileadmin/inf/d5/teaching/ss15_dmm/lectures/2015-05-26-intro-to-nmf.pdf
     2. Türkmen, Ali Caner. "A review of nonnegative matrix factorization methods for clustering." arXiv preprint arXiv:1507.03194 (2015).
     3. Kim, Jingu, and Haesun Park. Sparse nonnegative matrix factorization for clustering. Georgia Institute of Technology, 2008.
+    4. Blondel, Vincent D., Ngoc-Diep Ho, and Paul Dooren. In Image and Vision Computing. 2008.
+    5. Lin, Xihui, and Paul C. Boutros. BMC bioinformatics 21.1 (2020): 1-10.
+    6. Lee, Daniel D., and H. Sebastian Seung. Advances in neural information processing systems. 2001.
+    7. https://www.jjburred.com/research/pdf/jjburred_nmf_updates.pdf
 
 
     --- PARAMETERS ---
@@ -1511,13 +1523,24 @@ class NMF():
     _beta:                  it's a parameter to control the degree of sparsity. In [3], they suggest
                             Beta = 0.1 for high-dimensional data-sets, but also in [0.3-0.5] gave good
                             experimental results.
+    type _beta:             scalar
+
+    _metric:                the metric which has to be used to measure the convergence criteria. Two metrics
+                            are available: 'frobenius' and 'kld'. If 'frobenius' is chosen, the frobenius distance
+                            between the "real" data matrix (A) and the reconstructed (X_rec) is used as a metric.
+                            Otherwise, if 'kld' is chosen, the Kullback-Leibler divergence is used as a metric [4].
+    type _metric:           string
+
+    _algorithm:             algorithm to be used for NMF updates. Two are available: the alternating least
+                            squares ('ALS') or the multiplicative update rule ('mur').
+    type _algorithm:        string
 
     __iterMax:              maximum number of iterations for the iterative algorithm (PRIVATE)
     type   __iterMax:       scalar
     
     '''
 
-    def __init__(self, X):
+    def __init__(self, X, *dictionary):
 
         #standard construction - initialize the number of reduced dim
         self.X = X 
@@ -1537,11 +1560,28 @@ class NMF():
 
         #metric to be used to measure convergence criterion. Two settings are
         #available: "frobenius" and "kld" (Kullback-Leibler)
-        self._metric = 'KLD'
+        self._metric = 'frobenius'
+
+        #algorithm to be used for NMF updates. Two are available: the 
+        #alternating least squares ('ALS') or the multiplicative update rule ('mur')
+        self._algorithm = 'mur'
 
         #private properties for iterative algorithm
-        self.__iterMax = 500
+        self.__iterMax = 1000
         self.__convergence = False
+
+        if dictionary:
+            settings = dictionary[0]
+
+            self._center = settings["center"]
+            self._scale = settings["scale"]
+            self._dim = settings["number_of_features"]
+            self._algorithm = settings["optimization_algorithm"]
+            self._method = settings["als_method"]
+            self._eta = settings["sparsity_eta"]
+            self._beta = settings["sparsity_beta"]
+            self._metric = settings["optimization_metric"]
+
 
     @property
     def to_center(self):
@@ -1602,6 +1642,14 @@ class NMF():
     def metric(self, new_string):
         self._metric = new_string
 
+    @property
+    def algorithm(self):
+        return self._algorithm
+
+    @algorithm.setter
+    def algorithm(self, new_string):
+        self._algorithm = new_string
+
     @staticmethod
     def preprocess_training(X, centering_decision, scaling_decision):
 
@@ -1625,13 +1673,13 @@ class NMF():
         '''
         Compute the generalized Kullback-Leibler Divergence between two
         matrices, X and Y.
-        KLD is a distance which is often used to quantify the differences 
+        KLD is a measure which is often used to quantify the differences 
         between two probability distributions.
 
         Two formulations are available, one is for continuous functions
         (compute the integral) and the other is for discrete functions
         (compute the sum). In this function, the generalized form is implemented,
-        which is described in [i], formula (2) pag. 3.
+        which is described in [i], formula (2) - pag. 3.
 
         [i]: Blondel, Vincent D., Ngoc-Diep Ho, and Paul Dooren. In Image and Vision Computing. 2008.
         
@@ -1668,18 +1716,18 @@ class NMF():
     def fit(self):
         '''
         --- RETURNS ---
-        W:          matrix containing the NMF scores, whose shape is (k x observations)
+        W:          matrix containing the NMF reduced basis
         type W:     numpy matrix
 
-        H:          matrix containing the reduced basis, whose shape is (k x variables) 
+        H:          matrix containing the scores 
         type H:     numpy matrix
         '''
         from numpy.linalg import lstsq
         from numpy.linalg import norm
-        from scipy.optimize import nnls
+
 
         #Center and scale the matrix. The only criterion is Range, because the matrix elements
-        #must be all positive
+        #must be all positive (it is set inside the function)
         self.X_tilde = self.preprocess_training(self.X, self._center, self._scale)
 
         #To follow the notation in [3], we consider the A matrix with shape: (n_features x n_observations)
@@ -1692,97 +1740,181 @@ class NMF():
         mask = np.where(self.W < 0)
         self.W[mask] = 0
 
-        #scale the W matrix to have unit L2-norm as prescribed in [3]
-        for jj in range(0,self.W.shape[1]):
-            tmp = norm(self.W[:,jj])
-            self.W[:,jj] = self.W[:,jj]/tmp 
+
+        if self._algorithm.lower() == 'als':
+
+            #scale the W matrix to have unit L2-norm as prescribed in [3]
+            for jj in range(0,self.W.shape[1]):
+                tmp = norm(self.W[:,jj])
+                self.W[:,jj] = self.W[:,jj]/tmp 
 
 
-        if self._method == 'sparse':
+            if self._method == 'sparse':
+                
+                #Initialize sparsity factors as described in [3], Par. 3.2
+                sparsityW = np.sqrt(self._beta) * np.ones((1,self.W.shape[1]), dtype=float)         #1xk
+                sparsityH = np.sqrt(self._eta) * np.eye(self._dim)                                  #k x k
+                sparsityX1 = np.zeros((1,A.shape[1]), dtype=float)
+                sparsityX2 = np.zeros((self._dim, A.shape[0]), dtype=float)
+
+                modX1 = np.r_[A, sparsityX1]                                                        #(mxn) + (1xn) = (m+1) x n
+                modX2 = np.r_[A.T, sparsityX2]                                                      #(nxm) + (kxm) =(n+k) x m 
             
-            #Initialize sparsity factors as described in [3], Par. 3.2
-            sparsityW = np.sqrt(self._beta) * np.ones((1,self.W.shape[1]), dtype=float)         #1xk
-            sparsityH = np.sqrt(self._eta) * np.eye(self._dim)                                  #k x k
-            sparsityX1 = np.zeros((1,A.shape[1]), dtype=float)
-            sparsityX2 = np.zeros((self._dim, A.shape[0]), dtype=float)
 
-            modX1 = np.r_[A, sparsityX1]                                                        #(mxn) + (1xn) = (m+1) x n
-            modX2 = np.r_[A.T, sparsityX2]                                                      #(nxm) + (kxm) =(n+k) x m 
-           
+            #Initialize the parameters for the iterative algorithm
+            iteration = 0
+            eps_rec = 1.0
+            convTol = 1E-8
+            eps_tol = 1E-16
 
-        #Initialize the parameters for the iterative algorithm
-        iteration = 0
-        eps_rec = 1.0
-        convTol = 1E-6
-        eps_tol = 1E-16
+            while not self.__convergence and iteration < self.__iterMax:
 
-        while not self.__convergence and iteration < self.__iterMax:
+                if self._method.lower() == 'standard':
+                    #optimize H, and after that delete negative coefficients
+                    self.H = lstsq(self.W, A, rcond=None)[0]
+                    mask = np.where(self.H < 0)
+                    self.H[mask] = 0
 
-            if self._method.lower() == 'standard':
-                #optimize H, and after that delete negative coefficients
-                self.H = lstsq(self.W, A, rcond=None)[0]
-                mask = np.where(self.H < 0)
-                self.H[mask] = 0
-
-                #optimize W, and after that delete negative coefficients
-                self.W = lstsq(self.H.T, A.T, rcond=None)[0]
-                mask = np.where(self.W < 0)
-                self.W[mask] = 0
-                self.W = self.W.T
+                    #optimize W, and after that delete negative coefficients
+                    self.W = lstsq(self.H.T, A.T, rcond=None)[0]
+                    mask = np.where(self.W < 0)
+                    self.W[mask] = 0
+                    self.W = self.W.T
 
 
-            elif self._method.lower() == 'sparse':
-                modW = np.r_[self.W, sparsityW]                                                 #(m x k) + (1 x k) = (m+1) x k 
-                self.H = lstsq(modW, modX1, rcond=None)[0]                                      #(m+1)x k ++ (m+1)x n == (k x n) == H
-                mask = np.where(self.H < 0)
-                self.H[mask] = 0
+                elif self._method.lower() == 'sparse':
+                    modW = np.r_[self.W, sparsityW]                                                 #(m x k) + (1 x k) = (m+1) x k 
+                    self.H = lstsq(modW, modX1, rcond=None)[0]                                      #(m+1)x k ++ (m+1)x n == (k x n) == H
+                    mask = np.where(self.H < 0)
+                    self.H[mask] = 0
+                    
+                    modH = np.r_[self.H.T, sparsityH]                                               #(nxk) + (kxk) = (n+k) x k
+
+                    self.W = lstsq(modH, modX2, rcond=None)[0]                                      #(n+k) x k ++ (n+k) x m == (k x m)
+                    mask = np.where(self.W < 0)
+                    self.W[mask] = 0
+                    self.W = self.W.T
+
+                else:
+                    raise Exception("NMF method not implemented. Please choose one between 'standard' or 'sparse'. Exiting with error..")
+                    exit()
+
+
+                #Compute the reconstructed matrix from the reduced-order basis
+                X_rec = self.W @ self.H 
+
+
+                #Compute the error between the original and the reconstructed
+                #via Frobenius norm or with the Kullback-Leibler divergence
+                if self._metric.lower() == 'frobenius':
+                    eps_rec_new = np.linalg.norm((A.T - X_rec.T), 'fro')
+                elif self._metric.lower() == 'kld':
+                    eps_rec_new = self.KL_divergence(A.T, X_rec.T)
+
+
+                #Check the reconstruction error variation to see if the convergence
+                #has been reached
+                eps_rec_var = np.abs((eps_rec_new - eps_rec) / (eps_rec_new) + eps_tol)
+                eps_rec = eps_rec_new
+
+                #Check if the convergence conditions have been satisfied
+                if eps_rec_var > convTol and iteration < self.__iterMax:
+                    print("Iteration number: {}".format(iteration))
+                    print("\tReconstruction error variance: {}".format(eps_rec_var))
+                    iteration +=1
+                else:
+                    #scale again the W matrix to have unit L2-norm as prescribed in [3]
+                    for jj in range(0,self.W.shape[1]):
+                        tmp = norm(self.W[:,jj])
+                        self.W[:,jj] = self.W[:,jj]/tmp 
+                        tmp2 = norm(self.H[jj,:])
+                        self.H[jj,:] = self.H[jj,:]/tmp2
+                    print("Convergence has been reached after {} iterations.".format(iteration))
+                    print("\tFinal reconstruction error variance: {}".format(eps_rec_var))
+                    
+                    break
+        
+        elif self._algorithm.lower() == 'mur':
+
+            #Initialize the parameters for the iterative algorithm
+            iteration = 0
+            eps_rec = 1.0
+            convTol = 1E-6
+            eps_tol = 1E-16
+
+            #Initialize weights matrix for low-rank approximation
+            self.H = np.random.rand(self._dim, observations)            #dim: k x n
+            #Remove any negative value as prescribed in [3]
+            mask = np.where(self.H < 0)
+            self.H[mask] = 0
+
+            while not self.__convergence and iteration < self.__iterMax:
+                if self._metric.lower() == 'frobenius':
+                    phi = self.W.T @ A                              #(k x m) @ (m x n) = (k x n)
+                    chi = (self.W.T @ self.W @ self.H) + +1E-16     #(k x m) @ (m x k) @ (k x n) = (k x n)
+
+                    alpha = np.divide(phi, chi)
+                    self.H *= alpha
+                    
+                    
+                    zeta = A @ self.H.T                             #(m x n) @ (n x k) = (m x k)
+                    theta = (self.W @ self.H @ self.H.T) +1E-16     #(m x k) @ (k x n) @ (n x k) = (m x k)
+
+                    gamma = np.divide(zeta, theta)
+                    self.W *= gamma
                 
-                modH = np.r_[self.H.T, sparsityH]                                               #(nxk) + (kxk) = (n+k) x k
+                elif self._metric.lower() == 'kld':
+                    psi = np.divide(A, (self.W @ self.H) +1E-16)            #(m x n) / [(m x k) @ (k x n)]
+                    phi = self.W.T @ psi                                    #(k x m) @ (m x n) = (k x n)
+                    chi = self.W.T @ np.ones((A.shape), dtype=float) +1E-16 #(k x m) @ (m x n) = (k x n)
 
-                self.W = lstsq(modH, modX2, rcond=None)[0]                                      #(n+k) x k ++ (n+k) x m == (k x m)
-                mask = np.where(self.W < 0)
-                self.W[mask] = 0
-                self.W = self.W.T
+                    alpha = np.divide(phi, chi) 
+                    self.H *= alpha
 
-            else:
-                raise Exception("NMF method not implemented. Please choose one between 'standard' or 'sparse'. Exiting with error..")
-                exit()
+                    omicron = (self.W @ self.H) + 1E-16                             #(m x k) @ (k x n) = (m x n)
+                    omicron_star = np.divide(A, omicron)                            #(m x n) / (m x n) = (m x n)
+                    zeta = omicron_star @ self.H.T                                  #(m x n) @ (n x k) = (m x k)
+                    theta = (np.ones((omicron_star.shape), dtype=float) @ self.H.T) +1E-16    #(m x n) @ (n x k) = (m x k)
 
-
-            #Compute the reconstructed matrix from the reduced-order basis
-            X_rec = self.W @ self.H 
-
-
-            #Compute the error between the original and the reconstructed
-            #via Frobenius norm or with the Kullback-Leibler divergence
-            if self._metric.lower() == 'frobenius':
-                eps_rec_new = np.linalg.norm((A.T - X_rec.T), 'fro')
-            elif self._metric.lower() == 'kld':
-                eps_rec_new = self.KL_divergence(A.T, X_rec.T)
+                    gamma = np.divide(zeta, theta)
+                    self.W *= gamma
 
 
-            #Check the reconstruction error variation to see if the convergence
-            #has been reached
-            eps_rec_var = np.abs((eps_rec_new - eps_rec) / (eps_rec_new) + eps_tol)
-            eps_rec = eps_rec_new
 
-            #Check if the convergence conditions have been satisfied
-            if eps_rec_var > convTol and iteration < self.__iterMax:
-                print("Iteration number: {}".format(iteration))
-                print("\tReconstruction error: {}".format(eps_rec_new))
-                print("\tReconstruction error variance: {}".format(eps_rec_var))
-                iteration +=1
-            else:
-                #scale again the W matrix to have unit L2-norm as prescribed in [3]
-                for jj in range(0,self.W.shape[1]):
-                    tmp = norm(self.W[:,jj])
-                    self.W[:,jj] = self.W[:,jj]/tmp 
-                    self.H[jj,:] = self.H[jj,:]/tmp
-                print("Convergence has been reached after {} iterations.".format(iteration))
-                print("\tFinal reconstruction error: {}".format(eps_rec_new))
-                print("\tFinal reconstruction error variance: {}".format(eps_rec_var))
-                
-                break
+                X_rec = self.W @ self.H 
+
+
+                #Compute the error between the original and the reconstructed
+                #via Frobenius norm or with the Kullback-Leibler divergence
+                if self._metric.lower() == 'frobenius':
+                    eps_rec_new = np.linalg.norm((A.T - X_rec.T), 'fro')
+                elif self._metric.lower() == 'kld':
+                    eps_rec_new = self.KL_divergence(A.T, X_rec.T)
+
+
+                #Check the reconstruction error variation to see if the convergence
+                #has been reached
+                eps_rec_var = np.abs((eps_rec_new - eps_rec) / (eps_rec_new) + eps_tol)
+                eps_rec = eps_rec_new
+
+                #Check if the convergence conditions have been satisfied
+                if eps_rec_var > convTol and iteration < self.__iterMax:
+                    print("Iteration number: {}".format(iteration))
+                    print("\tReconstruction error variance: {}".format(eps_rec_var))
+                    iteration +=1
+                else:
+                    #scale again the W matrix to have unit L2-norm as prescribed in [3]
+                    for jj in range(0,self.W.shape[1]):
+                        tmp = norm(self.W[:,jj])
+                        self.W[:,jj] = self.W[:,jj]/tmp 
+                        tmp2 = norm(self.H[jj,:])
+                        self.H[jj,:] = self.H[jj,:]/tmp2
+                    print("Convergence has been reached after {} iterations.".format(iteration))
+                    print("\tFinal reconstruction error variance: {}".format(eps_rec_var))
+                    
+                    break
+
+
 
         return self.W, self.H
 

@@ -13,21 +13,42 @@ file_options = {
     "mesh_file_name"            : "mesh.csv",
 }
 
+settings = {
+    #Preprocessing settings (only Range is allowed)
+    "center"                    : True,
+    "scale"                     : True,
 
-num_of_features = 5
+    #set the reduced dimensionality
+    "number_of_features"        : 8,
+
+    #set the optimization algorithm to be used. Two are available:
+    #'als' (Alternating Least Squares) and 'mur' (Multiplicative Update Rule)
+    "optimization_algorithm"    : "als",
+    
+    #if 'als' is selected, there is also the option to add sparsity. Therefore,
+    #two options for als_method are available: 'standard' (sparsity = False) and 'sparse'.
+    #When the sparsity constraint is activated, eta and beta must also be set.     
+    "als_method"                : "sparse",
+    "sparsity_eta"              : 0.1,
+    "sparsity_beta"             : 0.03, 
+
+    #the metric to assess the reconstruction error. It is possible to select either
+    #'frobenius' (i.e., Frobenius distance between the original and the reconstructed matrix),
+    #or "kld", which stands for: Kullback-Leibler Divergence.
+    "optimization_metric"       : "frobenius",   
+}
+
+
+num_of_features = 8
 
 X = readCSV(file_options["path_to_file"], file_options["input_file_name"])
 mesh = np.genfromtxt(file_options["path_to_file"] + "/" + file_options["mesh_file_name"], delimiter= ',')
 
-model = model_order_reduction.NMF(X)
-model.encoding = num_of_features
-model.method = 'sparse'
-model.eta = 0.1
-model.beta = 0.03
 
-
+model = model_order_reduction.NMF(X, settings)
 W,H = model.fit()
 idx = model.cluster()
+
 
 for ii in range(0, num_of_features):
     fig = plt.figure()
