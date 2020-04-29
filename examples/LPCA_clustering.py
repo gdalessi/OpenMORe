@@ -7,18 +7,18 @@ from pyMORe.utilities import *
 
 
 file_options = {
-    "path_to_file"              : "../data",
-    "input_file_name"           : "flameD.csv",
+    "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data",
+    "input_file_name"           : "laminar2D.csv",
 }
 
 
 mesh_options = {
     #set the mesh file options (the path goes up twice - it's ok)
-    "path_to_file"              : "../../data",
+    "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data",
     "mesh_file_name"            : "mesh.csv",
 
     #eventually enable the clustering solution plot on the mesh
-    "plot_on_mesh"              : False,
+    "plot_on_mesh"              : True,
 }
 
 
@@ -30,11 +30,11 @@ settings = {
     "scaling_method"            : "auto",
 
     #set the initialization method (random, observations, kmeans, pkcia)
-    "initialization_method"     : "observations",
+    "initialization_method"     : "kmeans",
 
     #set the number of clusters and PCs in each cluster
     "number_of_clusters"        : 8,
-    "number_of_eigenvectors"    : 5,
+    "number_of_eigenvectors"    : 12,
 
     #enable additional options:
     "adaptive_PCs"              : False,    # --> use a different number of PCs in each cluster (to test)
@@ -61,6 +61,7 @@ if settings["evaluate_clustering"]:
 
     #evaluate the clustering solution
     PHC_coeff, PHC_deviations = evaluate_clustering_PHC(X, index, method='PHC_standard')
+    print(PHC_coeff)
 
     #evaluate the clustering solution by means of the Davies-Bouldin index
     X_tilde = center_scale(X, center(X, method=settings["centering_method"]), scale(X, method=settings["scaling_method"]))

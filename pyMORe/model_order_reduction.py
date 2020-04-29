@@ -1820,6 +1820,7 @@ class NMF():
                 #Check if the convergence conditions have been satisfied
                 if eps_rec_var > convTol and iteration < self.__iterMax:
                     print("Iteration number: {}".format(iteration))
+                    print("\tReconstruction error: {}".format(eps_rec_new))
                     print("\tReconstruction error variance: {}".format(eps_rec_var))
                     iteration +=1
                 else:
@@ -1828,7 +1829,7 @@ class NMF():
                         tmp = norm(self.W[:,jj])
                         self.W[:,jj] = self.W[:,jj]/tmp 
                         tmp2 = norm(self.H[jj,:])
-                        self.H[jj,:] = self.H[jj,:]/tmp2
+                        self.H[jj,:] = self.H[jj,:]/tmp
                     print("Convergence has been reached after {} iterations.".format(iteration))
                     print("\tFinal reconstruction error variance: {}".format(eps_rec_var))
                     
@@ -1900,6 +1901,7 @@ class NMF():
                 #Check if the convergence conditions have been satisfied
                 if eps_rec_var > convTol and iteration < self.__iterMax:
                     print("Iteration number: {}".format(iteration))
+                    print("\tReconstruction error: {}".format(eps_rec_new))
                     print("\tReconstruction error variance: {}".format(eps_rec_var))
                     iteration +=1
                 else:

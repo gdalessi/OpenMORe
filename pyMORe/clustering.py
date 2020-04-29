@@ -305,7 +305,7 @@ class lpca:
                 print("WARNING:")
                 print("\tAn empty cluster was found:")
                 print("\tThe number of cluster was lowered to ensure statistically meaningful results.")
-                print("\tThe current number of clusters is equal to: {}".format(max(idx)))
+                print("\tThe current number of clusters is equal to: {}".format(np.max(idx) +1))
                 k = np.max(idx) +1
                 jj = 0
             else:
@@ -497,7 +497,7 @@ class lpca:
             iteration += 1
             # Consider only statistical meaningful groups of points
             idx = lpca.merge_clusters(self.X_tilde, idx)
-            self._k = max(idx)+1
+            self._k = max(idx) +1
         print("Convergence reached in {} iterations.".format(iteration))
         lpca.plot_residuals(iteration, residuals)
         return idx
@@ -638,6 +638,41 @@ class KMeans(lpca):
             self._scale = settings["scale"]
             self._scaling = settings["scaling_method"]
 
+    @property
+    def initMode(self):
+        return self._initMode
+
+    @initMode.setter
+    def initMode(self, new_bool):
+        self._initMode = new_bool
+
+    @staticmethod
+    def remove_empty(X, idx):
+        '''
+        Remove a cluster if it is empty, or not statistically meaningful.
+        '''
+        k = np.max(idx) +1
+        jj = 0
+        while jj < k:
+            cluster_ = get_cluster(X, idx, jj)
+            if cluster_.shape[0] < 2: 
+                if jj > 0:
+                    mask = np.where(idx >=jj)
+                    idx[mask] -= 1
+                else:
+                    mask = np.where(idx >jj)
+                    idx[mask] -= 1
+                print("WARNING:")
+                print("\tAn empty cluster was found:")
+                print("\tThe number of cluster was lowered to ensure statistically meaningful results.")
+                print("\tThe current number of clusters is equal to: {}".format(np.max(idx) +1))
+                k = np.max(idx) +1
+                jj = 0
+            else:
+                jj += 1
+
+        return idx
+
 
     def fit(self):
         from scipy.spatial.distance import euclidean, cdist
@@ -698,14 +733,14 @@ class KMeans(lpca):
                 print("Iteration number: {}".format(iter))
                 print("The SSE over all cluster is equal to: {}".format(minDist_sum))
                 print("The SSE variance is equal to: {}".format(varDist))
-
+            
             #Consider only statistical meaningful groups of points: if there
             #are empty cluster, delete them. The algorithm's iterations will
             #be re-initialized each time a cluster is deleted.
-            idx = KMeans.merge_clusters(self.X, idx)
+            idx = self.remove_empty(self.X, idx)
             check_ = np.max(idx)
             if check_+1 != self._k:
-                self._k = max(idx)
+                self._k = max(idx) +1
                 C_mat = np.empty((self._k, self.X.shape[1]), dtype=float)
                 C_old = np.empty((self._k, self.X.shape[1]), dtype=float)
                 dist = np.empty((self.X.shape[0], self._k), dtype=float)
@@ -715,6 +750,7 @@ class KMeans(lpca):
                 iter = 0
                 for ii in range(0,self._k):
                     C_mat[ii,:] = self.X[np.random.randint(0,self.X.shape[0]),:]
+            
 
         return idx
 

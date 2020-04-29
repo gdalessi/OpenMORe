@@ -7,8 +7,8 @@ import pyMORe.model_order_reduction as model_order_reduction
 from pyMORe.utilities import *
 
 file_options = {
-    "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitLab/pyMORe/data",
-    "input_file_name"           : "flameD.csv",
+    "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data",
+    "input_file_name"           : "laminar2D.csv",
 
     "mesh_file_name"            : "mesh.csv",
 }
@@ -23,7 +23,7 @@ settings = {
 
     #set the optimization algorithm to be used. Two are available:
     #'als' (Alternating Least Squares) and 'mur' (Multiplicative Update Rule)
-    "optimization_algorithm"    : "als",
+    "optimization_algorithm"    : "mur",
     
     #if 'als' is selected, there is also the option to add sparsity. Therefore,
     #two options for als_method are available: 'standard' (sparsity = False) and 'sparse'.
@@ -35,7 +35,7 @@ settings = {
     #the metric to assess the reconstruction error. It is possible to select either
     #'frobenius' (i.e., Frobenius distance between the original and the reconstructed matrix),
     #or "kld", which stands for: Kullback-Leibler Divergence.
-    "optimization_metric"       : "frobenius",   
+    "optimization_metric"       : "kld",   
 }
 
 
