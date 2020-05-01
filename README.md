@@ -1,4 +1,3 @@
-**General:**
 pyMORe is a collection of Python modules for Model-Order-Reduction, clustering 
 and classification. 
 Several techniques are implemented to accomplish the aforementioned purposes, 
@@ -18,7 +17,7 @@ satisfied:
 
 **Installation:**
 if the libraries requirements are satisfied, go to the pyMORe folder from your 
-terminal, and type “python setup.py install”.
+terminal, and type: `python setup.py install`.
 
 **Usage:**
 you can run a quick test running one of the examples in the “examples” folder, 
@@ -26,7 +25,7 @@ or following one of the jupyter tutorials in the “tutorials” folder. In the
 “data” folder, a collection of data (from a CFD simulation of a turbulent 
 reacting jet) is also contained to run the examples and test the code.
 
-Example: python examples/LPCA_clustering.py
+Example: `python examples/LPCA_clustering.py`
 	
 A detailed description of all the functions is available in the source code. 
 Several examples for different tasks (clustering, model order reduction, 
