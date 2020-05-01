@@ -28,19 +28,69 @@ import matplotlib.pyplot as plt
 class lpca:
     '''
     The iterative Local Principal Component Analysis clustering algorithm is based on the following steps:
-    0. Preprocessing: The training matrix X is centered and scaled, after being loaded. Four scaling are available,
-    AUTO, VAST, PARETO, RANGE - Two centering are available, MEAN and MIN;
-    1. Initialization: The cluster centroids are initializated: a random allocation (RANDOM)
-    or a previous clustering solution (KMEANS) can be chosen to compute the centroids initial values;
-    2. Partition: Each observation is assigned to a cluster k such that the local reconstruction
-    error is minimized;
-    3. PCA: The Principal Component Analysis is performed in each of the clusters found
-    in the previous step. A new set of centroids is computed after the new partitioning
-    step, their coordinates are calculated as the mean of all the observations in each
-    cluster;
-    4. Iteration: All the previous steps are iterated until convergence is reached. The convergence
-    criterion is that the variation of the global mean reconstruction error between two consecutive
-    iterations must be below a fixed threshold.
+    
+    0.  Preprocessing: The training matrix X is centered and scaled.
+    
+    1.  Initialization: The cluster centroids are initializated, several options are available.
+        The first is a random allocation ('random'), assigning random values to the class membership
+        vector, idx. The second option, is the initialization by means of a previous clustering solution
+        obtained by the Kmeans algorithm ('kmeans'). The third option is 'observations': a number 'k'
+        (where k = selected number of clusters) is randomly selected from the data-set and chosen as cluster
+        centroids. The idx is calculated via euclidean distance minimization between the observations and
+        the random centroids. The last available initialization is 'pkcia', compute the positive definite 
+        matrix Y = XX.T and assign the initial idx value on the basis of the first eigenvector obtained
+        from Y.   
+    
+    2.  Partition: Each observation is assigned to a cluster k such that the local reconstruction
+        error is minimized;
+    
+    3.  PCA: The Principal Component Analysis is performed in each of the clusters found
+        in the previous step. A new set of centroids is computed after the new partitioning
+        step, their coordinates are calculated as the mean of all the observations in each
+        cluster;
+    
+    4.  Iteration: All the previous steps are iterated until convergence is reached. The convergence
+        criterion is that the variation of the global mean reconstruction error between two consecutive
+        iterations must be below a fixed threshold.
+
+    
+    --- PARAMETERS ---
+    X:          RAW data matrix, uncentered and unscaled. It must be organized
+                with the structure: (observations x variables).
+    type X :    numpy array
+
+    dictionary:         Dictionary containing all the instruction for the setters
+    type dictionary:    dictionary
+
+    
+    --- SETTERS ---
+    k:                      number of clusters to be used for the partitioning
+    type   k:               scalar
+
+    _center:                Enable the centering function
+    type   _center:         boolean 
+    
+    _centering:             set the centering method. Available choices for scaling
+                            are 'mean' or 'min'.
+    type   _centering:      string
+
+    _scale:                 Enable the scaling function
+    type   _scale:          boolean 
+
+    _scaling:               set the scaling method. Available choices for scaling
+                            are 'auto' or 'vast' or 'range' or 'pareto'.
+    type _scaling:          string
+
+    _method:                initialization method: 'random', 'kmeans', 'observations', 'pkcia' are available.
+    type   _method:         string
+
+    correction:             multiplicative or additive correction factor to be used for the lpca algorithm
+    type _beta:             string
+
+    _nPCs:                  number of Principal Components which have to be used locally for the dimensionality reduction task.
+    type _nPCs:             scalar
+
+    
     '''
     def __init__(self, X, *dictionary):
         self.X = np.array(X)
@@ -176,6 +226,19 @@ class lpca:
         '''
         The clustering solution must be initialized to start the lpca iterative algorithm.
         Several initialization are available, and they can lead to different clustering solutions.
+
+        
+        --- PARAMETERS ---
+        X:          Original data matrix (observations x variables). 
+        type X :    numpy array
+
+        k:          numbers of clusters. 
+        type k :    scalar
+
+
+        --- RETURNS ---
+        idx:        vector whose dimensions are (n,) containing the cluster assignment.
+        type idx:   numpy array 
         '''
         if method.lower() == 'random':
             #Assign randomly an integer between 0 and k to each observation.
@@ -279,6 +342,9 @@ class lpca:
 
     @staticmethod
     def initialize_parameters():
+        '''
+        Set some private parameters for the algorithm convergence.
+        '''
         iteration = 0
         eps_rec = 1.0
         residuals = np.array(0)
@@ -286,10 +352,23 @@ class lpca:
         eps_tol = 1E-16
         return iteration, eps_rec, residuals, iter_max, eps_tol
 
+    
     @staticmethod
     def merge_clusters(X, idx):
         '''
         Remove a cluster if it is empty, or not statistically meaningful.
+
+        --- PARAMETERS ---
+        X:          Original data matrix (observations x variables). 
+        type X :    numpy array
+
+        idx:        vector whose dimensions are (n,) containing the cluster assignment. 
+        type idx :  numpy array
+
+
+        --- RETURNS ---
+        idx:        vector whose dimensions are (n,) containing the cluster assignment, WITHOUT EMPTY CLASSES.
+        type idx:   numpy array 
         '''
         k = np.max(idx) +1
         jj = 0
@@ -603,9 +682,7 @@ class fpca(lpca):
 
 
 class KMeans(lpca):
-    '''
-    X must be centered and scaled --- to change ---
-    '''
+    
     def __init__(self,X, *dictionary):
         #Initialize matrix and number of clusters.
         self.X = X

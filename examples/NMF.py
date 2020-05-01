@@ -8,15 +8,17 @@ from pyMORe.utilities import *
 
 file_options = {
     "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data",
-    "input_file_name"           : "laminar2D.csv",
+    "input_file_name"           : "concentrations.csv",
 
     "mesh_file_name"            : "mesh.csv",
 }
 
 settings = {
     #Preprocessing settings (only Range is allowed)
-    "center"                    : True,
+    "center"                    : False,
+    "centering"                 : 'min',
     "scale"                     : True,
+    "scaling"                   : "auto",
 
     #set the reduced dimensionality
     "number_of_features"        : 8,
@@ -30,7 +32,7 @@ settings = {
     #When the sparsity constraint is activated, eta and beta must also be set.     
     "als_method"                : "sparse",
     "sparsity_eta"              : 0.1,
-    "sparsity_beta"             : 0.03, 
+    "sparsity_beta"             : 0.3, 
 
     #the metric to assess the reconstruction error. It is possible to select either
     #'frobenius' (i.e., Frobenius distance between the original and the reconstructed matrix),
@@ -39,7 +41,6 @@ settings = {
 }
 
 
-num_of_features = 8
 
 X = readCSV(file_options["path_to_file"], file_options["input_file_name"])
 mesh = np.genfromtxt(file_options["path_to_file"] + "/" + file_options["mesh_file_name"], delimiter= ',')
@@ -50,7 +51,7 @@ W,H = model.fit()
 idx = model.cluster()
 
 
-for ii in range(0, num_of_features):
+for ii in range(0, settings["number_of_features"]):
     fig = plt.figure()
     axes = fig.add_axes([0.2,0.15,0.7,0.7], frameon=True)
     axes.scatter(mesh[:,0], mesh[:,1], c=H.T[:,ii],alpha=0.5, cmap='gnuplot')

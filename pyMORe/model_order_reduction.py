@@ -1551,7 +1551,9 @@ class NMF():
         #only Range scaling is possible, so no setter for the method 
         #is prescribed.
         self._center = True
+        self._centering = 'min'
         self._scale = True
+        self._scaling = 'auto'
 
         #info about the method: standard ALS or sparse ALS are implemented:
         self._method = 'sparse'
@@ -1574,7 +1576,9 @@ class NMF():
             settings = dictionary[0]
 
             self._center = settings["center"]
+            self._centering = settings["centering"]
             self._scale = settings["scale"]
+            self._scaling = settings["scaling"]
             self._dim = settings["number_of_features"]
             self._algorithm = settings["optimization_algorithm"]
             self._method = settings["als_method"]
@@ -1591,6 +1595,18 @@ class NMF():
     @accepts(object, bool)
     def to_center(self, new_bool):
         self._center = new_bool
+    
+    @property
+    def centering(self):
+        return self._centering
+
+    @centering.setter
+    def centering(self, new_string):
+        self._centering = new_string
+
+        if self._centering != 'min':
+            raise Exception("No other centering than 'min' is allowed for NMF. Data will be scaled with their minimum.")
+            self._centering = 'min'
 
     @property
     def to_scale(self):
@@ -1600,6 +1616,15 @@ class NMF():
     @accepts(object, bool)
     def to_scale(self, new_bool):
         self._scale = new_bool
+
+    @property
+    def scaling(self):
+        return self._scaling
+
+    @scaling.setter
+    @allowed_scaling
+    def scaling(self, new_string):
+        self._scaling = new_string
 
     @property
     def encoding(self):
@@ -1651,10 +1676,7 @@ class NMF():
         self._algorithm = new_string
 
     @staticmethod
-    def preprocess_training(X, centering_decision, scaling_decision):
-
-        centering_method = 'min'
-        scaling_method = 'range'
+    def preprocess_training(X, centering_decision, scaling_decision, centering_method, scaling_method):
 
         if centering_decision and scaling_decision:
             mu, X_ = center(X, centering_method, True)
@@ -1667,6 +1689,7 @@ class NMF():
             X_tilde = X
 
         return X_tilde
+
 
     @staticmethod
     def KL_divergence(X, Y):
@@ -1713,6 +1736,7 @@ class NMF():
 
         return KLD
 
+
     def fit(self):
         '''
         --- RETURNS ---
@@ -1726,9 +1750,8 @@ class NMF():
         from numpy.linalg import norm
 
 
-        #Center and scale the matrix. The only criterion is Range, because the matrix elements
-        #must be all positive (it is set inside the function)
-        self.X_tilde = self.preprocess_training(self.X, self._center, self._scale)
+        #Center and scale the matrix. 
+        self.X_tilde = self.preprocess_training(self.X, self._center, self._scale, self._centering, self._scaling)
 
         #To follow the notation in [3], we consider the A matrix with shape: (n_features x n_observations)
         A = self.X_tilde.T
@@ -1764,7 +1787,7 @@ class NMF():
             #Initialize the parameters for the iterative algorithm
             iteration = 0
             eps_rec = 1.0
-            convTol = 1E-8
+            convTol = 1E-5
             eps_tol = 1E-16
 
             while not self.__convergence and iteration < self.__iterMax:
@@ -1840,42 +1863,42 @@ class NMF():
             #Initialize the parameters for the iterative algorithm
             iteration = 0
             eps_rec = 1.0
-            convTol = 1E-6
+            convTol = 1E-5
             eps_tol = 1E-16
 
             #Initialize weights matrix for low-rank approximation
-            self.H = np.random.rand(self._dim, observations)            #dim: k x n
+            self.H = np.random.rand(self._dim, observations)                                    #dim: k x n
             #Remove any negative value as prescribed in [3]
             mask = np.where(self.H < 0)
             self.H[mask] = 0
 
             while not self.__convergence and iteration < self.__iterMax:
                 if self._metric.lower() == 'frobenius':
-                    phi = self.W.T @ A                              #(k x m) @ (m x n) = (k x n)
-                    chi = (self.W.T @ self.W @ self.H) + +1E-16     #(k x m) @ (m x k) @ (k x n) = (k x n)
+                    phi = self.W.T @ A                                                          #(k x m) @ (m x n) = (k x n)
+                    chi = (self.W.T @ self.W @ self.H) + +1E-16                                 #(k x m) @ (m x k) @ (k x n) = (k x n)
 
                     alpha = np.divide(phi, chi)
                     self.H *= alpha
                     
                     
-                    zeta = A @ self.H.T                             #(m x n) @ (n x k) = (m x k)
-                    theta = (self.W @ self.H @ self.H.T) +1E-16     #(m x k) @ (k x n) @ (n x k) = (m x k)
+                    zeta = A @ self.H.T                                                         #(m x n) @ (n x k) = (m x k)
+                    theta = (self.W @ self.H @ self.H.T) +1E-16                                 #(m x k) @ (k x n) @ (n x k) = (m x k)
 
                     gamma = np.divide(zeta, theta)
                     self.W *= gamma
                 
                 elif self._metric.lower() == 'kld':
-                    psi = np.divide(A, (self.W @ self.H) +1E-16)            #(m x n) / [(m x k) @ (k x n)]
-                    phi = self.W.T @ psi                                    #(k x m) @ (m x n) = (k x n)
-                    chi = self.W.T @ np.ones((A.shape), dtype=float) +1E-16 #(k x m) @ (m x n) = (k x n)
+                    psi = np.divide(A, (self.W @ self.H) +1E-16)                                #(m x n) / [(m x k) @ (k x n)]
+                    phi = self.W.T @ psi                                                        #(k x m) @ (m x n) = (k x n)
+                    chi = self.W.T @ np.ones((A.shape), dtype=float) +1E-16                     #(k x m) @ (m x n) = (k x n)
 
                     alpha = np.divide(phi, chi) 
                     self.H *= alpha
 
-                    omicron = (self.W @ self.H) + 1E-16                             #(m x k) @ (k x n) = (m x n)
-                    omicron_star = np.divide(A, omicron)                            #(m x n) / (m x n) = (m x n)
-                    zeta = omicron_star @ self.H.T                                  #(m x n) @ (n x k) = (m x k)
-                    theta = (np.ones((omicron_star.shape), dtype=float) @ self.H.T) +1E-16    #(m x n) @ (n x k) = (m x k)
+                    omicron = (self.W @ self.H) + 1E-16                                         #(m x k) @ (k x n) = (m x n)
+                    omicron_star = np.divide(A, omicron)                                        #(m x n) / (m x n) = (m x n)
+                    zeta = omicron_star @ self.H.T                                              #(m x n) @ (n x k) = (m x k)
+                    theta = (np.ones((omicron_star.shape), dtype=float) @ self.H.T) +1E-16      #(m x n) @ (n x k) = (m x k)
 
                     gamma = np.divide(zeta, theta)
                     self.W *= gamma
@@ -1907,10 +1930,10 @@ class NMF():
                 else:
                     #scale again the W matrix to have unit L2-norm as prescribed in [3]
                     for jj in range(0,self.W.shape[1]):
-                        tmp = norm(self.W[:,jj])
+                        tmp = norm(self.W[:,jj]) + 1E-16
                         self.W[:,jj] = self.W[:,jj]/tmp 
-                        tmp2 = norm(self.H[jj,:])
-                        self.H[jj,:] = self.H[jj,:]/tmp2
+                        #tmp2 = norm(self.H[jj,:])
+                        self.H[jj,:] = self.H[jj,:]/tmp
                     print("Convergence has been reached after {} iterations.".format(iteration))
                     print("\tFinal reconstruction error variance: {}".format(eps_rec_var))
                     
