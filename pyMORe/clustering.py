@@ -333,6 +333,18 @@ class lpca:
             #For each observation, choose the nearest centroid and compute the idx for the initialization.
             for ii in range(0, X.shape[0]):
                 idx[ii] = np.argmin(dist[ii,:])
+        
+        elif method.lower() == 'uniform':
+            idx = np.zeros(X.shape[0], dtype=int)
+            spacing = np.round(X.shape[0]/k) +1
+            for ii in range(1, k):
+                if ii != (k -1):
+                    start = int(ii*spacing+1)
+                    endID = int((ii+1)*spacing)
+                    idx[start:endID] = ii 
+                else:
+                    start = int(ii*spacing+1)
+                    idx[start:] = ii 
 
         else:
             raise Exception("Initialization option not supported. Please choose one between RANDOM or KMEANS.")
@@ -348,7 +360,7 @@ class lpca:
         iteration = 0
         eps_rec = 1.0
         residuals = np.array(0)
-        iter_max = 500
+        iter_max = 250
         eps_tol = 1E-16
         return iteration, eps_rec, residuals, iter_max, eps_tol
 
@@ -374,7 +386,7 @@ class lpca:
         jj = 0
         while jj < k:
             cluster_ = get_cluster(X, idx, jj)
-            if cluster_.shape[0] < cluster_.shape[1]: #2:
+            if cluster_.shape[0] < 2: #2 or cluster_.shape[1]:
                 if jj > 0:
                     mask = np.where(idx >=jj)
                     idx[mask] -= 1
@@ -502,14 +514,11 @@ class lpca:
         while(iteration < iter_max):
             sq_rec_oss = np.zeros((rows, cols), dtype=float)
             sq_rec_err = np.zeros((rows, self._k), dtype=float)
-            if self._correction == 'phc_standard':
+
+            if self._correction == 'phc_multi':
                 PHC_coefficients, PHC_std = evaluate_clustering_PHC(self.X, idx, method='phc_standard')   #PHC_index(self.X, idx) or PHC_robustTrim(self.X, idx)
-            elif self._correction == 'phc_median':
-                PHC_coefficients, PHC_std = evaluate_clustering_PHC(self.X, idx, method='phc_median')
-            elif self._correction == 'phc_robust':
-                PHC_coefficients, PHC_std = evaluate_clustering_PHC(self.X, idx, method='phc_robust')
-            else:
-                pass
+                PHC_coefficients = PHC_coefficients/np.max(PHC_coefficients)
+
             for ii in range(0, self._k):
                 cluster = get_cluster(self.X_tilde, idx, ii)
                 if self._correction.lower() != 'medianoids' and self._correction.lower() != 'medoids':
@@ -530,28 +539,63 @@ class lpca:
                 rec_err_os = (self.X_tilde - C_mat) - (self.X_tilde - C_mat) @ modes[0] @ modes[0].T
                 sq_rec_oss = np.power(rec_err_os, 2)
                 sq_rec_err[:,ii] = sq_rec_oss.sum(axis=1)
-                if self.correction.lower() == "mean":
-                    correction_[:,ii] = np.mean(np.var((self.X_tilde - C_mat) @ modes[0], axis=0))
-                    scores_factor = np.multiply(sq_rec_err, correction_)
+                
+                if self.correction.lower() == "c_range":
+                    
+                    #compute the cluster considering the raw data, and compute
+                    #the cluster's centroids
+                    cluster2 = get_cluster(self.X, idx, ii)
+                    centroids2 = get_centroids(cluster2)  
+                    #compute the range for the centroid values: /2 = +-50%, /3 = +- 33% etc.
+                    C_mStar = centroids2/2      
+                    #lower bound: centroid - interval
+                    check1 = centroids2 - C_mStar
+                    #upper boundL centroid + interval
+                    check2 = centroids2 + C_mStar       
+                    #boolean matrix initialization as matrix of ones    
+                    boolean_mat = np.ones(self.X_tilde.shape)
+                    count = 0
+
+                    #for each element of the raw data matrix, check if it's in the interval.
+                    #If yes, put 0 in the boolean matrix
+                    for mm in range(0, self.X.shape[0]):
+                        for nn in range(0, self.X.shape[1]):
+                            if self.X[mm,nn] >= check1[nn] and self.X[mm,nn] <= check2[nn]:
+                                boolean_mat[mm,nn] = 0                                               
+                                count +=1         
+                    #For each row, sum up all the columns to obtain the multiplicative correction coefficient                                                  
+                    yo = np.sum(boolean_mat, axis=1)
+                    scores_factor[:,ii] = sq_rec_err[:,ii] * yo
+                    
                     self.__activateCorrection = True
-                elif self._correction.lower() == "max":
-                    correction_[:,ii] = np.max(np.var((self.X_tilde - C_mat) @ modes[0], axis=0))
-                    scores_factor = np.multiply(sq_rec_err, correction_)
+                
+                elif self._correction.lower() == "uncorrelation":
+                    maxF = np.max(np.var((self.X_tilde - C_mat) @ modes[0], axis=0))
+                    minF = np.min(np.var((self.X_tilde - C_mat) @ modes[0], axis=0))
+                    yo = 1-minF/maxF
+                    
+                    scores_factor[:,ii] = sq_rec_err[:,ii] * yo
                     self.__activateCorrection = True
-                elif self._correction.lower() == "min":
-                    correction_[:,ii] = np.min(np.var((self.X_tilde - C_mat) @ modes[0], axis=0))
-                    scores_factor = np.multiply(sq_rec_err, correction_)
+
+                elif self._correction.lower() == "local_variance":
+                    yo = np.mean(np.var(cluster2))
+                    scores_factor[:,ii] = sq_rec_err[:,ii] * yo
                     self.__activateCorrection = True
-                elif self._correction.lower() == "std":
-                    correction_[:,ii] = np.std(np.var((self.X_tilde - C_mat) @ modes[0], axis=0))
-                    scores_factor = np.multiply(sq_rec_err, correction_)
-                    self.__activateCorrection = True
-                elif self._correction.lower() == 'phc_standard' or self._correction.lower() == 'phc_median' or self._correction.lower() == 'phc_robust':
+
+                elif self._correction.lower() == "phc_multi":
                     local_homogeneity = PHC_coefficients[ii]
-                    scores_factor = np.add(sq_rec_err, local_homogeneity)
+                    scores_factor[:,ii] = sq_rec_err[:,ii] * local_homogeneity
                     self.__activateCorrection = True
+                
+                elif self._correction.lower() == "local_skewness":
+                    from scipy.stats import skew
+
+                    yo = np.mean(skew(cluster, axis=0))
+                    scores_factor[:,ii] = sq_rec_err[:,ii] * yo
+                    self.__activateCorrection = True
+                
                 else:
-                    pass
+                    pass                            
             # Update idx
             if self.__activateCorrection == True:
                 idx = np.argmin(scores_factor, axis = 1)
@@ -578,7 +622,7 @@ class lpca:
             idx = lpca.merge_clusters(self.X_tilde, idx)
             self._k = max(idx) +1
         print("Convergence reached in {} iterations.".format(iteration))
-        lpca.plot_residuals(iteration, residuals)
+        #lpca.plot_residuals(iteration, residuals)
         return idx
 
 
@@ -937,54 +981,3 @@ class multistageLPCA(lpca):
 
 
         return idx_yo
-
-if __name__ == '__main__':
-    
-    file_options = {
-        "path_to_file"              : "../data",
-        "input_file_name"           : "flameD.csv",
-    }
-
-
-    mesh_options = {
-        #set the mesh file options (the path goes up twice - it's ok)
-        "path_to_file"              : "../../data",
-        "mesh_file_name"            : "mesh.csv",
-
-        #eventually enable the clustering solution plot on the mesh
-        "plot_on_mesh"              : False,
-    }
-
-
-    settings = {
-        #centering and scaling options
-        "center"                    : True,
-        "centering_method"          : "mean",
-        "scale"                     : True,
-        "scaling_method"            : "auto",
-
-        #set the initialization method (random, observations, kmeans, pkcia)
-        "initialization_method"     : "observations",
-
-        #set the number of clusters and PCs in each cluster
-        "number_of_clusters"        : 8,
-        "number_of_eigenvectors"    : 5,
-
-        #enable additional options:
-        "adaptive_PCs"              : False,    # --> use a different number of PCs in each cluster (to test)
-        "correction_factor"         : "off",    # --> enable eventual corrective coefficients for the LPCA algorithm:
-                                                #     'off', 'mean', 'min', 'max', 'std', 'phc_standard', 'phc_median', 'phc_robust', 'medianoids', 'medoids' are available
-
-        "classify"                  : False,    # --> classify a new matrix Y on the basis of the lpca clustering
-        "write_on_txt"              : True,     # --> write the idx vector with the class for each observation
-        "evaluate_clustering"       : True,     # --> enable the calculation of indeces to evaluate the goodness of the clustering
-    }
-
-
-    X = readCSV(file_options["path_to_file"], file_options["input_file_name"])
-
-    model = clustering.lpca(X, settings)
-    index = model.fit()
-
-    if settings["write_on_txt"]:
-        np.savetxt("idx.txt", index)

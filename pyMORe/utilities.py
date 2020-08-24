@@ -23,7 +23,7 @@ import time
 
 import matplotlib
 import matplotlib.pyplot as plt
-__all__ = ["unscale", "uncenter", "center", "scale", "center_scale", "evaluate_clustering_PHC", "get_centroids", "get_cluster", "get_all_clusters", "explained_variance", "evaluate_clustering_DB", "NRMSE", "PCA_fit", "accepts", "readCSV", "allowed_centering","allowed_scaling", "varimax_rotation", "get_medianoids", "get_medoids"]
+__all__ = ["unscale", "uncenter", "center", "scale", "center_scale", "evaluate_clustering_PHC", "fastSVD", "get_centroids", "get_cluster", "get_all_clusters", "explained_variance", "evaluate_clustering_DB", "NRMSE", "PCA_fit", "accepts", "readCSV", "allowed_centering","allowed_scaling", "varimax_rotation", "get_medianoids", "get_medoids"]
 
 
 # ------------------------------
@@ -236,7 +236,7 @@ def evaluate_clustering_PHC(X, idx, method='PHC_standard'):
         #from the PHC computation, as they can be considered outliers. The aforementioned distance is
         #computed via PCA (see Jolliffe for details)
 
-        import model_order_reduction
+        from . import model_order_reduction
         
         try:
             for ii in range(0,k):
@@ -278,15 +278,68 @@ def evaluate_clustering_PHC(X, idx, method='PHC_standard'):
 
                 PHC_coeff[ii] = np.mean((maxima-minima)/(media +TOL))
                 PHC_deviations[ii] = np.mean(dev)
-            else:
-                raise Exception("PHC method not supported. Available PHCs: 'PHC_standard', 'PHC_median', 'PHC_robust'. Exiting with error..")
-                exit()
         except ValueError:
             print("An exception was thrown by Python during the PHC computation. Probably the considered cluster was found empty.")
             print("Passing..")
             pass
+    else:
+        raise Exception("PHC method not supported. Available PHCs: 'PHC_standard', 'PHC_median', 'PHC_robust'. Exiting with error..")
+        exit()
 
     return PHC_coeff, PHC_deviations
+
+
+def fastSVD(X_tilde, n_eigs):
+    '''
+    Perform a fast Singular Value Decomposition with the algorithm described in:
+    [1] Halko, Nathan, et al. SIAM Journal on Scientific computing 33.5 (2011): 2580-2594.
+    - Input:
+    X = CENTERED/SCALED data matrix -- dim: (observations x variables)
+    n_eigs = number of eigenvectors to retain -- dim: (scalar)
+   
+    - Output:
+    Z = scores matrix, projection of X on the eigenvectors -- dim: (observations x n_eigs)
+    A = modes matrix, Eigenvectors from SVD -- dim: (variables x n_eigs)
+    '''
+    rows, cols = X_tilde.shape 
+    
+    l = n_eigs+2
+    i = 2
+    
+    #Step 1: construct a random matrix G, with 0 mean and variance equal to 1.
+    G = np.random.rand(cols, l)
+    ____, X_ = center(G, "mean", True)
+    ____, G = scale(X_, "auto", True)   
+    
+    #Step 2: Compute the H matrix of eq. (2.2) from [1]. 
+    #To do that, an iterative procedure must be adopted (in the for loop):
+
+    for ii in range(0,i):
+        if ii == 0:
+            H = X_tilde @ G         # (n x p) @ [(p x n) @ (n x l)] = (n x p) @ (p x l) = (n x l)
+        else:
+            tmp = X_tilde @ (X_tilde.T @ H) 
+            H = np.concatenate((H, tmp), axis=1)
+
+    #Step 3: decompose H with a QR decomposition, the column of the matrix
+    #Q must be orthonormal
+    Q, ____ = np.linalg.qr(H, mode='reduced')
+    
+    
+    #Step 4: compute the T matrix as described in eq. (2.4) of [1]
+    T = X_tilde.T @ Q 
+
+    #Step 5: decompose the T matrix, and retrieve the scores matrix (Z) and
+    #the modes matrix (A)
+    V_tilde, Sig_tilde, Wt = np.linalg.svd(T, full_matrices=True)
+    U_tilde = Q @ Wt.T 
+
+    Z = U_tilde[:, :n_eigs]         #scores
+    A = V_tilde[:,:n_eigs]          #modes
+    S = Sig_tilde[:n_eigs]
+
+    return Z, A, S
+
 
 
 def get_centroids(X):
@@ -365,8 +418,6 @@ def get_cluster(X, idx, index, write=False):
         pass
 
     
-
-
 def get_all_clusters(X, idx):
     '''
     Group all the observations of the matrix X given their membership vector idx,
@@ -491,6 +542,7 @@ def scale(X, method, return_scaled_matrix=False):
             raise Exception("Unsupported scaling option. Please choose: AUTO, PARETO, VAST or RANGE.")
         return sig, X0
 
+
 def split_for_validation(X, validation_quota):
     '''
     Split the data into two matrices, one to train the model (X_train) and the
@@ -553,6 +605,7 @@ def unscale(X_tilde, sigma):
     else:
         raise Exception("The matrix to be unscaled and the scaling vector must have the same dimensionality.")
         exit()
+
 
 def varimax_rotation(X, b, normalize=True):
     '''

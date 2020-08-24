@@ -174,12 +174,12 @@ class PCA:
 
     @property
     def set_num_to_plot(self):
-        return self._assessPCs
+        return self._num_to_plot
 
     @set_num_to_plot.setter
     @accepts(object, int)
     def set_num_to_plot(self, new_number):
-        self._assessPCs = new_number
+        self._num_to_plot = new_number
 
 
     @staticmethod
@@ -881,9 +881,58 @@ class KPCA(PCA):
     def __init__(self, X):
 
         #Set the sigma - the coefficient for the kernel construction
-        self.sigma = 10
+        #self.sigma = 10
+
+        self._n_ret = 1
+        self._path = ' '
+        self._labels_name = ' '
 
         super().__init__(X)
+
+    @property
+    def retained(self):
+        return self._n_ret
+
+    @retained.setter
+    @accepts(object, int)
+    def retained(self, new_number):
+        self._n_ret = new_number
+
+        if self._n_ret <= 0:
+            raise Exception("The number of retained variables must be a positive integer. Exiting..")
+            exit()
+
+    @property
+    def path_to_labels(self):
+        return self._path
+
+    @path_to_labels.setter
+    def path_to_labels(self, new_string):
+        self._path = new_string
+
+    @property
+    def labels_file_name(self):
+        return self._labels_name
+
+    @labels_file_name.setter
+    def labels_file_name(self, new_string):
+        self._labels_name = new_string
+
+    @property
+    def kernel_type(self):
+        return self._kernel
+
+    @kernel_type.setter
+    def kernel_type(self, new_string):
+        self._kernel = new_string
+
+    def load_labels(self):
+        import pandas as pd
+        try:
+            self.labels= np.array(pd.read_csv(self._path + '/' + self._labels_name, sep = ',', header = None))
+        except OSError:
+            print("Could not open/read the selected file: " + self._labels_name)
+            exit()
 
 
     def fit(self):
@@ -897,10 +946,12 @@ class KPCA(PCA):
 
         WARNING: This method can be extremely expensive for large matrices.
         '''
-        from scipy.spatial.distance import pdist, squareform
+        #from scipy.spatial.distance import pdist, squareform
 
         self.X_tilde = KPCA.preprocess_training(self.X, self.to_center, self.to_scale, self.centering, self.scaling)
-
+        
+        '''
+        THIS IS OLD. NOW I ADOPTED sklearn FOR THESE TASKS
         print("Starting kernel computation..")
         # compute the distances between all the observations:
         distances = pdist(self.X_tilde, 'sqeuclidean')
@@ -918,8 +969,123 @@ class KPCA(PCA):
         evecs = evecs[:,mask]
         evals = evals[mask]
         evecs = evecs[:,:self.eigens]
+        '''
 
-        return evecs
+        from sklearn.metrics.pairwise import rbf_kernel
+        from sklearn.metrics.pairwise import polynomial_kernel
+        from sklearn.preprocessing import KernelCenterer
+
+        import time 
+        
+        t = time.time()
+        
+
+        if self._kernel == 'polynomial':
+            print("Computing the Kernel (poly)..")
+            Kernel = polynomial_kernel(self.X_tilde, degree=3, gamma=1/self._n_ret)
+        elif self._kernel == 'rbf':
+            print("Computing the Kernel (rbf)..")
+            Kernel = rbf_kernel(self.X_tilde, gamma=1/self.X_tilde.shape[0])
+        else:
+            raise Exception("The selected Kernel is not supported. Exiting with error..")
+            exit()
+
+        elapsed_kernel = time.time() - t   
+        print("Kernel computed in {} s.".format(elapsed_kernel)) 
+        
+        print("Centering the Kernel..")
+        tk2 = time.time()
+        K3 = transformer.transform(Kernel)
+        elapsed_k2 = time.time() - tk2 
+        print("Kernel centered in {} s.".format(elapsed_k2))
+       
+        print("Decomposing Kernel with fast SVD algorithm..")
+        tSVD = time.time()
+        self.Zt, self.A, singularVal = fastSVD(K3, self._nPCs)
+        elapsed_SVD = time.time() - tSVD
+        print("Decomposition accomplished in {} s.".format(elapsed_SVD))
+
+        #return modes (n x k)
+        return self.Zt, self.A, singularVal
+
+
+    def select_variables(self):
+        from sklearn.metrics.pairwise import rbf_kernel
+        from sklearn.metrics.pairwise import polynomial_kernel
+        from sklearn.preprocessing import KernelCenterer
+
+        import time 
+
+        self.load_labels()
+        self.removed = [None]
+
+        #Start with PCA, and compute the scores (Z)
+        Z_full, A_full, ____ = self.fit()
+        
+        
+        #Start the backward elimination:
+        while self.X_tilde.shape[1] > self._n_ret:
+            M2 = 1E12
+            M2_tmp = 0
+            var_tmp = 0
+
+            for ii in range(0,self.X_tilde.shape[1]):
+                print("Examining variables number: {}.".format(ii))
+                #Delete each variable from the original matrix (one at the time)
+                X_cut = np.delete(self.X_tilde, ii, axis=1)
+                #Compute the scores of the reduced matrix, after PCA
+
+                t = time.time()
+
+                if self._kernel == 'polynomial':
+                    print("Computing the Kernel (poly)..")
+                    Kernel = polynomial_kernel(self.X_tilde, degree=3, gamma=1/self._n_ret)
+                elif self._kernel == 'rbf':
+                    print("Computing the Kernel (rbf)..")
+                    Kernel = rbf_kernel(self.X_tilde, gamma=1/self.X_tilde.shape[0])
+                else:
+                    raise Exception("The selected Kernel is not supported. Exiting with error..")
+                    exit()
+
+
+                elapsed_kernel = time.time() - t   
+                print("Kernel computed in {} s.".format(elapsed_kernel)) 
+
+                print("Centering the Kernel..")
+                tk2 = time.time()
+                K2 = transformer = KernelCenterer().fit(Kernel)
+                K3 = transformer.transform(Kernel)
+                elapsed_k2 = time.time() - tk2 
+                print("Kernel centered in {} s.".format(elapsed_k2))
+
+
+                #print("Decomposing Kernel with fast SVD algorithm..")
+                tSVD = time.time()
+                Z_red, A_red, ___ = fastSVD(K3, self._nPCs)
+                
+                elapsed_SVD = time.time() - tSVD
+                print("Decomposition accomplished in {} s.".format(elapsed_SVD))
+
+                
+                from scipy.spatial import procrustes
+                #Compute the Procustes score, M2:
+                _____, _____, M2_tmp = procrustes(A_full, A_red)
+                #If the Silhouette score M2 is lower than the previous one in M2_tmp, store the
+                #variable 'ii' to remove it after the for loop
+                print("The examined variable is: {}, with a M2 score of: {}".format(self.labels[ii], M2_tmp))
+                if M2_tmp < M2:
+                    M2 = M2_tmp
+                    var_tmp = ii
+                print("The variable to delete is: {}, with a M2 score of: {}".format(self.labels[var_tmp], M2))
+            #Remove the variable from the matrix and the labels list
+            self.X_tilde = np.delete(self.X_tilde, var_tmp, axis=1)
+            print("COLUMNS OF X_TILDE: {}".format(self.X_tilde.shape))
+            self.removed = np.append(self.removed, self.labels[var_tmp])
+            print(self.removed)
+            self.labels = np.delete(self.labels, var_tmp, axis=0)
+            print("Current number of variables: {}".format(self.X_tilde.shape[1]))
+
+        return self.labels, self.removed
 
 
 class variables_selection(PCA):
