@@ -5,8 +5,8 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 
-import pyMORe.model_order_reduction as model_order_reduction
-from pyMORe.utilities import *
+import PyTROMode.model_order_reduction as model_order_reduction
+from PyTROMode.utilities import *
 
 file_options = {
     "path_to_file"              : "../data",

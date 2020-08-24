@@ -2,9 +2,9 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 
-import pyMORe.clustering as clustering
-from pyMORe.utilities import *
-import pyMORe.classification as classification
+import PyTROMode.clustering as clustering
+from PyTROMode.utilities import *
+import PyTROMode.classification as classification
 
 
 file_options = {

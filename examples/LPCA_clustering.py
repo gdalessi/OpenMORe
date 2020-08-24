@@ -2,8 +2,8 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 
-import pyMORe.clustering as clustering
-from pyMORe.utilities import *
+import PyTROMode.clustering as clustering
+from PyTROMode.utilities import *
 
 
 file_options = {

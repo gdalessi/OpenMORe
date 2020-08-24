@@ -1,9 +1,9 @@
-import pyMORe.model_order_reduction as model_order_reduction
-from pyMORe.utilities import *
+import PyTROMode.model_order_reduction as model_order_reduction
+from PyTROMode.utilities import *
 
 
 file_options = {
-    "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitLab/pyMORe/data",
+    "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitLab/PyTROMode/data",
     "input_file_name"           : "flameD.csv",
 }
 
