@@ -1,4 +1,4 @@
-pyMORe is a collection of Python modules for Model-Order-Reduction, clustering 
+PyTROMode (Python Tools for Reduced Order Modelling) is a collection of Python modules for Model-Order-Reduction, clustering 
 and classification. 
 Several techniques are implemented to accomplish the aforementioned purposes, 
 i.e.: Principal Component Analysis (PCA), Local Principal Component Analysis 
