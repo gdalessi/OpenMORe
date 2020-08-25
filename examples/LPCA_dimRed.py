@@ -1,7 +1,7 @@
 import numpy as np
 
-import PyTROMode.model_order_reduction as model_order_reduction
-from PyTROMode.utilities import *
+import PyTROModelling.model_order_reduction as model_order_reduction
+from PyTROModelling.utilities import *
 
 
 file_options = {

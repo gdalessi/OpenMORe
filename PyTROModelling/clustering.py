@@ -117,8 +117,12 @@ class lpca:
 
         if dictionary:
             settings = dictionary[0]
-
-            self._k = settings["number_of_clusters"]
+            try:
+                self._k = settings["number_of_clusters"]
+            except:
+                self._k = 2
+                print("Number of clusters not given to dictionary. Data will be automatically partitioned with k = 2..")
+                print("You can ignore this warning if 'k' has been assigned later via setter.")
             self._nPCs = settings["number_of_eigenvectors"]
             self._method = settings["initialization_method"]
             self._correction = settings["correction_factor"]

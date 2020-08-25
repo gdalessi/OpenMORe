@@ -2,8 +2,8 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 
-import PyTROMode.clustering as clustering
-from PyTROMode.utilities import *
+import PyTROModelling.clustering as clustering
+from PyTROModelling.utilities import *
 
 file_options = {
     "path_to_file"              : "../data",

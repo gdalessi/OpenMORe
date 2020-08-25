@@ -2,9 +2,9 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 
-import PyTROMode.clustering as clustering
-from PyTROMode.utilities import *
-import PyTROMode.classification as classification
+import PyTROModelling.clustering as clustering
+from PyTROModelling.utilities import *
+import PyTROModelling.classification as classification
 
 
 file_options = {

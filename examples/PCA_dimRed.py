@@ -1,9 +1,9 @@
-import PyTROMode.model_order_reduction as model_order_reduction
-from PyTROMode.utilities import *
+import PyTROModelling.model_order_reduction as model_order_reduction
+from PyTROModelling.utilities import *
 
 
 file_options = {
-    "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitLab/PyTROMode/data",
+    "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitLab/PyTROModelling/data",
     "input_file_name"           : "flameD.csv",
 }
 

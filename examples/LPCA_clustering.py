@@ -2,8 +2,8 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 
-import PyTROMode.clustering as clustering
-from PyTROMode.utilities import *
+import PyTROModelling.clustering as clustering
+from PyTROModelling.utilities import *
 
 
 file_options = {
@@ -29,7 +29,7 @@ settings = {
     "scale"                     : True,
     "scaling_method"            : "auto",
 
-    #set the initialization method (random, observations, kmeans, pkcia)
+    #set the initialization method (random, observations, kmeans, pkcia, uniform)
     "initialization_method"     : "kmeans",
 
     #set the number of clusters and PCs in each cluster
