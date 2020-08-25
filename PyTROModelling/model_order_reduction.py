@@ -932,7 +932,8 @@ class KPCA(PCA):
             self.labels= np.array(pd.read_csv(self._path + '/' + self._labels_name, sep = ',', header = None))
         except OSError:
             print("Could not open/read the selected file: " + self._labels_name)
-            exit()
+            print("Using variables numbers instead of names.")
+            self.labels = np.linspace(0, self.X.shape[1]-1, self.X.shape[1], dtype=int)
 
 
     def fit(self):
@@ -1018,7 +1019,8 @@ class KPCA(PCA):
 
         self.load_labels()
         self.removed = [None]
-
+        self.var_num = np.linspace(0, self.X.shape[1]-1, self.X.shape[1], dtype=int)
+        
         #Start with PCA, and compute the scores (Z)
         Z_full, A_full, ____ = self.fit()
         
@@ -1083,9 +1085,11 @@ class KPCA(PCA):
             self.removed = np.append(self.removed, self.labels[var_tmp])
             print(self.removed)
             self.labels = np.delete(self.labels, var_tmp, axis=0)
+            #number of the retained variables, in case no labels are given:
+            self.var_num = np.delete(self.var_num, var_tmp, axis=0)
             print("Current number of variables: {}".format(self.X_tilde.shape[1]))
 
-        return self.labels, self.removed
+        return self.labels, self.removed, self.var_num
 
 
 class variables_selection(PCA):
@@ -1227,7 +1231,8 @@ class variables_selection(PCA):
         except OSError:
             print("Could not open/read the selected file: " + self._labels_name)
             print("Using variables numbers instead of names.")
-            self.labels = np.linspace(0, self.X.shape[1], self.X.shape[1], dtype=int)
+            self.labels = np.linspace(0, self.X.shape[1]-1, self.X.shape[1], dtype=int)
+
             
 
 
@@ -1255,7 +1260,7 @@ class variables_selection(PCA):
         variables_selection.check_sanity_input(self.X, self.labels, self._n_ret)
 
         self.X_tilde = PCA.preprocess_training(self.X, self.to_center, self.to_scale, self.centering, self.scaling)
-        self.var_num = np.linspace(0, self.X.shape[1], self.X.shape[1], dtype=int)
+        self.var_num = np.linspace(0, self.X.shape[1]-1, self.X.shape[1], dtype=int)
         if self._method.lower() == 'procustes':
 
             #Start with PCA, and compute the scores (Z)

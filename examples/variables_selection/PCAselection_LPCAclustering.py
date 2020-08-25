@@ -7,8 +7,9 @@ import PyTROModelling.clustering as clustering
 from PyTROModelling.utilities import *
 
 file_options = {
-    "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitLab/PyTROModelling/data",
-    "input_file_name"           : "flameD.csv",
+    "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data", 
+    #"path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitLab/PyTROModelling/data",
+    "input_file_name"           : "cfdf.csv",
 }
 
 settings = {
@@ -20,10 +21,10 @@ settings = {
     "scaling_method"            : "auto",
 
     #variables selection options
-    
+    "select_variables"          : True,
     "method"                    : "procustes",
     "number_of_PCs"             : 8,
-    "number_of_variables"       : 25,
+    "number_of_variables"       : 50,
     "path_to_labels"            : "/Users/giuseppedalessio/Dropbox/GitLab/PyTROModelling/data",
     "labels_name"               : "none.csv",
 
@@ -44,13 +45,15 @@ settings = {
 }
 
 X = readCSV(file_options["path_to_file"], file_options["input_file_name"])
-X = X[:,1:]
+Y = X
+print("matrix dimensions: {}".format(X.shape))
+#X = X[:,1:]
+if settings["select_variables"]:
+    PVs = model_order_reduction.variables_selection(X, settings)
+    labels, numbers = PVs.fit()
 
-PVs = model_order_reduction.variables_selection(X, settings)
-labels, numbers = PVs.fit()
 
-
-X = X[:,numbers]
+    X = X[:,numbers]
 
 print("The new data dimensions are: {}".format(X.shape))
 
@@ -66,11 +69,11 @@ index = model.fit()
 if settings["evaluate_clustering"]:
 
     #evaluate the clustering solution
-    PHC_coeff, PHC_deviations = evaluate_clustering_PHC(X, index, method='PHC_standard')
+    PHC_coeff, PHC_deviations = evaluate_clustering_PHC(Y, index, method='PHC_standard')
     print(PHC_coeff)
 
     #evaluate the clustering solution by means of the Davies-Bouldin index
-    X_tilde = center_scale(X, center(X, method=settings["centering_method"]), scale(X, method=settings["scaling_method"]))
+    X_tilde = center_scale(Y, center(Y, method=settings["centering_method"]), scale(Y, method=settings["scaling_method"]))
     DB = evaluate_clustering_DB(X_tilde, index)
 
 
