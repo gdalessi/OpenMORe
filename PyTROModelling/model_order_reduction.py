@@ -1226,7 +1226,9 @@ class variables_selection(PCA):
             self.labels= np.array(pd.read_csv(self._path + '/' + self._labels_name, sep = ',', header = None))
         except OSError:
             print("Could not open/read the selected file: " + self._labels_name)
-            exit()
+            print("Using variables numbers instead of names.")
+            self.labels = np.linspace(0, self.X.shape[1], self.X.shape[1], dtype=int)
+            
 
 
     @staticmethod
@@ -1253,7 +1255,7 @@ class variables_selection(PCA):
         variables_selection.check_sanity_input(self.X, self.labels, self._n_ret)
 
         self.X_tilde = PCA.preprocess_training(self.X, self.to_center, self.to_scale, self.centering, self.scaling)
-
+        self.var_num = np.linspace(0, self.X.shape[1], self.X.shape[1], dtype=int)
         if self._method.lower() == 'procustes':
 
             #Start with PCA, and compute the scores (Z)
@@ -1284,9 +1286,10 @@ class variables_selection(PCA):
                 #Remove the variable from the matrix and the labels list
                 self.X_tilde = np.delete(self.X_tilde, var_tmp, axis=1)
                 self.labels = np.delete(self.labels, var_tmp, axis=0)
+                self.var_num = np.delete(self.var_num, var_tmp, axis=0)
                 print("Current number of variables: {}".format(self.X_tilde.shape[1]))
 
-            return self.labels
+            return self.labels, self.var_num
 
         elif self._method.lower() == 'b2':
 

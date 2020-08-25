@@ -32,3 +32,4 @@ PVs = model_order_reduction.variables_selection(X, settings)
 labels = PVs.fit()
 
 print(labels)
+print(numbers)
