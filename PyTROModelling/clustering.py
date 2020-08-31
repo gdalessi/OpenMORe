@@ -20,6 +20,7 @@ from .utilities import *
 from . import model_order_reduction
 
 import numpy as np
+from numpy import linalg as LA
 import numpy.matlib
 import matplotlib
 import matplotlib.pyplot as plt
@@ -985,3 +986,142 @@ class multistageLPCA(lpca):
 
 
         return idx_yo
+
+class spectralClustering():
+    def __init__(self,X):
+        self.X = X
+        self._k = 2
+        self._affinity = 'rbf'
+        self._sigma = 1.0
+
+        self._center = True
+        self._centering = 'mean'
+        self._scale = True
+        self._scaling = 'auto'
+
+        self._n_obs = self.X.shape[0]
+
+    @property
+    def clusters(self):
+        return self._k
+
+    @clusters.setter
+    @accepts(object, int)
+    def clusters(self, new_number):
+        self._k = new_number
+
+        if self._k <= 0:
+            raise Exception("The number of clusters in input must be a positive integer. Exiting..")
+            exit()
+
+    @property
+    def affinity(self):
+        return self._affinity
+
+    @affinity.setter
+    @accepts(object, str)
+    def affinity(self, new_string):
+        self._affinity = new_string
+
+
+    @property
+    def sigma(self):
+        return self._sigma
+
+    @sigma.setter
+    @accepts(object, float)
+    def sigma(self, new_value):
+        self._sigma = new_value
+
+    
+    @property
+    def to_center(self):
+        return self._center
+
+    @to_center.setter
+    @accepts(object, bool)
+    def to_center(self, new_bool):
+        self._center = new_bool
+
+
+    @property
+    def centering(self):
+        return self._centering
+
+    @centering.setter
+    @allowed_centering
+    def centering(self, new_string):
+        self._centering = new_string
+
+
+    @property
+    def to_scale(self):
+        return self._scale
+
+    @to_scale.setter
+    @accepts(object, bool)
+    def to_scale(self, new_bool):
+        self._scale = new_bool
+
+
+    @property
+    def scaling(self):
+        return self._scaling
+
+    @scaling.setter
+    @allowed_scaling
+    def scaling(self, new_string):
+        self._scaling = new_string
+
+    
+    @staticmethod
+    def preprocess_training(X, centering_decision, scaling_decision, centering_method, scaling_method):
+
+        if centering_decision and scaling_decision:
+            mu, X_ = center(X, centering_method, True)
+            sigma, X_tilde = scale(X_, scaling_method, True)
+        elif centering_decision and not scaling_decision:
+            mu, X_tilde = center(X, centering_method, True)
+        elif scaling_decision and not centering_decision:
+            sigma, X_tilde = scale(X, scaling_method, True)
+        else:
+            X_tilde = X
+
+        return X_tilde
+    
+
+    def fit(self):
+        
+        print("Preprocessing training matrix..")
+        self.X_tilde = self.preprocess_training(self.X, self._center, self._scale, self._centering, self._scaling)
+
+        W = np.zeros([self._n_obs, self._n_obs], dtype=float)
+        
+        print("Building weighted adjacency matrix..")
+        for ii in range(0, self._n_obs):
+            for jj in range(0, self._n_obs):
+                W[ii,jj] = np.exp(-LA.norm(self.X_tilde[ii,:]-self.X_tilde[jj,:])**2/(2*self._sigma**2))
+
+        D= np.zeros([self._n_obs, self._n_obs],dtype=float)
+        print("Building degree matrix..")
+        
+        for ii in range(0, self._n_obs):
+            D[ii,ii] = np.sum(W[ii,:])
+
+        #Now build Laplacian matrix and do an eigendecomposition
+        L = D-W 
+        eigval, eigvec = LA.eigh(L)
+
+        #Consider only the first 'k' columns of the eigenvector matrix
+        eigvec = eigvec[:,:self._k]
+
+        #Now perform K-means on it, to partition in 'k' different clusters
+        modelK = KMeans(eigvec)
+        modelK.to_center = False
+        modelK.to_scale = False
+        modelK.initMode = True #higher tolerance, lower number of iter to converge
+        modelK.clusters = self._k
+
+        index = modelK.fit()
+
+        return index

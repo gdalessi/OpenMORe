@@ -996,6 +996,7 @@ class KPCA(PCA):
         
         print("Centering the Kernel..")
         tk2 = time.time()
+        transformer = KernelCenterer().fit(Kernel)
         K3 = transformer.transform(Kernel)
         elapsed_k2 = time.time() - tk2 
         print("Kernel centered in {} s.".format(elapsed_k2))

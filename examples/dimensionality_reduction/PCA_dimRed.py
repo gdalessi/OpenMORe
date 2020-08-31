@@ -9,11 +9,13 @@ file_options = {
 
 settings ={
     #centering and scaling options
-    "centering"                 : "mean",
-    "scaling"                   : "auto",
+    "center"                    : True,
+    "centering_method"          : "mean",
+    "scale"                     : True,
+    "scaling_method"            : "auto",
 
     #set the number of PCs: it can be done automatically, or it can be
-    #decided by the user.
+    #decided by the user. Accepted entries: (int) or ('auto')
     "number_of_PCs"             : 5,
 }
 
@@ -22,6 +24,11 @@ X = readCSV(file_options["path_to_file"], file_options["input_file_name"])
 
 
 model = model_order_reduction.PCA(X)
+model.to_center = settings["center"]
+model.centering = settings["centering_method"]
+model.to_scale = settings["scale"]
+model.scaling = settings["scaling_method"]
+model.eigens = settings["number_of_PCs"]
 
 
 if settings["number_of_PCs"] is "auto":

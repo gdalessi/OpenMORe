@@ -22,7 +22,7 @@ settings = {
 
     #variables selection options
     "select_variables"          : True,
-    "method"                    : "procustes",
+    "method"                    : "procustes", #b2, b4, procustes, procustes rotation
     "number_of_PCs"             : 8,
     "number_of_variables"       : 50,
     "path_to_labels"            : "/Users/giuseppedalessio/Dropbox/GitLab/PyTROModelling/data",
@@ -47,7 +47,7 @@ settings = {
 X = readCSV(file_options["path_to_file"], file_options["input_file_name"])
 Y = X
 print("matrix dimensions: {}".format(X.shape))
-#X = X[:,1:]
+
 if settings["select_variables"]:
     PVs = model_order_reduction.variables_selection(X, settings)
     labels, numbers = PVs.fit()
