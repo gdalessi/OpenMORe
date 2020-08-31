@@ -1,7 +1,7 @@
 import numpy as np
 
-import PyTROModelling.model_order_reduction as model_order_reduction
-from PyTROModelling.utilities import *
+import OpenMORe.model_order_reduction as model_order_reduction
+from OpenMORe.utilities import *
 
 
 file_options = {

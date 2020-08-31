@@ -3,16 +3,12 @@ from numpy import linalg as LA
 import matplotlib
 import matplotlib.pyplot as plt
 
-import PyTROModelling.clustering as clustering
-from PyTROModelling.utilities import *
+import OpenMORe.clustering as clustering
+from OpenMORe.utilities import *
 
-
-from sklearn.datasets import make_moons
-from sklearn.datasets import make_circles
-from sklearn.datasets import make_blobs
 
 file_options = {
-    "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitLab/PyTROModelling/data/dummy_data",
+    "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitLab/OpenMORe/data/dummy_data",
     "input_file_name"           : "moons.csv",
 }
 

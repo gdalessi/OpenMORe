@@ -2,11 +2,11 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 
-import PyTROModelling.model_order_reduction as model_order_reduction
-from PyTROModelling.utilities import *
+import OpenMORe.model_order_reduction as model_order_reduction
+from OpenMORe.utilities import *
 
 file_options = {
-    "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitLab/PyTROModelling/data",
+    "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitLab/OpenMORe/data",
     "input_file_name"           : "flameD.csv",
 }
 
@@ -21,7 +21,7 @@ settings = {
     "method"                    : "procustes",
     "number_of_PCs"             : 8,
     "number_of_variables"       : 25,
-    "path_to_labels"            : "/Users/giuseppedalessio/Dropbox/GitLab/PyTROModelling/data",
+    "path_to_labels"            : "/Users/giuseppedalessio/Dropbox/GitLab/OpenMORe/data",
     "labels_name"               : "labels.csv",
 }
 

@@ -2,9 +2,9 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 
-import PyTROModelling.model_order_reduction as model_order_reduction
-from PyTROModelling.utilities import *
-import PyTROModelling.model_order_reduction as model_order_reduction
+import OpenMORe.model_order_reduction as model_order_reduction
+from OpenMORe.utilities import *
+import OpenMORe.model_order_reduction as model_order_reduction
 
 import datetime
 import sys
@@ -24,8 +24,8 @@ except FileExistsError:
 
 
 file_options = {
-    #"path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitLab/PyTROModelling/data",
-    "path_to_file"              : "/home/peppe/Dropbox/GitLab/PyTROModelling/data",
+    #"path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitLab/OpenMORe/data",
+    "path_to_file"              : "/home/peppe/Dropbox/GitLab/OpenMORe/data",
     "input_file_name"           : "pasr_full.csv",
 }
 
@@ -39,7 +39,7 @@ settings = {
     #variables selection options
     "number_of_PCs"             : 7,
     "number_of_variables"       : 72,
-    "path_to_labels"            : "/home/peppe/Dropbox/GitLab/PyTROModelling/data",
+    "path_to_labels"            : "/home/peppe/Dropbox/GitLab/OpenMORe/data",
     "labels_name"               : "full_labels.csv",
 
     #set the method which has to be used for the sampling.
@@ -125,7 +125,7 @@ X = X[:,1:]
 KPVs = model_order_reduction.KPCA(X)
 KPVs.eigens = settings["number_of_PCs"]
 KPVs.retained = settings["number_of_variables"]
-KPVs.path_to_labels = "/home/peppe/Dropbox/GitLab/PyTROModelling/data"
+KPVs.path_to_labels = "/home/peppe/Dropbox/GitLab/OpenMORe/data"
 KPVs.labels_file_name = "full_labels.csv"
 KPVs.kernel_type = 'polynomial'
 

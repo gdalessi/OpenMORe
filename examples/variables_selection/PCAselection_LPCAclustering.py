@@ -2,13 +2,13 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 
-import PyTROModelling.model_order_reduction as model_order_reduction
-import PyTROModelling.clustering as clustering
-from PyTROModelling.utilities import *
+import OpenMORe.model_order_reduction as model_order_reduction
+import OpenMORe.clustering as clustering
+from OpenMORe.utilities import *
 
 file_options = {
     "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data", 
-    #"path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitLab/PyTROModelling/data",
+    #"path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitLab/OpenMORe/data",
     "input_file_name"           : "cfdf.csv",
 }
 
@@ -25,7 +25,7 @@ settings = {
     "method"                    : "procustes", #b2, b4, procustes, procustes rotation
     "number_of_PCs"             : 8,
     "number_of_variables"       : 50,
-    "path_to_labels"            : "/Users/giuseppedalessio/Dropbox/GitLab/PyTROModelling/data",
+    "path_to_labels"            : "/Users/giuseppedalessio/Dropbox/GitLab/OpenMORe/data",
     "labels_name"               : "none.csv",
 
     #clustering options
