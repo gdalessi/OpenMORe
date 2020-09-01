@@ -3,11 +3,10 @@ Moreover, a wide range of useful functions for general machine-learning tasks ar
 
 **Requirements**: in order to use OpenMORe on your devices, the following requirements must be satisfied:
 
-- *Python version >= 3.6 
+- Python version >= 3.6 
 - Numpy must be installed 
 - Scipy must be installed 
-- Matplotlib must be installed*
-
+- Matplotlib must be installed
 
 
 **Installation**: if the libraries requirements are satisfied, clone/download the repo. After that, go to the OpenMORe folder from your terminal (where the file *setup.py* is located) and type: `python setup.py install`. 
