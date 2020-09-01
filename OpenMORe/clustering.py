@@ -116,6 +116,8 @@ class lpca:
         #Set the scaling method:
         self._scaling = 'auto'
 
+        self._writeFolder = True
+
         if dictionary:
             settings = dictionary[0]
             try:
@@ -132,6 +134,10 @@ class lpca:
             self._centering = settings["centering_method"]
             self._scale = settings["scale"]
             self._scaling = settings["scaling_method"]
+            try:
+                self._writeFolder = settings["write_stats"]
+            except:
+                self._writeFolder = True
 
 
     @property
@@ -224,6 +230,15 @@ class lpca:
     @allowed_scaling
     def scaling(self, new_string):
         self._scaling = new_string
+
+    @property
+    def writeFolder(self):
+        return self._writeFolder
+
+    @writeFolder.setter
+    @accepts(object, bool)
+    def writeFolder(self, new_string):
+        self._writeFolder = new_string
 
 
     @staticmethod
@@ -509,8 +524,9 @@ class lpca:
         print("Preprocessing training matrix..")
         self.X_tilde = self.preprocess_training(self.X, self._center, self._scale, self._centering, self._scaling)
         print("Fitting Local PCA model...")
-        lpca.set_environment()
-        lpca.write_recap_text(self._k, self._nPCs, self._correction, self._method)
+        if self._writeFolder:
+            lpca.set_environment()
+            lpca.write_recap_text(self._k, self._nPCs, self._correction, self._method)
         # Initialization
         iteration, eps_rec, residuals, iter_max, eps_tol = lpca.initialize_parameters()
         rows, cols = np.shape(self.X_tilde)
@@ -1107,7 +1123,7 @@ class multistageLPCA(lpca):
 class spectralClustering():
     '''
     [1] Von Luxburg, Ulrike. "A tutorial on spectral clustering." Statistics and computing 17.4 (2007): 395-416.
-    
+
     Spectral clustering is an unsupervised algorithm based on the eigenvectors decomposition
     of a graph Laplacian matrix L to partition a (n x p) data-set X in 'k' different groups.
 

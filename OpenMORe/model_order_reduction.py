@@ -886,6 +886,7 @@ class KPCA(PCA):
         self._n_ret = 1
         self._path = ' '
         self._labels_name = ' '
+        self._kernel = 'rbf'
 
         super().__init__(X)
 
