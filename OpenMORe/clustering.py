@@ -1106,6 +1106,8 @@ class multistageLPCA(lpca):
 
 class spectralClustering():
     '''
+    [1] Von Luxburg, Ulrike. "A tutorial on spectral clustering." Statistics and computing 17.4 (2007): 395-416.
+    
     Spectral clustering is an unsupervised algorithm based on the eigenvectors decomposition
     of a graph Laplacian matrix L to partition a (n x p) data-set X in 'k' different groups.
 
