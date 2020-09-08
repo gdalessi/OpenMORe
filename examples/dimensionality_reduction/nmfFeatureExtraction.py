@@ -1,5 +1,5 @@
 import numpy as np
-
+import os
 import matplotlib
 import matplotlib.pyplot as plt
 
@@ -7,8 +7,8 @@ import OpenMORe.model_order_reduction as model_order_reduction
 from OpenMORe.utilities import *
 
 file_options = {
-    "path_to_file"              : "/Users/giuseppedalessio/Dropbox/GitHub/data",
-    "input_file_name"           : "concentrations.csv",
+    "path_to_file"              : os.path.abspath(os.path.join(__file__ ,"../../../data/reactive_flow/")),
+    "input_file_name"           : "flameD.csv",
 
     "mesh_file_name"            : "mesh.csv",
 }
@@ -25,19 +25,19 @@ settings = {
 
     #set the optimization algorithm to be used. Two are available:
     #'als' (Alternating Least Squares) and 'mur' (Multiplicative Update Rule)
-    "optimization_algorithm"    : "mur",
+    "optimization_algorithm"    : "als",
     
     #if 'als' is selected, there is also the option to add sparsity. Therefore,
     #two options for als_method are available: 'standard' (sparsity = False) and 'sparse'.
     #When the sparsity constraint is activated, eta and beta must also be set.     
-    "als_method"                : "sparse",
+    "als_method"                : "standard",
     "sparsity_eta"              : 0.1,
     "sparsity_beta"             : 0.3, 
 
     #the metric to assess the reconstruction error. It is possible to select either
     #'frobenius' (i.e., Frobenius distance between the original and the reconstructed matrix),
     #or "kld", which stands for: Kullback-Leibler Divergence.
-    "optimization_metric"       : "kld",   
+    "optimization_metric"       : "frobenius",   
 }
 
 

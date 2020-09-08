@@ -1,12 +1,13 @@
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
+import os
 
-import PyTROMode.model_order_reduction as model_order_reduction
-from PyTROMode.utilities import *
+import OpenMORe.model_order_reduction as model_order_reduction
+from OpenMORe.utilities import *
 
 file_options = {
-    "path_to_file"              : "../data",
+    "path_to_file"              : os.path.abspath(os.path.join(__file__ ,"../../../data/reactive_flow/")),
     "input_file_name"           : "flameD.csv",
 
     "labels_name"               : "labels.csv",
@@ -15,13 +16,13 @@ file_options = {
 settings = {
     #set the method which has to be used for the sampling.
     #available options: "random", "cluster", "stratified", "multistage"
-    "method"                    : "multistage",
+    "method"                    : "lpca",
 
     #set the final size of the sampled dataset
     "final_size"                : 5000,
 
     #enable the option to plot the accessed space (mkdir and save the images in the folder)
-    "plot_accessed"             : True,
+    "plot_accessed"             : False,
 }
 
 X = readCSV(file_options["path_to_file"], file_options["input_file_name"])

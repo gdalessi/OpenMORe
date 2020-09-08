@@ -1,11 +1,12 @@
 import numpy as np
+import os
 
 import OpenMORe.model_order_reduction as model_order_reduction
 from OpenMORe.utilities import *
 
 
 file_options = {
-    "path_to_file"                  :   "../data",
+    "path_to_file"                  :   os.path.abspath(os.path.join(__file__ ,"../../../data/reactive_flow/")),
     "input_file_name"               :   "flameD.csv",
 }
 

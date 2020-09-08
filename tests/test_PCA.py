@@ -44,7 +44,7 @@ class testPCA(unittest.TestCase):
     def test_pca(self):
         globalPCA = model_order_reduction.PCA(self.X)
         globalPCA.eigens = self.nPCtest
-        globalPCA._plot_explained_variance = False
+        globalPCA.plot_explained_variance = False
         
         PCs, eigenvalues = globalPCA.fit()
         explained = globalPCA.get_explained()

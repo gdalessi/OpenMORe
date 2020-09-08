@@ -749,6 +749,12 @@ class LPCA(PCA):
 
         return idx
 
+    def check_sanity_input(self):
+        if self.X.shape[0] > len(self.idx) or self.X.shape[0] < len(self.idx):
+            raise Exception("The first dimension of the matrix X and the length of idx must agree.")
+            print("Exiting with error..")
+            exit()
+
 
     def fit(self):
         '''
@@ -775,6 +781,7 @@ class LPCA(PCA):
         #after that, compute the number of clusters and preprocess the training matrix
         #with the given settings
         self.idx = self.get_idx(self.path_to_idx)
+        self.check_sanity_input()
         self.k = int(max(self.idx) +1)
         self.X_tilde = self.preprocess_training(self.X, self.to_center, self.to_scale, self.centering, self.scaling)
 
@@ -1176,15 +1183,50 @@ class variables_selection(PCA):
         if dictionary:
             settings = dictionary[0]
 
-            self._nPCs = settings["number_of_PCs"]
-            self._method = settings["method"]
-            self._center = settings["center"]
-            self._centering = settings["centering_method"]
-            self._scale = settings["scale"]
-            self._scaling = settings["scaling_method"]
-            self._n_ret = settings["number_of_variables"]
-            self._path = settings["path_to_labels"]
-            self._labels_name = settings["labels_name"]
+            try:
+                self._nPCs = settings["number_of_PCs"]
+            except:
+                self._nPCs = self.X.shape[1]-1
+                print("Number of PCs to retain not given to dictionary. It will be automatically set equal to X.shape[1]-1.")
+                print("You can ignore this warning if the number of PCs has been assigned later via setter.")
+            try:
+                self._method = settings["method"]
+            except:
+                self.method = 'procustes'
+                print("Selection method not given to dictionary. It will be automatically set equal to 'procrustes'.")
+                print("You can ignore this warning if the selection method has been assigned later via setter.")
+            try:
+                self._center = settings["center"]
+            except:
+                self._center = True
+            try:
+                self._centering = settings["centering_method"]
+            except:
+                self._centering = "mean"
+            try:
+                self._scale = settings["scale"]
+            except:
+                self._scale = True 
+            try: 
+                self._scaling = settings["scaling_method"]
+            except:
+                self._scaling = "auto"
+            try:
+                self._n_ret = settings["number_of_variables"]
+            except:
+                raise Exception("Number of variables to retain (settings[number_of_variables]) not set in the dictionary.")
+                print("Exiting with error..")
+                exit()
+            try:
+                self._path = settings["path_to_labels"]
+            except:
+                #the class will work with the variables' number, instead of their names (managed in load labels method)
+                self._path = "not given"
+            try:
+                self._labels_name = settings["labels_name"]
+            except:
+                #the class will work with the variables' number, instead of their names (managed in load labels method)
+                self._labels_name = "not given"
 
 
     @property
@@ -1473,11 +1515,11 @@ class SamplePopulation():
             self.X_tilde = center_scale(self.X, center(self.X,'mean'), scale(self.X, 'auto'))
             self.__batchSize = int(self._dimensions / self.__k)
 
-            if self._method == 'random':
+            if self._method.lower() == 'random':
                 #Randomly shuffle the observations and take the prescribed number
                 np.random.shuffle(self.X)
                 miniX = self.X[:self.__batchSize,:]
-            elif self._method == 'KMeans':
+            elif self._method.lower() == 'kmeans':
                 #Perform KMeans and take (randomly) from each cluster a certain
                 #batch to form the sampled matrix.
                 model_KM = clustering.KMeans(self.X_tilde)
@@ -1499,7 +1541,7 @@ class SamplePopulation():
                         if miniX.shape[0] < self._dimensions and ii == max(id):
                             delta = self._dimensions - miniX.shape[0]
                             miniX= np.concatenate((miniX, cluster_[(self.__batchSize+1):(self.__batchSize+1+delta),:]), axis=0)
-            elif self._method == 'LPCA':
+            elif self._method.lower() == 'lpca':
                 #Do the exact same thing done in KMeans, but using the LPCA
                 #clustering algorithm. The number of PCs is automatically
                 #assessed via explained variance. The number of LPCs is chosen
@@ -1509,6 +1551,7 @@ class SamplePopulation():
                 model = clustering.lpca(self.X_tilde)
                 model.clusters = self.__k
                 model.eigens = int(optimalPCs / 2)
+                model.writeFolder = False
                 id = model.fit()
                 miniX = self.X[1:3,:]
                 for ii in range(0, max(id)+1):
@@ -1521,7 +1564,7 @@ class SamplePopulation():
                         if miniX.shape[0] < self._dimensions and ii == max(id):
                             delta = self._dimensions - miniX.shape[0]
                             miniX= np.concatenate((miniX, cluster_[(self.__batchSize+1):(self.__batchSize+1+delta),:]), axis=0)
-            elif self._method == 'stratified':
+            elif self._method.lower() == 'stratified':
                 #Condition the dataset dividing the interval of one variable in
                 #'k' bins and sample from each bin. The default variable to
                 #condition with is '0'. This setting must be eventually modified
@@ -1561,7 +1604,7 @@ class SamplePopulation():
                             miniX= np.concatenate((miniX, cluster_[(self.__batchSize+1):(self.__batchSize+1+delta),:]), axis=0)
                         var_left += delta_step
                         counter+=1
-            elif self._method == 'multistage':
+            elif self._method.lower() == 'multistage':
                 #Stratified sampling step: build multiMiniX from X conditioning,
                 #and after that cluster to have a further reduction in the
                 #dataset' size. The conditioning is done with k = 32, while the
@@ -1615,6 +1658,9 @@ class SamplePopulation():
                         if miniX.shape[0] < self._dimensions and ii == max(id):
                             delta = self._dimensions - miniX.shape[0]
                             miniX= np.concatenate((miniX, cluster_[(self.__batchSize+1):(self.__batchSize+1+delta),:]), axis=0)
+            
+            else:
+                raise Exception("The selected sampling method is not valid. Please choose between: 'random', 'kmeans', 'lpca', 'stratified' or 'multistage'.")
 
             #it can happen that few observations are missing to reach the prescribed number of observations of
             #the sampled matrix. In this case, fill the gap with random observations from the training matrix
@@ -1623,7 +1669,8 @@ class SamplePopulation():
                 delta = self._dimensions - miniX.shape[0]
 
                 miniX = np.concatenate((miniX, self.X[:delta,:]), axis=0)
-
+            elif miniX.shape[0] > self._dimensions:
+                miniX = miniX[:self._dimensions,:]
 
             return miniX
 
@@ -1750,17 +1797,50 @@ class NMF():
 
         if dictionary:
             settings = dictionary[0]
-
-            self._center = settings["center"]
-            self._centering = settings["centering"]
-            self._scale = settings["scale"]
-            self._scaling = settings["scaling"]
-            self._dim = settings["number_of_features"]
-            self._algorithm = settings["optimization_algorithm"]
-            self._method = settings["als_method"]
-            self._eta = settings["sparsity_eta"]
-            self._beta = settings["sparsity_beta"]
-            self._metric = settings["optimization_metric"]
+            try:
+                self._center = settings["center"]
+            except:
+                self._center = True
+            try:
+                self._centering = settings["centering_method"]
+            except:
+                self._centering = "mean"
+            try:
+                self._scale = settings["scale"]
+            except:
+                self._scale = True 
+            try: 
+                self._scaling = settings["scaling_method"]
+            except:
+                self._scaling = "auto"
+            try:
+                self._dim = settings["number_of_features"]
+            except:
+                self._dim = self.X.shape[1]
+                print("Number of features to retain not given to dictionary. It will be automatically set equal to X.shape[1].")
+                print("You can ignore this warning if the number of PCs has been assigned later via setter.")
+            try:
+                self._algorithm = settings["optimization_algorithm"]
+            except:
+                self._algorithm = 'als'
+                print("NMF algorithm not given to dictionary. It will be automatically set equal to Alternating Least Squares (als).")
+                print("You can ignore this warning if the algorithm has been assigned later via setter.")
+            try:
+                self._method = settings["als_method"]
+            except:
+                self._method = "standard"
+            try:
+                self._eta = settings["sparsity_eta"]
+            except:
+                self._eta = 0.01
+            try:
+                self._beta = settings["sparsity_beta"]
+            except:
+                self._beta = 0.01
+            try:
+                self._metric = settings["optimization_metric"]
+            except:
+                self._metric = 0.01
 
 
     @property

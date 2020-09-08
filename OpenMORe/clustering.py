@@ -100,7 +100,7 @@ class lpca:
         #Initialize the number of PCs to retain in each cluster:
         self._nPCs = 2
         #Set the initialization method:
-        self._method = 'KMEANS'                                             #Available options: 'KMEANS' or 'RANDOM'
+        self._method = 'uniform'                                             #Available options: 'KMEANS' or 'RANDOM'
         #Set the (eventual) corrector for the rec error computation:
         self._correction = "off"                                            #Available options: 'off', 'mean', 'max', 'std', 'var'
         self.__activateCorrection = False
@@ -126,14 +126,45 @@ class lpca:
                 self._k = 2
                 print("Number of clusters not given to dictionary. Data will be automatically partitioned with k = 2..")
                 print("You can ignore this warning if 'k' has been assigned later via setter.")
-            self._nPCs = settings["number_of_eigenvectors"]
-            self._method = settings["initialization_method"]
-            self._correction = settings["correction_factor"]
-            self._adaptive = settings["adaptive_PCs"]
-            self._center = settings["center"]
-            self._centering = settings["centering_method"]
-            self._scale = settings["scale"]
-            self._scaling = settings["scaling_method"]
+                
+            try:
+                self._nPCs = settings["number_of_eigenvectors"]
+            except:
+                self._nPCs = self.X.shape[1]-1
+                print("Number of PCs to retain not given to dictionary. It will be automatically set equal to X.shape[1]-1.")
+                print("You can ignore this warning if the number of PCs has been assigned later via setter.")
+            try:
+                self._method = settings["initialization_method"]
+            except:
+                self._method = 'uniform'
+                print("Initialization method not given to dictionary. It will be automatically set equal to 'uniform'.")
+                print("You can ignore this warning if the initialization method has been assigned later via setter.")
+            try:
+                self._correction = settings["correction_factor"]         
+            except:
+                self._correction = "off"
+                print("Correction factor not given to dictionary. It will be automatically set equal to 'off'.")
+                print("You can ignore this warning if the correction factor has been assigned later via setter.")
+            try:
+                self._adaptive = settings["adaptive_PCs"]
+            except:
+                self._adaptive = False
+            try:
+                self._center = settings["center"]
+            except:
+                self._center = True
+            try:
+                self._centering = settings["centering_method"]
+            except:
+                self._centering = "mean"
+            try:
+                self._scale = settings["scale"]
+            except:
+                self._scale = True 
+            try: 
+                self._scaling = settings["scaling_method"]
+            except:
+                self._scaling = "auto"
             try:
                 self._writeFolder = settings["write_stats"]
             except:
@@ -688,15 +719,54 @@ class fpca(lpca):
         if dictionary:
             settings = dictionary[0]
 
-            self._k = settings["number_of_clusters"]
-            self._nPCs = settings["number_of_eigenvectors"]
-            self._method = settings["initialization_method"]
-            self._correction = settings["correction_factor"]
-            self._adaptive = settings["adaptive_PCs"]
-            self._center = settings["center"]
-            self._centering = settings["centering_method"]
-            self._scale = settings["scale"]
-            self._scaling = settings["scaling_method"]
+            try:
+                self._k = settings["number_of_clusters"]
+            except:
+                self._k = 2
+                print("Number of clusters not given to dictionary. Data will be automatically partitioned with k = 2..")
+                print("You can ignore this warning if 'k' has been assigned later via setter.")
+            try:
+                self._nPCs = settings["number_of_eigenvectors"]
+            except:
+                self._nPCs = self.X.shape[1]-1
+                print("Number of PCs to retain not given to dictionary. It will be automatically set equal to X.shape[1]-1.")
+                print("You can ignore this warning if the number of PCs has been assigned later via setter.")
+            try:
+                self._method = settings["initialization_method"]
+            except:
+                self._method = 'uniform'
+                print("Initialization method not given to dictionary. It will be automatically set equal to 'uniform'.")
+                print("You can ignore this warning if the initialization method has been assigned later via setter.")
+            try:
+                self._correction = settings["correction_factor"]
+            except:
+                self._correction = "off"
+                print("Correction factor not given to dictionary. It will be automatically set equal to 'off'.")
+                print("You can ignore this warning if the correction factor has been assigned later via setter.")
+            try:
+                self._adaptive = settings["adaptive_PCs"]
+            except:
+                self._adaptive = False
+            try:
+                self._center = settings["center"]
+            except:
+                self._center = True
+            try:
+                self._centering = settings["centering_method"]
+            except:
+                self._centering = "mean"
+            try:
+                self._scale = settings["scale"]
+            except:
+                self._scale = True 
+            try: 
+                self._scaling = settings["scaling_method"]
+            except:
+                self._scaling = "auto"
+            try:
+                self._writeFolder = settings["write_stats"]
+            except:
+                self._writeFolder = True
 
 
 
@@ -819,11 +889,28 @@ class KMeans(lpca):
 
         if dictionary:
             settings = dictionary[0]
-            self._k = settings["number_of_clusters"]
-            self._center = settings["center"]
-            self._centering = settings["centering_method"]
-            self._scale = settings["scale"]
-            self._scaling = settings["scaling_method"]
+            try:
+                self._k = settings["number_of_clusters"]
+            except:
+                self._k = 2
+                print("Number of clusters not given to dictionary. Data will be automatically partitioned with k = 2..")
+                print("You can ignore this warning if 'k' has been assigned later via setter.")
+            try:
+                self._center = settings["center"]
+            except:
+                self._center = True
+            try:
+                self._centering = settings["centering_method"]
+            except:
+                self._centering = "mean"
+            try:
+                self._scale = settings["scale"]
+            except:
+                self._scale = True 
+            try: 
+                self._scaling = settings["scaling_method"]
+            except:
+                self._scaling = "auto"
 
     @property
     def initMode(self):
@@ -1318,7 +1405,7 @@ class spectralClustering():
         modelK = KMeans(eigvec)
         modelK.to_center = False
         modelK.to_scale = False
-        modelK.initMode = True #higher tolerance, lower number of iter to converge
+        modelK.initMode = False 
         modelK.clusters = self._k
 
         index = modelK.fit()

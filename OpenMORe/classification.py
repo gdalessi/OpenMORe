@@ -41,13 +41,26 @@ class VQPCA(clustering.lpca):
 
         super().__init__(X)
         self.k = int(max(self.idx) +1)
-        self.nPCs = round(self.Y.shape[1] - (self.Y.shape[1]) /5) #Use a very high number of PCs to classify,removing only the last 20% which contains noise
+        self.nPCs = round(self.Y.shape[1] - 1)#(self.Y.shape[1]) /10) Use a very high number of PCs to classify,removing only the last 20% which contains noise
+
+    def check_sanity_input(self):
+        if self.X.shape[0] > len(self.idx) or self.X.shape[0] < len(self.idx):
+            raise Exception("The first dimension of the matrix X and the length of idx must agree.")
+            print("Exiting with error..")
+            exit()
+
+        if self.X.shape[1] > self.Y.shape[1] or self.X.shape[1] < self.Y.shape[1]:
+            raise Exception("The second dimension of the matrix X and the second dimension of the matrix Y must agree.")
+            print("Exiting with error..")
+            exit()
+
 
     def fit(self):
         '''
         Classify a new set of observations on the basis of a previous
         LPCA partitioning.
         '''
+        self.check_sanity_input()
         print("Classifying the new observations...")
         # Compute the centering/scaling factors of the training matrix
         mu = center(self.X, self._centering)
