@@ -635,6 +635,7 @@ class lpca:
                     self.__activateCorrection = True
 
                 elif self._correction.lower() == "local_variance":
+                    cluster2 = get_cluster(self.X, idx, ii)
                     yo = np.mean(np.var(cluster2))
                     scores_factor[:,ii] = sq_rec_err[:,ii] * yo
                     self.__activateCorrection = True
