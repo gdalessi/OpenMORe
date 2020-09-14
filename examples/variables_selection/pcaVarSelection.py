@@ -20,7 +20,7 @@ settings = {
 
     #variables selection options
     "method"                    : "procustes",
-    "number_of_PCs"             : 8,
+    "number_of_eigenvectors"    : 8,
     "number_of_variables"       : 25,
     "path_to_labels"            : os.path.abspath(os.path.join(__file__ ,"../../../data/reactive_flow/")),
     "labels_name"               : "labels.csv",
