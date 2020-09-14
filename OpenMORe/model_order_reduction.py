@@ -1823,7 +1823,7 @@ class NMF():
             try:
                 self._metric = settings["optimization_metric"]
             except:
-                self._metric = 0.01
+                self._metric = 'frobenius'
 
 
     @property

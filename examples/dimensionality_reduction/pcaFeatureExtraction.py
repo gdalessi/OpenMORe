@@ -28,8 +28,10 @@ settings ={
 
     #set the final dimensionality
     "number_of_eigenvectors"    : 7,
+    
     #enable to plot the cumulative explained variance
     "enable_plot_variance"      : True,
+    
     #set the number of the variable whose reconstruction must be plotted
     "variable_to_plot"          : 0,
 
