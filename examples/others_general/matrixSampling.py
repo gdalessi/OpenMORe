@@ -19,7 +19,7 @@ settings = {
     "method"                    : "lpca",
 
     #set the final size of the sampled dataset
-    "final_size"                : 5000,
+    "final_size"                : 4000,
 
     #enable the option to plot the accessed space (mkdir and save the images in the folder)
     "plot_accessed"             : False,
@@ -31,10 +31,7 @@ X = readCSV(file_options["path_to_file"], file_options["input_file_name"])
 #approach. Other conditioning variables (e.g. mixture fraction) can be loaded separately.
 Temperature = X[:,0]
 
-reduceSize = model_order_reduction.SamplePopulation(X)
-
-reduceSize.sampling_strategy = settings["method"]
-reduceSize.set_size = settings["final_size"]
+reduceSize = model_order_reduction.SamplePopulation(X, settings)
 reduceSize.set_conditioning = Temperature
 
 miniX = reduceSize.fit()
@@ -94,7 +91,7 @@ if settings["plot_accessed"]:
         axes.set_ylabel(str(names_var[ii]))
         axes.set_xlim(min(X[:,0]), max(X[:,0]))
         axes.set_ylim(min(X[:,ii]), max(X[:,ii]))
-        matplotlib.rcParams.update({'font.size' : 14, 'text.usetex' : True})
+        matplotlib.rcParams.update({'font.size' : 16, 'text.usetex' : True})
         axes.legend(('Full training data', 'Sampled training data'), markerscale =7)
         plt.savefig('sampledVar' + str(names_var[ii]) + '.png')
         plt.show()

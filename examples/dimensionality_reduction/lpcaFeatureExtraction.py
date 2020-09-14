@@ -16,34 +16,30 @@ settings ={
     "scaling"                       :   "auto",
 
     #set the number of PCs:
-    "number_of_PCs"                 :   5,
-}
+    "number_of_eigenvectors"        :   5,
 
-#it is possible to plot one or more local PCs, given a number of cluster
-#and the number of the PC to plot in the chosen cluster:
-plotting_options = {
+    #set the path to the partitioning file:
+    #WARNING: the file name "idx.txt" is mandatory
+    "path_to_idx"                   : file_options["path_to_file"],
+
     #the number of cluster where you want to plot:
     "cluster_to_plot"               :   1,
 
     #the local principal component you want to plot:
-    "PC_to_plot"                    :   1,
+    "PC_to_plot"                    :   0,
 }
+
 
 X = readCSV(file_options["path_to_file"], file_options["input_file_name"])
 
-model = model_order_reduction.LPCA(X)
-model.centering = settings["centering"]
-model.scaling = settings["scaling"]
-model.eigens = settings["number_of_PCs"]
-model.path_to_idx = file_options["path_to_file"] #WARNING: the name 'idx.txt' is mandatory for the file
+model = model_order_reduction.LPCA(X, settings)
+
 
 LPCs, u_scores, Leigen, centroids = model.fit()
 X_rec_lpca = model.recover()
 
+model.plot_parity()
+model.plot_PCs()
+
 rec_err_local = NRMSE(X, X_rec_lpca)
 print(np.mean(rec_err_local))
-
-model.plot_parity()
-model.clust_to_plot = plotting_options["cluster_to_plot"]
-model.set_num_to_plot = plotting_options["PC_to_plot"]
-model.plot_PCs()

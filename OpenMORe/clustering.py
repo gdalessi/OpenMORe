@@ -1266,7 +1266,7 @@ class spectralClustering():
     type _sigma:            float
 
     '''
-    def __init__(self,X):
+    def __init__(self,X, *dictionary):
         self.X = X
         self._k = 2
         self._affinity = 'rbf'
@@ -1278,6 +1278,36 @@ class spectralClustering():
         self._scaling = 'auto'
 
         self._n_obs = self.X.shape[0]
+
+        if dictionary:
+            settings = dictionary[0]
+            try:
+                self._k = settings["number_of_clusters"]
+            except:
+                self._k = 2
+                print("Number of clusters not given to dictionary. Data will be automatically partitioned with k = 2..")
+                print("You can ignore this warning if 'k' has been assigned later via setter.")
+            try:
+                self._center = settings["center"]
+            except:
+                self._center = True
+            try:
+                self._centering = settings["centering_method"]
+            except:
+                self._centering = "mean"
+            try:
+                self._scale = settings["scale"]
+            except:
+                self._scale = True 
+            try: 
+                self._scaling = settings["scaling_method"]
+            except:
+                self._scaling = "auto"
+            try:
+                self._sigma = settings["sigma"]
+            except:
+                self._sigma = 1.0
+
 
     @property
     def clusters(self):
@@ -1291,16 +1321,6 @@ class spectralClustering():
         if self._k <= 0:
             raise Exception("The number of clusters in input must be a positive integer. Exiting..")
             exit()
-
-    @property
-    def affinity(self):
-        return self._affinity
-
-    @affinity.setter
-    @accepts(object, str)
-    def affinity(self, new_string):
-        self._affinity = new_string
-
 
     @property
     def sigma(self):

@@ -23,16 +23,19 @@ settings = {
     #variables selection options
     "select_variables"          : True,
     "method"                    : "procustes", #b2, b4, procustes, procustes rotation
-    "number_of_PCs"             : 12,
+    "number_of_eigenvectors"    : 12,
     "number_of_variables"       : 30,
     "path_to_labels"            : os.path.abspath(os.path.join(__file__ ,"../../../data/reactive_flow/")),
     "labels_name"               : "none.csv",
 
+    
     #clustering options
     #set the number of clusters
     "number_of_clusters"        : 8,
+    
     #set the initialization method
     "initialization_method"     : "uniform",
+    
     #enable additional options:
     "write_stats"               : False,
     "evaluate_clustering"       : True,
@@ -52,10 +55,7 @@ if settings["select_variables"]:
 
 print("The new data dimensions are: {}".format(X.shape))
 
-model = clustering.lpca(redX)
-model.clusters = settings["number_of_clusters"]
-model.eigens = settings["number_of_PCs"]
-model.initialization = settings["initialization_method"]
+model = clustering.lpca(redX, settings)
 
 index = model.fit()
 

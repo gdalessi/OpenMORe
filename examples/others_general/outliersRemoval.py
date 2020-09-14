@@ -20,7 +20,7 @@ settings ={
 
     #set the number of PCs: it can be done automatically, or it can be
     #decided by the user.
-    "number_of_PCs"             : 1,
+    "number_of_eigenvectors"    : 1,
 
     #set the method for the outlier removal procedure
     "method"                    : "orthogonal",
@@ -29,12 +29,8 @@ settings ={
 
 X = readCSV(file_options["path_to_file"], file_options["input_file_name"])
 
-model = model_order_reduction.PCA(X)
-model.eigens = settings["number_of_PCs"]
-model.to_center = settings["center"]
-model.centering = settings["centering"]
-model.to_scale = settings["scale"]
-model.scaling = settings["scaling"]
+model = model_order_reduction.PCA(X, settings)
+
 
 if settings["method"].lower() == "leverage":
     X_cleaned, ___, id = model.outlier_removal_leverage()

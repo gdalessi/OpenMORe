@@ -31,11 +31,7 @@ settings = {
 
 X = readCSV(file_options["path_to_file"], file_options["input_file_name"])
 
-model = clustering.spectralClustering(X)
-model.to_center = False
-model.to_scale = False
-model.clusters = settings["number_of_clusters"]
-model.sigma = settings["sigma"]
+model = clustering.spectralClustering(X, settings)
 idx = model.fit()
 
 matplotlib.rcParams.update({'font.size' : 12, 'text.usetex' : True})

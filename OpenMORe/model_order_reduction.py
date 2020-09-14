@@ -66,7 +66,7 @@ class PCA:
                             has to be < 10% on average
     type _assessPCs:        boolean or string
     '''
-    def __init__(self, X):
+    def __init__(self, X, *dictionary):
         #Useful variables from training dataset
         self.X = X
         self.n_obs = X.shape[0]
@@ -90,6 +90,47 @@ class PCA:
         self._num_to_plot = 1
         #Initialize the number of PCs
         self._nPCs = X.shape[1] -1
+
+        if dictionary:
+            settings = dictionary[0]
+            try:
+                self._nPCs = settings["number_of_eigenvectors"]
+            except:
+                self._nPCs = self.X.shape[1]-1
+                print("Number of PCs to retain not given to dictionary. It will be automatically set equal to X.shape[1]-1.")
+                print("You can ignore this warning if the number of PCs has been assigned later via setter.")
+            try:
+                self._center = settings["center"]
+            except:
+                self._center = True
+            try:
+                self._centering = settings["centering_method"]
+            except:
+                self._centering = "mean"
+            try:
+                self._scale = settings["scale"]
+            except:
+                self._scale = True 
+            try: 
+                self._scaling = settings["scaling_method"]
+            except:
+                self._scaling = "auto"
+            try:
+                self._plot_explained_variance = settings["enable_plot_variance"]
+            except:
+                self._plot_explained_variance = True 
+            try:
+                self._assessPCs = settings["set_criterion_autoPCs"]
+            except:
+                self._assessPCs = "var"
+            try:
+                self._threshold_var = settings["variance_to_explain"]
+            except:
+                self._threshold_var = 0.95
+            try:
+                self._num_to_plot = settings["variable_to_plot"]
+            except:
+                self._num_to_plot = 0
 
     @property
     def eigens(self):
@@ -710,7 +751,7 @@ class LPCA(PCA):
     type   _clust_to_plot:   scalar
 
     '''
-    def __init__(self,X):
+    def __init__(self,X, *dictionary):
         #Set the path where the file 'idx.txt' (containing the partitioning solution) is located
         self._path_to_idx = 'path'
         #Set the PC number to plot or the variable's number to plot
@@ -719,6 +760,45 @@ class LPCA(PCA):
         self._clust_to_plot = 1
 
         super().__init__(X)
+
+        if dictionary:
+                settings = dictionary[0]
+                try:
+                    self._nPCs = settings["number_of_eigenvectors"]
+                except:
+                    self._nPCs = self.X.shape[1]-1
+                    print("Number of PCs to retain not given to dictionary. It will be automatically set equal to X.shape[1]-1.")
+                    print("You can ignore this warning if the number of PCs has been assigned later via setter.")
+                try:
+                    self._center = settings["center"]
+                except:
+                    self._center = True
+                try:
+                    self._centering = settings["centering_method"]
+                except:
+                    self._centering = "mean"
+                try:
+                    self._scale = settings["scale"]
+                except:
+                    self._scale = True 
+                try: 
+                    self._scaling = settings["scaling_method"]
+                except:
+                    self._scaling = "auto"
+                try:
+                    self._path_to_idx = settings["path_to_idx"]
+                except:
+                    self._path_to_idx = ' '
+                try:
+                    self._clust_to_plot = settings["cluster_to_plot"]
+                except:
+                    self._clust_to_plot = 0
+                try:
+                    self._num_to_plot = settings["PC_to_plot"]
+                except:
+                    self._num_to_plot = 0
+            
+
 
     @property
     def path_to_idx(self):
@@ -885,46 +965,46 @@ class LPCA(PCA):
 
 
 class KPCA(PCA):
-    def __init__(self, X):
+    def __init__(self, X, *dictionary):
 
         #Set the sigma - the coefficient for the kernel construction
         #self.sigma = 10
-
-        self._n_ret = 1
-        self._path = ' '
-        self._labels_name = ' '
         self._kernel = 'rbf'
 
         super().__init__(X)
 
+        if dictionary:
+            settings = dictionary[0]
+            try:
+                self._nPCs = settings["number_of_eigenvectors"]
+            except:
+                self._nPCs = self.X.shape[1]-1
+                print("Number of PCs to retain not given to dictionary. It will be automatically set equal to X.shape[1]-1.")
+                print("You can ignore this warning if the number of PCs has been assigned later via setter.")
+            try:
+                self._center = settings["center"]
+            except:
+                self._center = True
+            try:
+                self._centering = settings["centering_method"]
+            except:
+                self._centering = "mean"
+            try:
+                self._scale = settings["scale"]
+            except:
+                self._scale = True 
+            try: 
+                self._scaling = settings["scaling_method"]
+            except:
+                self._scaling = "auto"
+            try:
+                self._kernel = settings["selected_kernel"]
+            except:
+                self._kernel = 'rbf'
+
     @property
     def retained(self):
         return self._n_ret
-
-    @retained.setter
-    @accepts(object, int)
-    def retained(self, new_number):
-        self._n_ret = new_number
-
-        if self._n_ret <= 0:
-            raise Exception("The number of retained variables must be a positive integer. Exiting..")
-            exit()
-
-    @property
-    def path_to_labels(self):
-        return self._path
-
-    @path_to_labels.setter
-    def path_to_labels(self, new_string):
-        self._path = new_string
-
-    @property
-    def labels_file_name(self):
-        return self._labels_name
-
-    @labels_file_name.setter
-    def labels_file_name(self, new_string):
-        self._labels_name = new_string
 
     @property
     def kernel_type(self):
@@ -934,14 +1014,6 @@ class KPCA(PCA):
     def kernel_type(self, new_string):
         self._kernel = new_string
 
-    def load_labels(self):
-        import pandas as pd
-        try:
-            self.labels= np.array(pd.read_csv(self._path + '/' + self._labels_name, sep = ',', header = None))
-        except OSError:
-            print("Could not open/read the selected file: " + self._labels_name)
-            print("Using variables numbers instead of names.")
-            self.labels = np.linspace(0, self.X.shape[1]-1, self.X.shape[1], dtype=int)
 
 
     def fit(self):
@@ -958,27 +1030,6 @@ class KPCA(PCA):
         #from scipy.spatial.distance import pdist, squareform
 
         self.X_tilde = KPCA.preprocess_training(self.X, self.to_center, self.to_scale, self.centering, self.scaling)
-        
-        '''
-        THIS IS OLD. NOW I ADOPTED sklearn FOR THESE TASKS
-        print("Starting kernel computation..")
-        # compute the distances between all the observations:
-        distances = pdist(self.X_tilde, 'sqeuclidean')
-        square_distances = squareform(distances)
-
-        # build the first kernel, center it with the 1n matrix, then compute the centered kernel K:
-        Kernel = np.exp(-sigma * square_distances)
-        centering_k = np.ones((n_obs, n_obs))/n_obs
-        K = Kernel - centering_k @ Kernel - Kernel @ centering_k + centering_k @ Kernel @ centering_k
-
-        print("Starting kernel decomposition..")
-        # Compute the PCs from the kernel matrix, and retain the first 'n_eigs' PCs:
-        evals, evecs = LA.eigh(K)
-        mask = np.argsort(evals)[::-1]
-        evecs = evecs[:,mask]
-        evals = evals[mask]
-        evecs = evecs[:,:self.eigens]
-        '''
 
         from sklearn.metrics.pairwise import rbf_kernel
         from sklearn.metrics.pairwise import polynomial_kernel
@@ -1018,87 +1069,6 @@ class KPCA(PCA):
         #return modes (n x k)
         return self.Zt, self.A, singularVal
 
-
-    def select_variables(self):
-        from sklearn.metrics.pairwise import rbf_kernel
-        from sklearn.metrics.pairwise import polynomial_kernel
-        from sklearn.preprocessing import KernelCenterer
-
-        import time 
-
-        self.load_labels()
-        self.removed = [None]
-        self.var_num = np.linspace(0, self.X.shape[1]-1, self.X.shape[1], dtype=int)
-        
-        #Start with PCA, and compute the scores (Z)
-        Z_full, A_full, ____ = self.fit()
-        
-        
-        #Start the backward elimination:
-        while self.X_tilde.shape[1] > self._n_ret:
-            M2 = 1E12
-            M2_tmp = 0
-            var_tmp = 0
-
-            for ii in range(0,self.X_tilde.shape[1]):
-                print("Examining variables number: {}.".format(ii))
-                #Delete each variable from the original matrix (one at the time)
-                X_cut = np.delete(self.X_tilde, ii, axis=1)
-                #Compute the scores of the reduced matrix, after PCA
-
-                t = time.time()
-
-                if self._kernel == 'polynomial':
-                    print("Computing the Kernel (poly)..")
-                    Kernel = polynomial_kernel(self.X_tilde, degree=3, gamma=1/self._n_ret)
-                elif self._kernel == 'rbf':
-                    print("Computing the Kernel (rbf)..")
-                    Kernel = rbf_kernel(self.X_tilde, gamma=1/self.X_tilde.shape[0])
-                else:
-                    raise Exception("The selected Kernel is not supported. Exiting with error..")
-                    exit()
-
-
-                elapsed_kernel = time.time() - t   
-                print("Kernel computed in {} s.".format(elapsed_kernel)) 
-
-                print("Centering the Kernel..")
-                tk2 = time.time()
-                K2 = transformer = KernelCenterer().fit(Kernel)
-                K3 = transformer.transform(Kernel)
-                elapsed_k2 = time.time() - tk2 
-                print("Kernel centered in {} s.".format(elapsed_k2))
-
-
-                #print("Decomposing Kernel with fast SVD algorithm..")
-                tSVD = time.time()
-                Z_red, A_red, ___ = fastSVD(K3, self._nPCs)
-                
-                elapsed_SVD = time.time() - tSVD
-                print("Decomposition accomplished in {} s.".format(elapsed_SVD))
-
-                
-                from scipy.spatial import procrustes
-                #Compute the Procustes score, M2:
-                _____, _____, M2_tmp = procrustes(A_full, A_red)
-                #If the Silhouette score M2 is lower than the previous one in M2_tmp, store the
-                #variable 'ii' to remove it after the for loop
-                print("The examined variable is: {}, with a M2 score of: {}".format(self.labels[ii], M2_tmp))
-                if M2_tmp < M2:
-                    M2 = M2_tmp
-                    var_tmp = ii
-                print("The variable to delete is: {}, with a M2 score of: {}".format(self.labels[var_tmp], M2))
-            #Remove the variable from the matrix and the labels list
-            self.X_tilde = np.delete(self.X_tilde, var_tmp, axis=1)
-            print("COLUMNS OF X_TILDE: {}".format(self.X_tilde.shape))
-            self.removed = np.append(self.removed, self.labels[var_tmp])
-            print(self.removed)
-            self.labels = np.delete(self.labels, var_tmp, axis=0)
-            #number of the retained variables, in case no labels are given:
-            self.var_num = np.delete(self.var_num, var_tmp, axis=0)
-            print("Current number of variables: {}".format(self.X_tilde.shape[1]))
-
-        return self.labels, self.removed, self.var_num
 
 
 class variables_selection(PCA):
@@ -1184,7 +1154,7 @@ class variables_selection(PCA):
             settings = dictionary[0]
 
             try:
-                self._nPCs = settings["number_of_PCs"]
+                self._nPCs = settings["number_of_eigenvectors"]
             except:
                 self._nPCs = self.X.shape[1]-1
                 print("Number of PCs to retain not given to dictionary. It will be automatically set equal to X.shape[1]-1.")
@@ -1459,7 +1429,7 @@ class SamplePopulation():
     type   _method:         string
 
     '''
-    def __init__(self, X):
+    def __init__(self, X, *dictionary):
         #Initial training dataset (raw data).
         self.X = X
         self.__nObs = self.X.shape[0]
@@ -1477,6 +1447,18 @@ class SamplePopulation():
         
         #Variable to use for the matrix conditioning in case of stratified sampling
         self._conditioning =0
+
+        if dictionary:
+            settings = dictionary[0]
+        
+            try:
+                self._method = settings["method"]
+            except:
+                self._method = "random"
+            try:
+                self._dimensions = settings["final_size"]
+            except:
+                self._dimensions = int(self.X.shape[0]/2)
 
     @property
     def sampling_strategy(self):
@@ -1577,6 +1559,7 @@ class SamplePopulation():
                     max_con = np.max(self._conditioning)
                 #Compute the extension of each bin (delta_step)
                 self.__kHardConditioning = 100
+                local_batchSize = int(self._dimensions/self.__kHardConditioning)
                 delta_step = ((max_con - min_con) / self.__kHardConditioning)
                 counter = 0
                 var_left = min_con
@@ -1589,19 +1572,19 @@ class SamplePopulation():
                         mask = np.logical_and(self.X[:,self._conditioning] >= var_left, self.X[:,self._conditioning] < var_right)
                     else:
                         mask = np.logical_and(self._conditioning >= var_left, self._conditioning < var_right)
-                    cluster_ = self.X[mask]
+                    cluster_ = self.X[mask,:]
                     #Also in this case, if the cluster size is lower than the
                     #batch size, take all the cluster.
-                    if cluster_.shape[0] < self.__batchSize:
+                    if cluster_.shape[0] <= local_batchSize:
                         miniX = np.concatenate((miniX, cluster_), axis=0)
                         var_left += delta_step
                         counter+=1
                     else:
                         np.random.shuffle(cluster_)
-                        miniX = np.concatenate((miniX, cluster_[:self.__batchSize,:]), axis=0)
-                        if miniX.shape[0] < self._dimensions and counter == self.__kHardConditioning:
+                        miniX = np.concatenate((miniX, cluster_[:local_batchSize,:]), axis=0)
+                        '''if miniX.shape[0] < self._dimensions and counter == self.__kHardConditioning:
                             delta = self._dimensions - miniX.shape[0]
-                            miniX= np.concatenate((miniX, cluster_[(self.__batchSize+1):(self.__batchSize+1+delta),:]), axis=0)
+                            miniX= np.concatenate((miniX, cluster_[(self.__batchSize+1):(self.__batchSize+1+delta),:]), axis=0)'''
                         var_left += delta_step
                         counter+=1
             elif self._method.lower() == 'multistage':
