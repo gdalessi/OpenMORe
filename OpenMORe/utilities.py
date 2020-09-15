@@ -609,16 +609,24 @@ def unscale(X_tilde, sigma):
 
 def varimax_rotation(X, b, normalize=True):
     '''
-    STILL UNDER CONSTRUCTION
-    Warning: has not been tested, yet -- there is still something to be checked.
+    Rotate the factors by means of the varimax rotation.
+    - Input:
+    X = training data matrix, SCALED/UNSCALED it makes no difference
+    b = factors/modes to be rotated
+    normalize = (optional), the factors/modes are normalized with their standard deviation
+
+    - Output:
+    rot_loadings = rotated modes or factors, returned after the algorithm convergenceß
     '''
+    import math
+
     eigens = b.shape[1]
-    norm_factor = np.std(b)
+    norm_factor = np.std(b, axis=0)
     loadings = np.empty((b.shape[0], b.shape[1]), dtype=float)
     rot_loadings = np.empty((b.shape[0], b.shape[1]), dtype=float)
 
     for ii in range(0, eigens):
-        loadings[:,ii] = b[:,ii]/norm_factor
+        loadings[:,ii] = b[:,ii]/norm_factor[ii]
 
     C = np.cov(loadings, rowvar=False)
 
@@ -635,32 +643,34 @@ def varimax_rotation(X, b, normalize=True):
                 x_j = loadings[:,ii]
                 y_j = loadings[:,jj]
 
-                u_j = x_j**2 - y_j**2
-                v_j = 2*x_j * y_j
+                u_j = np.reshape(np.array(np.multiply(x_j,x_j) - np.multiply(y_j,y_j)), (b.shape[0],1)) #nvarx1
+                v_j = np.reshape(np.array(2*np.multiply(x_j, y_j)), (b.shape[0],1)) #nvarx1
 
                 A = np.sum(u_j)
                 B = np.sum(v_j)
-                C = u_j.T * u_j - v_j.T *v_j
-                D = 2 * u_j.T * v_j
+                C = u_j.T @ u_j - v_j.T @ v_j
+                D = 2 * u_j.T @ v_j
 
                 num = D - 3*A*B/X.shape[0]
                 den = C - (A**2 - B**2)/X.shape[0]
 
                 phi = np.arctan2(num, den)/4
-                angle = phi *180/3.141592653589793238462643383279502
+                angle = phi *180/math.pi 
 
-                if np.mean(np.abs(phi)) > 0.00001:
-                    X_j = np.cos(phi) *x_j + np.sin(phi) *y_j
+                if np.abs(phi) > 0.00001:
+                    Z_j = np.cos(phi) *x_j + np.sin(phi) *y_j
                     Y_j = -np.sin(phi) *x_j + np.cos(phi) *y_j
 
-                    loadings[:,ii] = X_j
+                    loadings[:,ii] = Z_j
                     loadings[:,jj] = Y_j
 
         var_old = variance_explained
         variance_explained = np.sum(loadings**2)
+
         check = np.abs((variance_explained - var_old)/(variance_explained + 1E-16))
 
         if check < convergence_tolerance or iter > iter_max:
+            iter += 1
             convergence = True
         else:
             iter += 1
@@ -670,7 +680,7 @@ def varimax_rotation(X, b, normalize=True):
 
 
     for ii in range(0, eigens):
-        rot_loadings[:,ii] = loadings[:,ii] * norm_factor
+        rot_loadings[:,ii] = loadings[:,ii] * norm_factor[ii]
 
     return rot_loadings
 
