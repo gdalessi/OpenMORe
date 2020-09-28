@@ -35,7 +35,7 @@ class testPCA(unittest.TestCase):
         self.nVarTest = 4
         self.selMethod1 = 'procustes'
         self.selMethod2 = 'b2'
-        self.selMethod3 = 'procustes_rotation'
+        self.selMethod3 = 'b4'
 
 
     def tearDown(self):
@@ -58,16 +58,13 @@ class testPCA(unittest.TestCase):
         kernelPCA =  model_order_reduction.KPCA(self.X)
         kernelPCA.eigens = self.nPCtest
         kernelPCA.kernel_type = self.kernelType
-        kernelPCA.retained = self.nVarTest
 
         Z, A, S = kernelPCA.fit()
-        labels = kernelPCA.select_variables()[0]
 
 
         self.assertEqual(Z.shape[1], self.nPCtest)
         self.assertEqual(A.shape[1], self.nPCtest)
-        self.assertEqual(len(S), self.nPCtest)
-        self.assertEqual(len(labels), self.nVarTest)
+
 
     def test_varSelection(self):
         linearSelection = model_order_reduction.variables_selection(self.X)
@@ -78,10 +75,10 @@ class testPCA(unittest.TestCase):
         labels1, ____ = linearSelection.fit()
 
         linearSelection.method = self.selMethod2
-        labels2 = linearSelection.fit()
+        labels2, ____ = linearSelection.fit()
 
         linearSelection.method = self.selMethod3
-        labels3 = linearSelection.fit()
+        labels3, ____ = linearSelection.fit()
 
         self.assertEqual(len(labels1), self.nVarTest)
         self.assertEqual(len(labels2), self.nVarTest)

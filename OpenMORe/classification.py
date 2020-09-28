@@ -65,12 +65,15 @@ class VQPCA(clustering.lpca):
         # Compute the centering/scaling factors of the training matrix
         mu = center(self.X, self._centering)
         sigma = scale(self.X, self._scaling)
+        
         # Scale the new matrix with these factors
         Y_tilde = center_scale(self.Y, mu, sigma)
+        
         # Initialize arrays
         rows, cols = np.shape(self.Y)
         sq_rec_oss = np.empty((rows, cols), dtype=float)
         sq_rec_err = np.empty((rows, self.k), dtype=float)
+        
         # Compute the reconstruction errors
         for ii in range (0, self.k):
             cluster = get_cluster(self.X, self.idx, ii)

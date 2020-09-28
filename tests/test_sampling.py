@@ -55,16 +55,3 @@ class testSampling(unittest.TestCase):
         miniX = sample.fit()
 
         self.assertEqual(miniX.shape[0], self.dimensions)
-
-    def test_sampleMultistage(self):
-        method = 'multistage'
-        largeX = np.random.rand(10000,3)
-        largeSample = 1000
-        
-        sample = model_order_reduction.SamplePopulation(largeX)
-        sample.sampling_strategy = method
-        sample.set_size = largeSample
-
-        miniX = sample.fit()
-
-        self.assertEqual(miniX.shape[0], largeSample)

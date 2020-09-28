@@ -528,7 +528,10 @@ class lpca:
 
     @staticmethod
     def preprocess_training(X, centering_decision, scaling_decision, centering_method, scaling_method):
-
+        '''
+        Center and scale the matrix X, depending on the bool values
+        centering_decision and scaling_decision
+        '''
         if centering_decision and scaling_decision:
             mu, X_ = center(X, centering_method, True)
             sigma, X_tilde = scale(X_, scaling_method, True)
@@ -561,7 +564,7 @@ class lpca:
         # Initialization
         iteration, eps_rec, residuals, iter_max, eps_tol = lpca.initialize_parameters()
         rows, cols = np.shape(self.X_tilde)
-        # Initialize solution
+        # Initialize the solution vector
         idx = lpca.initialize_clusters(self.X_tilde, self._k, self._method)
         residuals = np.array(0)
         if self._correction != "off":
@@ -577,13 +580,18 @@ class lpca:
                 PHC_coefficients = PHC_coefficients/np.max(PHC_coefficients)
 
             for ii in range(0, self._k):
+                #group the observations of a certain cluster
                 cluster = get_cluster(self.X_tilde, idx, ii)
+                #compute the centroids, or the medianoids or the medoids, depending on the 
+                #selected choice
                 if self._correction.lower() != 'medianoids' and self._correction.lower() != 'medoids':
                     centroids = get_centroids(cluster)
                 elif self.correction.lower() == 'medianoids':
                     centroids = get_medianoids(cluster)
                 elif self.correction.lower() == 'medoids':
                     centroids = get_medoids(cluster)
+                #perform PCA in the cluster, centering and scaling can be avoided
+                #because the observations are already standardized
                 local_model = model_order_reduction.PCA(cluster)
                 local_model.to_center = False
                 local_model.to_scale = False
@@ -592,13 +600,17 @@ class lpca:
                 else:
                     local_model.set_PCs()
                 modes = local_model.fit()
+                #create the centroids (medoids or medianoids, respectively) matrix
                 C_mat = np.matlib.repmat(centroids, rows, 1)
+                #compute the rec error for the considered cluster
                 rec_err_os = (self.X_tilde - C_mat) - (self.X_tilde - C_mat) @ modes[0] @ modes[0].T
                 sq_rec_oss = np.power(rec_err_os, 2)
                 sq_rec_err[:,ii] = sq_rec_oss.sum(axis=1)
                 
+                #use a penalty to eventually enhance the clustering performances
                 if self.correction.lower() == "c_range":
-                    
+                    #add a penalty if the observations are not in the centroids neighbourhood
+
                     #compute the cluster considering the raw data, and compute
                     #the cluster's centroids
                     cluster2 = get_cluster(self.X, idx, ii)
@@ -623,10 +635,11 @@ class lpca:
                     #For each row, sum up all the columns to obtain the multiplicative correction coefficient                                                  
                     yo = np.sum(boolean_mat, axis=1)
                     scores_factor[:,ii] = sq_rec_err[:,ii] * yo
-                    
+                    #activate the option to take into account the penalty in the error
                     self.__activateCorrection = True
                 
                 elif self._correction.lower() == "uncorrelation":
+                    #the clusters where the observations maximize the uncorrelation are favoured
                     maxF = np.max(np.var((self.X_tilde - C_mat) @ modes[0], axis=0))
                     minF = np.min(np.var((self.X_tilde - C_mat) @ modes[0], axis=0))
                     yo = 1-minF/maxF
@@ -635,17 +648,22 @@ class lpca:
                     self.__activateCorrection = True
 
                 elif self._correction.lower() == "local_variance":
+                    #try to assign the observations to each cluster such that the
+                    #variance in that cluster is minimized, i.e., the variables are
+                    #more homogeneous
                     cluster2 = get_cluster(self.X, idx, ii)
                     yo = np.mean(np.var(cluster2))
                     scores_factor[:,ii] = sq_rec_err[:,ii] * yo
                     self.__activateCorrection = True
 
                 elif self._correction.lower() == "phc_multi":
+                    #assign the clusters to minimize the PHC 
                     local_homogeneity = PHC_coefficients[ii]
                     scores_factor[:,ii] = sq_rec_err[:,ii] * local_homogeneity
                     self.__activateCorrection = True
                 
                 elif self._correction.lower() == "local_skewness":
+                    #assign the clusters to minimize the variables' skewness
                     from scipy.stats import skew
 
                     yo = np.mean(skew(cluster, axis=0))
@@ -654,7 +672,7 @@ class lpca:
                 
                 else:
                     pass                            
-            # Update idx
+            # Update idx --> choose the cluster where the rec err is minimized
             if self.__activateCorrection == True:
                 idx = np.argmin(scores_factor, axis = 1)
             else:
@@ -668,7 +686,7 @@ class lpca:
             print("- Iteration number: {}".format(iteration+1))
             print("\tReconstruction error: {}".format(eps_rec_new))
             print("\tReconstruction error variance: {}".format(eps_rec_var))
-            # Check condition
+            # Check convergence condition
             if (eps_rec_var <= eps_tol):
                 lpca.write_final_stats(iteration, eps_rec)
                 break
@@ -676,7 +694,8 @@ class lpca:
                 residuals = np.append(residuals, eps_rec_new)
             # Update counter
             iteration += 1
-            # Consider only statistical meaningful groups of points
+            # Consider only statistical meaningful groups of points: if there are <2 points
+            #in a cluster, delete it because it's not statistically meaningful
             idx = lpca.merge_clusters(self.X_tilde, idx)
             self._k = max(idx) +1
         print("Convergence reached in {} iterations.".format(iteration))
@@ -776,15 +795,18 @@ class fpca(lpca):
         This function is used to partition the data matrix 'X' in 'k' different
         bins, depending on the conditioning vector interval.
         '''
-
+        #preprocess the training matrix
         self.X_tilde = self.preprocess_training(self.X, self._center, self._scale, self._centering, self._scaling)
 
-
+        #compute the interval of the conditioning variable
         min_interval = np.min(self.condVec)
         max_interval = np.max(self.condVec)
 
+        #depending on the final number of bins, the extension of each bin (delta_step)
+        #is computed
         delta_step = (max_interval - min_interval) / self._k
 
+        #assign each observation depending on its conditioning variable's value
         counter = 0
         self.idx = np.empty((len(self.condVec),),dtype=int)
         var_left = min_interval
@@ -808,14 +830,18 @@ class fpca(lpca):
         '''
 
         for ii in range(0, self._k):
+            #initialize the lists
             self.centroids = [None] *self._k
             self.LPCs = [None] *self._k
             self.u_scores = [None] *self._k
             self.Leigen = [None] *self._k
 
             for ii in range (0,self._k):
+                #compute the cluster
                 cluster = get_cluster(self.X_tilde, self.idx, ii)
+                #the centroid is computed via function in the module: utility.py
                 self.centroids[ii], cluster_ = center(cluster, self._centering, True)
+                #solve the eigendecomposition problem for the centered cluster
                 self.LPCs[ii], self.Leigen[ii] = PCA_fit(cluster_, self._nPCs)
                 self.u_scores[ii] = cluster_ @ self.LPCs[ii]
 
@@ -1050,164 +1076,6 @@ class KMeans(lpca):
         return idx
 
 
-class multistageLPCA(lpca):
-    '''
-    Perform both local-PCA algorithm in two steps: first, with a supervised partitioning by means of a
-    conditioning variable (fpca), a set of clusters is found. After that, in each of these groups, the
-    vqpca algorithm is perform with a bisection logic, i.e., in each of the conditioned clusters, vqpca
-    is performed with k = 2. 
-
-    --- PARAMETERS ---
-    X:                      RAW data matrix, uncentered and unscaled. It must be organized
-                            with the structure: (observations x variables).
-    type X :                numpy array
-
-    conditioninig:          Column vector (observations x 1) containing the variable which must be 
-                            used to condition the dataset.
-    type conditioninig:     numpy array
-
-    
-    --- SETTERS ---
-    clusters:               number of clusters to be used for the partitioning
-    type   k:               scalar
-
-    to_center:              Enable the centering function
-    type   _center:         boolean 
-    
-    centering:              set the centering method. Available choices for scaling
-                            are 'mean' or 'min'.
-    type   _centering:      string
-
-    to_scale:               Enable the scaling function
-    type   _scale:          boolean 
-
-    scaling:                set the scaling method. Available choices for scaling
-                            are 'auto' or 'vast' or 'range' or 'pareto'.
-    type _scaling:          string
-
-    initialization:         initialization method: 'random', 'kmeans', 'observations', 'pkcia' are available.
-    type   _method:         string
-
-    correction:             multiplicative or additive correction factor to be used for the lpca algorithm
-    type _beta:             string
-
-    eigens:                 number of Principal Components which have to be used locally for the dimensionality reduction task.
-    type _nPCs:             scalar
-
-    '''
-    def __init__(self,X, conditioning):
-        self.X = X
-        self.condVec = conditioning
-
-        super().__init__(X)
-
-    def partition(self):
-        '''
-        Group the observations depending coupling fpca/vqpca.
-
-        --- RETURNS ---
-        idx:        vector whose dimensions are (n,) containing the cluster assignment for each observation.
-        type idx:   numpy array 
-        
-        '''
-        #First of all, center and scale the data matrix
-        self.X_tilde = self.preprocess_training(self.X, self._center, self._scale, self._centering, self._scaling)
-
-        #Compute the bin width (delta_step), after calculating the max and the min of the
-        #conditioning vector, condVec. An additional 1% is subtracted (resp. added) to the
-        #interval, because in this process few points at the interval limits could be lost otherwise
-        min_interval = np.min(self.condVec) -0.01*np.min(self.condVec)
-        max_interval = np.max(self.condVec) +0.01*np.max(self.condVec)
-        delta_step = (max_interval - min_interval) / self._k
-
-        #Declare an id vector, to keep track of the observations which will be split into
-        #the clusters.
-        id = np.linspace(1,self.X.shape[0], self.X.shape[0])
-
-        #Start the conditioning by means of condVec
-        counter = 0
-        self.idxF = np.empty((len(self.condVec),), dtype=int)
-        var_left = min_interval
-
-        #Put the observations in the bin where they belong, until the max number of
-        #bins is reached:
-        while counter <= self._k:
-            var_right = var_left + delta_step
-            mask = np.logical_and(self.condVec >= var_left, self.condVec < var_right)
-            self.idxF[np.where(mask)] = counter
-            counter += 1
-            var_left += delta_step
-
-        #In each bin, compute the iterative VQPCA algorithm. In this way, each bin of
-        #condVec is split in two:
-        for ii in range(0,self._k):
-            #Get the cluster's observations
-            cluster_ = get_cluster(self.X_tilde, self.idxF, ii)
-            #Get the number of the observation in the original matrix
-            id_ = get_cluster(id, self.idxF, ii)
-
-            #Perform VQPCA in the cluster, using k = 2.
-            modelVQ = lpca(cluster_)
-            modelVQ.to_center = False
-            modelVQ.to_scale = False
-            modelVQ.clusters = 2
-            modelVQ.eigens = self.eigens
-            modelVQ.initialization = 'observations'
-            idxLoc = modelVQ.fit()
-            #There is need to have 1 as k_min in each cluster, so increase the python
-            #enumeration
-            idxLoc = idxLoc +1 #now the indeces are [1,2]
-
-            #The following code makes sure that all the integers between 1 and k, with k
-            #equal to the selected number of clusters, are covered. So that:
-            #Bin1 --> k = 1,2
-            #Bin2 --> k = 3,4
-            #Bin3 --> k = 4,5
-            #etc..
-            ii+=1
-            if ii > 1:
-                mask1 = np.where(idxLoc == 1)
-                idxLoc[mask1] = ii + (ii-1)
-                mask2 = np.where(idxLoc == 2)
-                idxLoc[mask2] = 2*ii
-            else:
-                mask1 = np.where(idxLoc == 1)
-                idxLoc[mask1] = ii
-                mask2 = np.where(idxLoc == 2)
-                idxLoc[mask2] = ii+1
-            ii-=1
-
-            #Now we temporarely merge the observation id vector with the cluster, because
-            #later we'll have to reassemble the original matrix in the exact same order, so
-            #in the end the 'tracking' matrix is obtained, whose dimensions are (n x (p+1)).
-            tracking = np.hstack([id_.reshape((-1,1)), cluster_])
-
-            #As soon as the matrix cluster_ is partitioned via VQPCA, rebuild the training
-            #matrix. For now, the training matrix will still be not ordered as the original
-            #one.
-            if ii == 0:
-                X_yo = tracking
-                idx_yo = idxLoc
-            else:
-                X_yo = np.concatenate((X_yo, tracking), axis=0)
-                idx_yo = np.concatenate((idx_yo, idxLoc), axis=0)
-
-
-        #To order again the observations of the clustered matrix in the exact same way as
-        #the original one, isolate and sort in ascending order the previous id vector which
-        #was put in the matrix first column.
-        id_back = X_yo[:,0]
-        mask = np.argsort(id_back)
-
-        #Sort the matrix and the idx:
-        X_yo = X_yo[mask,:]
-        idx_yo = idx_yo[mask]
-
-        idx_yo = idx_yo-1
-
-
-        return idx_yo
-
 class spectralClustering():
     '''
     [1] Von Luxburg, Ulrike. "A tutorial on spectral clustering." Statistics and computing 17.4 (2007): 395-416.
@@ -1401,9 +1269,8 @@ class spectralClustering():
         
         print("Preprocessing training matrix..")
         self.X_tilde = self.preprocess_training(self.X, self._center, self._scale, self._centering, self._scaling)
-
+        #initialize the similarity matrix, whose dimensions are (nxn) --> WARNING: IT'S EXPENSIVE FOR LARGE MATRICES  
         W = np.zeros([self._n_obs, self._n_obs], dtype=float)
-        
         print("Building weighted adjacency matrix..")
         for ii in range(0, self._n_obs):
             for jj in range(0, self._n_obs):
@@ -1411,7 +1278,7 @@ class spectralClustering():
 
         D= np.zeros([self._n_obs, self._n_obs],dtype=float)
         print("Building degree matrix..")
-        
+        #build the diagonal degree matrix
         for ii in range(0, self._n_obs):
             D[ii,ii] = np.sum(W[ii,:])
 
@@ -1428,7 +1295,7 @@ class spectralClustering():
         modelK.to_scale = False
         modelK.initMode = False 
         modelK.clusters = self._k
-
+        
         index = modelK.fit()
 
         return index

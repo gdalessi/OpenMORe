@@ -46,18 +46,24 @@ def center(X, method, return_centered_matrix= False):
     # Main
     if not return_centered_matrix:
         if method.lower() == 'mean':
+            #compute the vector containing the mean for each variable
             mu = np.mean(X, axis = 0)
         elif method.lower() == 'min':
+            #compute the vector containing the minimum for each variable
             mu = np.min(X, axis = 0)
         else:
             raise Exception("Unsupported centering option. Please choose: MEAN or MIN.")
         return mu
     else:
         if method.lower() == 'mean':
+            #compute the vector containing the mean for each variable
             mu = np.mean(X, axis = 0)
+            #subtract the mean to each observation of the matrix X
             X0 = X - mu
         elif method.lower() == 'min':
+            #compute the vector containing the minimum for each variable
             mu = np.min(X, axis = 0)
+            #subtract the minimum to each observation of the matrix X
             X0 = X - mu
         else:
             raise Exception("Unsupported centering option. Please choose: MEAN or MIN.")
@@ -80,7 +86,10 @@ def center_scale(X, mu, sig):
     '''
     TOL = 1E-16
     if X.shape[1] == mu.shape[0] and X.shape[1] == sig.shape[0]:
+        #centering step: subtract the centering factor to each observation
         X0 = X - mu
+
+        #scaling step: divide each observation for the scaling factor. TOL is added to avoid dividing by 0 
         X0 = X0 / (sig + TOL)
         return X0
     else:
@@ -92,7 +101,7 @@ def explained_variance(X, n_eigs, plot=False):
     Assess the variance explained by the first 'n_eigs' retained
     Principal Components. This is important to know if the percentage
     of explained variance is enough, or additional PCs must be retained.
-    Usually, it is considered accepted a percentage of explained variable
+    Usually, it is considered acceptable a percentage of explained variable
     above 95%.
     - Input:
     X = CENTERED/SCALED data matrix -- dim: (observations x variables)
@@ -101,10 +110,15 @@ def explained_variance(X, n_eigs, plot=False):
     - Output:
     explained: percentage of explained variance -- dim: (scalar)
     '''
+    #compute PCA
     PCs, eigens = PCA_fit(X, n_eigs)
+    
+    #the explained variance is defined as the sum of the 'q' eigenvalues to retain
+    #divided by the total sum of the eigenvalues
     explained_variance = np.cumsum(eigens)/sum(eigens)
     explained = explained_variance[n_eigs]
 
+    #plot the curve of the cumulative variance, if the option is activated
     if plot:
         matplotlib.rcParams.update({'font.size' : 18, 'text.usetex' : True})
         fig = plt.figure()
@@ -127,6 +141,7 @@ def evaluate_clustering_DB(X, idx):
     the clustering solution is. -- Tested OK with comparison Matlab
     """
     from scipy.spatial.distance import euclidean, cdist
+    
     #Initialize matrix and other quantitites
     k = int(np.max(idx) +1)
     centroids_list = [None] *k
@@ -165,11 +180,12 @@ def evaluate_clustering_DB(X, idx):
     for ii in range(0,k):
         D_i[ii] = np.max(R_ij[ii], axis=0)
 
+    #The final DB index is the mean value of the DBs for each cluster
     DB = np.mean(D_i)
 
     return DB
 
-def evaluate_clustering_PHC(X, idx, method='PHC_standard'):
+def evaluate_clustering_PHC(X, idx):
     '''
     Computes the PHC (Physical Homogeneity of the Cluster) index.
     For many applications, more than a pure mathematical tool to assess the quality of the clustering solution,
@@ -189,102 +205,32 @@ def evaluate_clustering_PHC(X, idx, method='PHC_standard'):
     PHC_coeff=[None] *k
     PHC_deviations=[None] *k
 
-    if method.lower() == 'phc_standard':
-        #The standard PHC for one variable is computed as: (max - min)/ mean
-        #If the training matrix has many variables, the PHCs are stored in a list PHC_coeff.
+    #The standard PHC for one variable is computed as: (max - min)/ mean
+    #If the training matrix has more than 1 variable, the PHCs are stored in a list PHC_coeff.
 
-        for ii in range (0,k):
-            try:
-                cluster_ = get_cluster(X, idx, ii)
-
-                maxima = np.max(cluster_, axis = 0)
-                minima = np.min(cluster_, axis = 0)
-                media = np.mean(cluster_, axis=0)
-
-                dev = np.std(cluster_, axis=0)
-
-                PHC_coeff[ii] = np.mean((maxima-minima)/(media +TOL))
-                PHC_deviations[ii] = np.mean(dev)
-            except ValueError:
-                print("An exception was thrown by Python during the PHC computation. Probably the considered cluster was found empty.")
-                print("Passing..")
-                pass
-
-    elif method.lower() == "phc_median":
-        #It's very similar to the standard PHC, with the exception that the
-        #median is used instead of the mean, as it is considered to be more robust
-        #for many statistical applications
+    for ii in range (0,k):
         try:
-            for ii in range (0,k):
-                cluster_ = get_cluster(X, idx, ii)
+            #take the clusters' observations
+            cluster_ = get_cluster(X, idx, ii)
 
-                maxima = np.max(cluster_, axis = 0)
-                minima = np.min(cluster_, axis = 0)
-                media = np.median(cluster_, axis=0)
+            #compute max, min and mean
+            maxima = np.max(cluster_, axis = 0)
+            minima = np.min(cluster_, axis = 0)
+            media = np.mean(cluster_, axis=0)
 
-                dev = np.std(cluster_, axis=0)
+            #compute the standard deviation of each cluster, because PHC can be sensitive to outliers
+            #so if dev it's high PHC could not be completely reliable
+            dev = np.std(cluster_, axis=0)
 
-                PHC_coeff[ii] = np.mean((maxima-minima)/(media +TOL))
-                PHC_deviations[ii] = np.mean(dev)
-        except ValueError:
-                print("An exception was thrown by Python during the PHC computation. Probably the considered cluster was found empty.")
-                print("Passing..")
-                pass
-
-    elif method.lower() == "phc_robust":
-        #Mahalanobis distance is computed in each cluster and a small fraction of observations is removed
-        #from the PHC computation, as they can be considered outliers. The aforementioned distance is
-        #computed via PCA (see Jolliffe for details)
-
-        from . import model_order_reduction
-        
-        try:
-            for ii in range(0,k):
-                cluster_ = get_cluster(X, idx, ii)
-
-                model = model_order_reduction.PCA(cluster_)
-                model.centering = 'mean'
-                model.scaling = 'auto'
-                model.eigens = cluster_.shape[1] -1
-                PCs, eigval = model.fit()
-                scores = model.get_scores()
-                mahalanobis_ = np.empty((cluster_.shape[0],),dtype=float)
-
-                for jj in range(0,cluster_.shape[0]):
-                    t_sq = 0
-                    lam_j = 0
-                    for jj in range(0, cluster_.shape[1]-1):
-                        t_sq += scores[ii,jj]**2
-                        lam_j += eigval[jj]
-                    mahalanobis_[ii] = t_sq/(lam_j + TOL)
-
-                #A fraction alpha (typically 0.01%-0.1%) of the data points characterized by the largest
-                #value of DM are classified as outliers and removed.
-
-                alpha = 0.000007
-
-                #compute the new number of observations after the trim factor:
-                trim = int((1-alpha)*cluster_.shape[0])
-                to_trim = np.argsort(mahalanobis_)
-
-                new_mask = to_trim[:trim]
-                cluster_ = cluster_[new_mask,:]
-
-                maxima = np.max(cluster_, axis = 0)
-                minima = np.min(cluster_, axis = 0)
-                media = np.mean(cluster_, axis=0)
-
-                dev = np.std(cluster_, axis=0)
-
-                PHC_coeff[ii] = np.mean((maxima-minima)/(media +TOL))
-                PHC_deviations[ii] = np.mean(dev)
+            #compute PHCs. TOL is added to avoid dividing by 0
+            PHC_coeff[ii] = np.mean((maxima-minima)/(media +TOL))
+            
+            #compute the average standard deviations
+            PHC_deviations[ii] = np.mean(dev)
         except ValueError:
             print("An exception was thrown by Python during the PHC computation. Probably the considered cluster was found empty.")
             print("Passing..")
             pass
-    else:
-        raise Exception("PHC method not supported. Available PHCs: 'PHC_standard', 'PHC_median', 'PHC_robust'. Exiting with error..")
-        exit()
 
     return PHC_coeff, PHC_deviations
 
@@ -405,6 +351,7 @@ def get_cluster(X, idx, index, write=False):
     cluster: matrix with the grouped observations -- dim: (p x var)
     '''
     try:
+        #identify the observations which belong to a certain cluster
         positions = np.where(idx == index)
         cluster = X[positions]
         
@@ -432,6 +379,8 @@ def get_all_clusters(X, idx):
     clusters = [None] *k
 
     for ii in range (0,k):
+        #identify the observations which belong to a certain cluster
+        #and store them in the clusters' list
         clusters[ii] = get_cluster(X, idx, ii)
 
     return clusters
@@ -439,8 +388,10 @@ def get_all_clusters(X, idx):
 
 def NRMSE (X_true, X_pred):
     n_obs, n_var = X_true.shape
+    #initialize the NRMSE 
     NRMSE = [None] *n_var
 
+    #compute the NRMSE for each observation of the two matrices
     for ii in range(0, n_var):
         NRMSE[ii] = np.sqrt(np.mean((X_true[:,ii] - X_pred[:,ii])**2)) / np.sqrt(np.mean(X_true[:,ii]**2))
 
@@ -465,14 +416,19 @@ def PCA_fit(X, n_eig):
     because the eigenvalues are also ordered in terms of magnitude.
     '''
     if n_eig < X.shape[1]:
+        #compute the covariance matrix from the original data matrix
         C = np.cov(X, rowvar=False) #rowvar=False because the X matrix is (observations x variables)
 
+        #perform an eigendecomposition
         evals, evecs = LA.eig(C)
+
+        #sort the eigenvalues in descending order
         mask = np.argsort(evals)[::-1]
         evecs = evecs[:,mask]
         evals = evals[mask]
 
-        evecs = evecs[:, 0:n_eig]
+        #retain only the selected number 'q' of eigenvalues
+        evecs = evecs[:, :n_eig]
 
         return evecs, evals
 
@@ -507,14 +463,18 @@ def scale(X, method, return_scaled_matrix=False):
     TOL = 1E-16
     if not return_scaled_matrix:
         if method.lower() == 'auto':
+            #compute the auto scaling factor: standard deviation of each variable
             sig = np.std(X, axis = 0)
         elif method.lower() == 'pareto':
+            #compute the pareto scaling factor: sqrt of the standard deviation of each variable
             sig = np.sqrt(np.std(X, axis = 0))
         elif method.lower() == 'vast':
+            #compute the vast scaling factor: variance/mean of each variable
             variances = np.var(X, axis = 0)
             means = np.mean(X, axis = 0)
             sig = variances / means
         elif method.lower() == 'range':
+            #compute the range scaling factor: max-min for each variable
             maxima = np.max(X, axis = 0)
             minima = np.min(X, axis = 0)
             sig = maxima - minima
@@ -523,17 +483,21 @@ def scale(X, method, return_scaled_matrix=False):
         return sig
     else:
         if method.lower() == 'auto':
+            #compute the auto scaling factor: standard deviation of each variable
             sig = np.std(X, axis = 0)
             X0 = X / (sig + TOL)
         elif method.lower() == 'pareto':
+            #compute the pareto scaling factor: sqrt of the standard deviation of each variable
             sig = np.sqrt(np.std(X, axis = 0))
             X0 = X / (sig + TOL)
         elif method.lower() == 'vast':
+            #compute the vast scaling factor: variance/mean of each variable
             variances = np.var(X, axis = 0)
             means = np.mean(X, axis = 0)
             sig = variances / means
             X0 = X / (sig + TOL)
         elif method.lower() == 'range':
+            #compute the range scaling factor: max-min for each variable
             maxima = np.max(X, axis = 0)
             minima = np.min(X, axis = 0)
             sig = maxima - minima
@@ -555,13 +519,17 @@ def split_for_validation(X, validation_quota):
     X_test = matrix to be used to test the reduced model
     '''
 
+    #compute the number of variables and observations of the training matrix
     nObs = X.shape[0]
     nVar = X.shape[1]
 
+    #compute how many observations must be included in the test
     nTest = int(nObs * validation_quota)
 
+    #shuffle the training matrix to maximize the randomness of the subset
     np.random.shuffle(X)
 
+    #split
     X_test = X[:nTest,:]
     X_train = X[nTest+1:,:]
 
@@ -578,8 +546,10 @@ def uncenter(X_tilde, mu):
     X0 = uncentered matrix -- dim: (observations x variables)
     '''
     if X_tilde.shape[1] == mu.shape[0]:
+        #initialize the uncentered matrix with all zeros
         X0 = np.zeros_like(X_tilde, dtype=float)
         for i in range(0, len(mu)):
+            #add the centering factor to unscale
             X0[:,i] = X_tilde[:,i] + mu[i]
         return X0
     else:
@@ -598,8 +568,10 @@ def unscale(X_tilde, sigma):
     '''
     TOL = 1E-16
     if X_tilde.shape[1] == sigma.shape[0]:
+        #initialize the uncentered matrix with all zeros
         X0 = np.zeros_like(X_tilde, dtype=float)
         for i in range(0, len(sigma)):
+            #multiply for the scaling factor to unscale
             X0[:,i] = X_tilde[:,i] * (sigma[i] + TOL)
         return X0
     else:
@@ -619,22 +591,30 @@ def varimax_rotation(X, b, normalize=True):
     rot_loadings = rotated modes or factors, returned after the algorithm convergenceß
     '''
     import math
-
+    #compute the dimensionality of the problem
     eigens = b.shape[1]
+    
+    #compute the normalization factor for the modes/factors before the rotation
     norm_factor = np.std(b, axis=0)
+    
+    #initialize an empty matrix for the rotated loadings
     loadings = np.empty((b.shape[0], b.shape[1]), dtype=float)
     rot_loadings = np.empty((b.shape[0], b.shape[1]), dtype=float)
 
+    #standardize the loadings dividing for the normalization factor
     for ii in range(0, eigens):
         loadings[:,ii] = b[:,ii]/norm_factor[ii]
 
+    #compute the loadings covariance matrix
     C = np.cov(loadings, rowvar=False)
 
+    #initialize the algorithm's parameter to reach convergence
     iter_max = 1000
     convergence_tolerance = 1E-16
     iter = 1
     convergence = False
 
+    #compute the percentage of explained variance
     variance_explained = np.sum(loadings**2)
 
     while not convergence:
@@ -667,6 +647,7 @@ def varimax_rotation(X, b, normalize=True):
         var_old = variance_explained
         variance_explained = np.sum(loadings**2)
 
+        #convergence criterion
         check = np.abs((variance_explained - var_old)/(variance_explained + 1E-16))
 
         if check < convergence_tolerance or iter > iter_max:

@@ -225,7 +225,10 @@ class PCA:
 
     @staticmethod
     def preprocess_training(X, centering_decision, scaling_decision, centering_method, scaling_method):
-
+        '''
+        Center and scale the matrix X, depending on the bool values
+        centering_decision and scaling_decision
+        '''
         if centering_decision and scaling_decision:
             mu, X_ = center(X, centering_method, True)
             sigma, X_tilde = scale(X_, scaling_method, True)
@@ -312,6 +315,8 @@ class PCA:
         explained:      percentage of explained variance 
         type explained: scalar  
         '''
+        #compute the explained variance by means of the cumulative sum of the
+        #considered "q" eigenvalues
         explained_variance = np.cumsum(self.evals)/sum(self.ALLevals)
         explained = explained_variance[-1]
         #If the plot boolean is True, produce an image to show the explained variance curve.
@@ -341,6 +346,8 @@ class PCA:
         scores:      matrix of the scores 
         type scores: numpy matrix  
         '''
+        #Project the full matrix on the reduced basis
+        #Z = XA --> (nxq) = (nxp) x (pxq)
         self.scores = self.X_tilde @ self.evecs
 
         return self.scores
@@ -398,6 +405,7 @@ class PCA:
 
         '''
 
+        #plot
         matplotlib.rcParams.update({'font.size' : 18, 'text.usetex' : True})
         fig = plt.figure()
         axes = fig.add_axes([0.15,0.15,0.7,0.7], frameon=True)
@@ -416,10 +424,14 @@ class PCA:
         red line, the better it is the reconstruction.
 
         '''
-
+        #perform PCA
         self.fit()
+        #recontruct the original matrix from the reduced manifold:
+        #X_rec = Z*A^{T}
+        #it is possible to do this because the matrix A is orthonormal, i.e., A^{-1} = A^{T}
         reconstructed_ = self.recover()
 
+        #plot
         matplotlib.rcParams.update({'font.size' : 18, 'text.usetex' : True})
         fig = plt.figure()
         axes = fig.add_axes([0.25,0.15,0.7,0.7], frameon=True)
@@ -483,13 +495,14 @@ class PCA:
             scores_dist[ii] = t_sq/(lam_j + TOL)
 
         #Now compute the distance distribution, and delete the observations in the
-        #upper 3% (done in the while loop) to get the outlier-free matrix.
+        #upper 2% (done in the while loop) to get the outlier-free matrix.
 
         #Divide the distance vector in 100 bins
         n_bins = 100
         min_interval = np.min(scores_dist)
         max_interval = np.max(scores_dist)
-
+        
+        #compute the step of each bin
         delta_step = (max_interval - min_interval) / n_bins
 
         counter = 0
@@ -509,6 +522,7 @@ class PCA:
         cumulativeDensity = 0
         new_counter = 0
 
+        #remove the upper 2% of the CDF, i.e., x_{i} \in [0.98; 1]
         while cumulativeDensity < 0.98:
             cumulative_ = counts[new_counter]/self.X.shape[0]
             cumulativeDensity += cumulative_
@@ -541,25 +555,25 @@ class PCA:
         new_mask:   the vector containing the ID of the non-outlier observations
         '''
         #Orthogonal outliers removal:
+
+        #Compute the PCs
         PCs, eigval = self.fit()
+        #eventually preprocess the training matrix
+        X_cs = self.preprocess_training(self.X, self._center, self._scale, self._centering, self._scaling)
 
-        mu_X = center(self.X, self.centering)
-        sigma_X = scale(self.X, self.scaling)
-
-        X_cs = center_scale(self.X, mu_X, sigma_X)
-
-
+        #compute the squared reconstruction error
         epsilon_rec = X_cs - X_cs @ PCs @ PCs.T
         sq_rec_oss = np.power(epsilon_rec, 2)
 
         #Now compute the distance distribution, and delete the observations in the
-        #upper 3% (done in the while loop) to get the outlier-free matrix.
+        #upper 2% (done in the while loop) to get the outlier-free matrix.
 
         #Divide the distance vector in 100 bins
         n_bins = 100
         min_interval = np.min(sq_rec_oss)
         max_interval = np.max(sq_rec_oss)
-
+        
+        #compute the step of each bin
         delta_step = (max_interval - min_interval) / n_bins
 
         counter = 0
@@ -587,140 +601,11 @@ class PCA:
             cumulativeDensity += cumulative_
             new_counter += 1
 
+        #delete the observations in the upper 2%, i.e., x_{i} \in [0.98; 1]
         new_mask = np.where(bin_id > new_counter)
         self.X = np.delete(self.X, new_mask, axis=0)
 
         return self.X, bin_id, new_mask
-
-
-    def outlier_removal_multistep(self):
-        '''
-        Parente, Alessandro, and James C. Sutherland. Combustion and flame 160.2 (2013): 340-350.
-
-
-        This function removes the outlier via PCA. Firstly, the input matrix is trimmed by means of
-        the calculation of the Mahalanobis distance: a very small percentage (0.01 - 0.1%) of the 
-        observations are discarded.
-        After that, an iterative algorithm is started for outlier removal, and the convergence is reached
-        when the data kurtosis' change is below a fixed threshold between two consecutive iterations.
-
-
-        --- RETURNS ---
-        X:         the matrix without outliers
-        type X:    numpy matrix
-        
-        '''
-
-        from scipy.stats import kurtosis
-
-        convergence = False
-        iterations = 0
-        kurtosis_ = 1
-        conv_tol = 1E-6
-        iterMax = 150
-        TOL = 1E-16
-
-        while not convergence:
-            #Trim the input data to have a robust Mahalanobis distance, after PCA
-            input_eigens = self.eigens
-            self.eigens = self.X.shape[1]-1
-
-            PCs, eigval = self.fit()
-            scores = self.get_scores()
-            mahalanobis_ = np.empty((self.X.shape[0],), dtype=float)
-
-            #The observations associated with large values of DM (mahal) are classified as outliers
-            #and then discarded
-            for ii in range(0,self.X.shape[0]):
-                t_sq = 0
-                lam_j = 0
-                for jj in range(0, self.X.shape[1]-1):
-                    t_sq += scores[ii,jj]**2
-                    lam_j += eigval[jj]
-                mahalanobis_[ii] = t_sq/(lam_j + TOL)
-
-            #A fraction alpha (typically 0.01%-0.1%) of the data points characterized by the largest
-            #value of DM are classified as outliers and removed.
-            if iterations < 20:
-                alpha = 0.000007
-            else:
-                alpha = 0
-
-            #compute the new number of observations after the trim factor:
-            trim = int((1-alpha)*self.X.shape[0])
-            to_trim = np.argsort(mahalanobis_)
-
-            new_mask = to_trim[:trim]
-            self.X = self.X[new_mask,:]
-
-            print("X trimmed dim: {}".format(self.X.shape))
-
-            #Compute the PCA scores. Override the eventual number of PCs: ALL the
-            #PCs are needed, as the outliers are also given by the last PCs examination
-            PCs, eigval = self.fit()
-            scores = self.get_scores()
-            w_scores = scores/np.sqrt(eigval)
-            #Select as "important" the PCs which explain the 20% of the average eigenvalue
-            self.eigens = input_eigens
-
-
-            #compute the curtosis of the new w_scores = u_scores/sqrt(eigenvalues)
-            new_kurt = np.mean(kurtosis(w_scores[:,:self.eigens]))
-            #check if the kurtosis variation is below the fixed threshold, to activate convergence
-            check_conv = (new_kurt - np.mean(kurtosis_))/(new_kurt + TOL)
-            print("Delta Kurtosis: {}".format(check_conv))
-
-            if check_conv <= conv_tol or iterations >= iterMax:
-                convergence = True
-                break
-
-            mahalanobis_ = np.empty((self.X.shape[0],), dtype=float)
-            scores_dist = np.empty((self.X.shape[0],), dtype=float)
-            #Compute again the Mahalanobis distance for the robust set of scores, evaluating the
-            #important PCs
-            for ii in range(0,self.X.shape[0]):
-                t_sq = 0
-                lam_j = 0
-                for jj in range(0, self.eigens):
-                    t_sq += scores[ii,jj]**2
-                    lam_j += eigval[jj]
-                mahalanobis_[ii] = t_sq/(lam_j + TOL)
-            #remove the points in the 99th quantile
-            to_remove = np.quantile(mahalanobis_, 0.9995)
-            new_mask = np.where(mahalanobis_ > to_remove)
-
-            #Do the same, but on the very last PCs.
-            r = len(np.where(eigval < 0.2*np.mean(eigval))[0])
-
-            for ii in range(0,self.X.shape[0]):
-                t_sq = 0
-                lam_j = 0
-                for jj in range(scores.shape[1]-r+1, scores.shape[1]):
-                    t_sq += scores[ii,jj]**2
-                    lam_j += eigval[jj]
-                scores_dist[ii] = t_sq/(lam_j + TOL)
-            #remove also here the scores in the 99th quantile
-            to_remove2 = np.quantile(scores_dist, 0.9995)
-            new_mask2 = np.where(scores_dist >= to_remove2)
-            #merge the idx of the points which were selected in the two steps, and delete
-            #the repetitions (unique)
-            temp = np.concatenate((new_mask, new_mask2), axis=1)
-            to_delete = np.unique(temp)
-
-            print('Observations to delete: {}'.format(len(to_delete)))
-            #Delete the points from the matrix
-            self.X = np.delete(self.X, to_delete, axis=0)
-
-            print("Iteration number: {}".format(iterations))
-            iterations +=1
-            #store the "previous" Kurtosis
-            kurtosis_ = kurtosis(w_scores[:,:self.eigens])
-
-
-            print("The training matrix dimensions without outliers are: {}x{}".format(self.X.shape[0], self.X.shape[1]))
-
-
-        return self.X
 
 
 class LPCA(PCA):
@@ -819,6 +704,9 @@ class LPCA(PCA):
 
     @staticmethod
     def get_idx(path):
+        '''
+        try to load the solution obtained from a previous partitioned given a path
+        '''
 
         try:
             print("Reading idx..")
@@ -899,14 +787,14 @@ class LPCA(PCA):
         self.X_tilde = self.preprocess_training(self.X, self.to_center, self.to_scale, self.centering, self.scaling)
 
         #The centering and scaling factors are computed from the training matrix
-        #because they will be used in the future.
+        #because they will be used in the future to unscale/uncenter
         mu_global = center(self.X, self.centering)
         sigma_global = scale(self.X, self.scaling)
 
         #Perform LPCA
         self.LPCs, self.u_scores, self.Leigen, self.centroids = self.fit()
 
-        #Considering the idx of that set of partitio
+        #Considering the idx of that set of partition
         for ii in range (0,self.k):
             cluster_ = get_cluster(self.X_tilde, self.idx, ii)
             centroid_ =self.centroids[ii]
@@ -916,6 +804,7 @@ class LPCA(PCA):
             positions = np.where(self.idx == ii)
             self.X_rec[positions] = C_
 
+        #unscale and uncenter to get back the original values
         self.X_rec = unscale(self.X_rec, sigma_global)
         self.X_rec = uncenter(self.X_rec, mu_global)
 
@@ -928,9 +817,10 @@ class LPCA(PCA):
         manifold. The more the scatter plot (black dots) is in line with the
         red line, the better it is the reconstruction.
         '''
-
+        #reconstruct the matrix from the low-dimensional manifold
         reconstructed_ = self.recover()
 
+        #plot
         matplotlib.rcParams.update({'font.size' : 18, 'text.usetex' : True})
         fig = plt.figure()
         axes = fig.add_axes([0.15,0.15,0.7,0.7], frameon=True)
@@ -951,8 +841,10 @@ class LPCA(PCA):
         weights, especially for the PCs associated with the largest eigenvalues,
         can be important for data-analysis purposes.
         '''
+        #consider the PCs in a given cluster (LPCs)
         local_eigen = self.LPCs[self.clust_to_plot]
 
+        #barplot
         matplotlib.rcParams.update({'font.size' : 18, 'text.usetex' : True})
         fig = plt.figure()
         axes = fig.add_axes([0.15,0.15,0.7,0.7], frameon=True)
@@ -1027,8 +919,7 @@ class KPCA(PCA):
 
         WARNING: This method can be extremely expensive for large matrices.
         '''
-        #from scipy.spatial.distance import pdist, squareform
-
+        #As usual, preprocess the matrix
         self.X_tilde = KPCA.preprocess_training(self.X, self.to_center, self.to_scale, self.centering, self.scaling)
 
         from sklearn.metrics.pairwise import rbf_kernel
@@ -1039,7 +930,7 @@ class KPCA(PCA):
         
         t = time.time()
         
-
+        #compute the Kernel using sklearn
         if self._kernel == 'polynomial':
             print("Computing the Kernel (poly)..")
             Kernel = polynomial_kernel(self.X_tilde, degree=3, gamma=1/self._n_ret)
@@ -1053,13 +944,15 @@ class KPCA(PCA):
         elapsed_kernel = time.time() - t   
         print("Kernel computed in {} s.".format(elapsed_kernel)) 
         
+        #the Gram matrix must be centered
         print("Centering the Kernel..")
         tk2 = time.time()
         transformer = KernelCenterer().fit(Kernel)
         K3 = transformer.transform(Kernel)
         elapsed_k2 = time.time() - tk2 
         print("Kernel centered in {} s.".format(elapsed_k2))
-       
+
+        #now perform fast SVD to decompose the matrix
         print("Decomposing Kernel with fast SVD algorithm..")
         tSVD = time.time()
         self.Zt, self.A, singularVal = fastSVD(K3, self._nPCs)
@@ -1270,9 +1163,11 @@ class variables_selection(PCA):
         '''
 
         print("Selecting global variables via PCA and Procustes Analysis...")
+        #load the variables' labels (or the numbers, if the path is not given)
         self.load_labels()
         variables_selection.check_sanity_input(self.X, self.labels, self._n_ret)
-
+        
+        #preprocess the training matrix
         self.X_tilde = PCA.preprocess_training(self.X, self.to_center, self.to_scale, self.centering, self.scaling)
         self.var_num = np.linspace(0, self.X.shape[1]-1, self.X.shape[1], dtype=int)
         if self._method.lower() == 'procustes':
@@ -1314,7 +1209,7 @@ class variables_selection(PCA):
 
             #Number of variables before the elimination starts:
             max_var = self.X.shape[1]
-            #While the number of variables is larger than the number you want to retain 'm', go on
+            #While the number of variables is larger than the number you want to retain ('m'), go on
             #with the elimination process:
             while max_var > self.retained:
                 #Perform PCA:
@@ -1328,48 +1223,13 @@ class variables_selection(PCA):
                 #Delete the selected variable
                 self.X_tilde = np.delete(self.X_tilde, argmax_on_last, axis=1)
                 self.labels = np.delete(self.labels, argmax_on_last, axis=0)
+                self.var_num = np.delete(self.var_num, argmax_on_last, axis=0)
                 print("Current number of variables: {}".format(self.X_tilde.shape[1]))
                 #Get the current number of variables for the while loop
                 max_var = self.X_tilde.shape[1]
 
 
-            return self.labels
-
-        if self._method.lower() == 'procustes_rotation':
-
-            #Start with PCA, and compute the scores (Z)
-            eigenvec = PCA_fit(self.X_tilde, self._nPCs)
-            Z = self.X_tilde @ eigenvec[0]
-            #Start the backward elimination:
-            while self.X_tilde.shape[1] > self._n_ret:
-                M2 = 1E12
-                M2_tmp = 0
-                var_tmp = 0
-
-                for ii in range(0,self.X_tilde.shape[1]):
-                    #Delete each variable from the original matrix (one at the time)
-                    X_cut = np.delete(self.X_tilde, ii, axis=1)
-                    #Compute the scores of the reduced matrix, after PCA
-                    eigenvec = PCA_fit(X_cut, self._nPCs)
-                    Z_tilde = X_cut @ eigenvec[0]
-                    #ROTATE THE SCORES VIA VARIMAX
-                    Z_tilde = varimax_rotation(self.X_tilde, Z_tilde, normalize=True)
-                    #Compute the reduced scores covariance matrix, and then apply SVD
-                    covZZ = np.transpose(Z_tilde) @ Z
-                    u, s, vh = np.linalg.svd(covZZ, full_matrices=True)
-                    #Compute the Procustes Analysis score M2 for the matrix without the 'ii' variable
-                    M2_tmp = np.trace((np.transpose(Z) @ Z) + (np.transpose(Z_tilde) @ Z_tilde) - 2*s)
-                    #If the Silhouette score M2 is lower than the previous one in M2_tmp, store the
-                    #variable 'ii' to remove it after the for loop
-                    if M2_tmp < M2:
-                        M2 = M2_tmp
-                        var_tmp = ii
-                #Remove the variable from the matrix and the labels list
-                self.X_tilde = np.delete(self.X_tilde, var_tmp, axis=1)
-                self.labels = np.delete(self.labels, var_tmp, axis=0)
-                print("Current number of variables: {}".format(self.X_tilde.shape[1]))
-
-            return self.labels
+            return self.labels, self.var_num
 
         elif self._method.lower() == 'b4':
 
@@ -1383,15 +1243,17 @@ class variables_selection(PCA):
             model.eigens = self._nPCs
             PCs,eigvals = model.fit()
             PVs = []
+            self.var_num = []
 
             for ii in range(0, self._n_ret):
                 #Check the largest weight on the first 'm' PCs and add it to the PVs list.
                 argmax_= np.argmax(np.abs(PCs[:,ii]))
                 PVs.append(self.labels[argmax_])
+                self.var_num = argmax_
                 #Set the variable weight to zero on all the PCs, to avoid repetition in the PVs list.
                 PCs[argmax_,:]= 0
 
-            return PVs
+            return PVs, self.var_num
 
         else:
             raise Exception("Variables selection method not supported. Please choose one between 'B2', 'Procustes', 'Procustes_rotation'.")
@@ -1442,7 +1304,7 @@ class SamplePopulation():
         #Choose the dimensions of the sampled dataset.
         self._dimensions = 1
         
-        #Predefined number of clusters, if 'cluster', 'stratified' or 'multistage' are chosen
+        #Predefined number of clusters, if 'cluster' (kmeans or lpca) or 'stratified' are chosen
         self.__k = 32
         
         #Variable to use for the matrix conditioning in case of stratified sampling
@@ -1563,6 +1425,7 @@ class SamplePopulation():
                 delta_step = ((max_con - min_con) / self.__kHardConditioning)
                 counter = 0
                 var_left = min_con
+                #initialize the sampled matrix miniX
                 miniX = self.X[1:3,:]
                 while counter <= self.__kHardConditioning:
                     #Compute the two extremes, and take all the observations in
@@ -1581,69 +1444,12 @@ class SamplePopulation():
                         counter+=1
                     else:
                         np.random.shuffle(cluster_)
+                        #add the new observations to the sampled matrix
                         miniX = np.concatenate((miniX, cluster_[:local_batchSize,:]), axis=0)
-                        '''if miniX.shape[0] < self._dimensions and counter == self.__kHardConditioning:
-                            delta = self._dimensions - miniX.shape[0]
-                            miniX= np.concatenate((miniX, cluster_[(self.__batchSize+1):(self.__batchSize+1+delta),:]), axis=0)'''
                         var_left += delta_step
                         counter+=1
-            elif self._method.lower() == 'multistage':
-                #Stratified sampling step: build multiMiniX from X conditioning,
-                #and after that cluster to have a further reduction in the
-                #dataset' size. The conditioning is done with k = 32, while the
-                #clustering takes k = 16
-                self.__multiBatchSize = 2*self.__batchSize
-                self.__kHardConditioning = 100
-                if not self.__condVec:
-                    min_con = np.min(self.X[:,self._conditioning])
-                    max_con = np.max(self.X[:,self._conditioning])
-                else:
-                    min_con = np.min(self._conditioning)
-                    max_con = np.max(self._conditioning)
-                delta_step = ((max_con - min_con) / self.__kHardConditioning)
-                counter = 0
-                var_left = min_con
-                multiMiniX = self.X[1:3,:]
-                while counter <= self.__kHardConditioning:
-                    var_right = var_left + delta_step
-                    if not self.__condVec:
-                        mask = np.logical_and(self.X[:,self._conditioning] >= var_left, self.X[:,self._conditioning] < var_right)
-                    else:
-                        mask = np.logical_and(self._conditioning >= var_left, self._conditioning < var_right)
-                    cluster_ = self.X[mask]
-                    if cluster_.shape[0] < self.__multiBatchSize:
-                        multiMiniX = np.concatenate((multiMiniX, cluster_), axis=0)
-                        var_left += delta_step
-                        counter+=1
-                    else:
-                        np.random.shuffle(cluster_)
-                        multiMiniX = np.concatenate((multiMiniX, cluster_[:self.__multiBatchSize,:]), axis=0)
-                        if multiMiniX.shape[0] < self._dimensions and counter == self.__kHardConditioning:
-                            delta = self._dimensions - multiMiniX.shape[0]
-                            multiMiniX= np.concatenate((multiMiniX, cluster_[(self.__multiBatchSize+1):(self.__multiBatchSize+1+delta),:]), axis=0)
-                        var_left += delta_step
-                        counter+=1
-                #Clustering sampling step: build miniX from multiMiniX via KMeans
-                multiMiniX_tilde = center_scale(multiMiniX, center(multiMiniX,'mean'), scale(multiMiniX, 'auto'))
-                multiK = int(self.__k / 2)
-                miniX = self.X[1:3,:]
-                model_KM = clustering.KMeans(multiMiniX_tilde)
-                model_KM.clusters = self.__k
-                model_KM.initMode = True
-                id = model_KM.fit()
-                for ii in range(0, max(id)+1):
-                    cluster_ = get_cluster(multiMiniX, id, ii)
-                    if cluster_.shape[0] < self.__batchSize:
-                        miniX = np.concatenate((miniX, cluster_), axis=0)
-                    else:
-                        np.random.shuffle(cluster_)
-                        miniX = np.concatenate((miniX, cluster_[:self.__batchSize,:]), axis=0)
-                        if miniX.shape[0] < self._dimensions and ii == max(id):
-                            delta = self._dimensions - miniX.shape[0]
-                            miniX= np.concatenate((miniX, cluster_[(self.__batchSize+1):(self.__batchSize+1+delta),:]), axis=0)
-            
             else:
-                raise Exception("The selected sampling method is not valid. Please choose between: 'random', 'kmeans', 'lpca', 'stratified' or 'multistage'.")
+                raise Exception("The selected sampling method is not valid. Please choose between: 'random', 'kmeans', 'lpca', 'stratified'.")
 
             #it can happen that few observations are missing to reach the prescribed number of observations of
             #the sampled matrix. In this case, fill the gap with random observations from the training matrix
@@ -2045,11 +1851,13 @@ class NMF():
 
 
                 elif self._method.lower() == 'sparse':
+                    #add the sparsity factors
                     modW = np.r_[self.W, sparsityW]                                                 #(m x k) + (1 x k) = (m+1) x k 
                     self.H = lstsq(modW, modX1, rcond=None)[0]                                      #(m+1)x k ++ (m+1)x n == (k x n) == H
                     mask = np.where(self.H < 0)
                     self.H[mask] = 0
                     
+                    #add the sparsity factors
                     modH = np.r_[self.H.T, sparsityH]                                               #(nxk) + (kxk) = (n+k) x k
 
                     self.W = lstsq(modH, modX2, rcond=None)[0]                                      #(n+k) x k ++ (n+k) x m == (k x m)
@@ -2086,7 +1894,7 @@ class NMF():
                     print("\tReconstruction error variance: {}".format(eps_rec_var))
                     iteration +=1
                 else:
-                    #scale again the W matrix to have unit L2-norm as prescribed in [3]
+                    #scale again the W matrix to have unitary L2-norm before lstsq as prescribed in [3]
                     for jj in range(0,self.W.shape[1]):
                         tmp = norm(self.W[:,jj])
                         self.W[:,jj] = self.W[:,jj]/tmp 
@@ -2143,7 +1951,6 @@ class NMF():
                     self.W *= gamma
 
 
-
                 X_rec = self.W @ self.H 
 
 
@@ -2188,9 +1995,13 @@ class NMF():
         idx:            vector containing the cluster assignment, whose shape is (observations x 1)
         type idx:       numpy vector
         '''
+        #initialize the labels vector
         idx = np.empty((self.rows,), dtype=int)
+        #each observation is assigned to the cluster where the NMF scores are maximized,
+        #i.e., corresponding to the column of H with the highest value.
         idx = np.argmax(self.H.T, axis=1)
 
+        #eventually remove empty clusters with the method defined in LPCA
         idx = clustering.lpca.merge_clusters(self.X_tilde, idx)
         print("The final number of clusters is equal to: {}".format(np.max(idx+1)))
 
