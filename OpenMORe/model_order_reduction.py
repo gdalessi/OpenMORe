@@ -1209,6 +1209,7 @@ class variables_selection(PCA):
 
             #Number of variables before the elimination starts:
             max_var = self.X.shape[1]
+            counter = 1
             #While the number of variables is larger than the number you want to retain ('m'), go on
             #with the elimination process:
             while max_var > self.retained:
@@ -1218,15 +1219,20 @@ class variables_selection(PCA):
                 PCs,eigvals = model.fit()
                 #Check which variable has the max weight on the last PC. Python starts to count from
                 #zero, that's why the last number is "self._nPCs -1" and not "self._nPCs"
-                max_on_last = np.max(np.abs(PCs[:,self._nPCs-1]))
-                argmax_on_last = np.max(np.abs(PCs[:,self._nPCs-1]))
-                #Delete the selected variable
-                self.X_tilde = np.delete(self.X_tilde, argmax_on_last, axis=1)
+                max_on_last = np.max(np.abs(PCs[:,PCs.shape[1]- counter]))
+                argmax_on_last = np.argmax(np.abs(PCs[:,PCs.shape[1]- counter]))
+                #Delete the selected variable from the original matrix
+                self.X = np.delete(self.X, argmax_on_last, axis=1)
+                #same for the labels
                 self.labels = np.delete(self.labels, argmax_on_last, axis=0)
+                #same for the numbers list
                 self.var_num = np.delete(self.var_num, argmax_on_last, axis=0)
-                print("Current number of variables: {}".format(self.X_tilde.shape[1]))
+                #same for the corresponding PC rows
+                PCs = np.delete(PCs, argmax_on_last, axis =0)
+                print("Current number of variables: {}".format(self.X.shape[1]))
                 #Get the current number of variables for the while loop
-                max_var = self.X_tilde.shape[1]
+                counter += 1
+                max_var = self.X.shape[1]
 
 
             return self.labels, self.var_num
@@ -1251,7 +1257,7 @@ class variables_selection(PCA):
                 PVs.append(self.labels[argmax_])
                 self.var_num = argmax_
                 #Set the variable weight to zero on all the PCs, to avoid repetition in the PVs list.
-                PCs[argmax_,:]= 0
+                PCs = np.delete(PCs, argmax_, axis=0)
 
             return PVs, self.var_num
 
