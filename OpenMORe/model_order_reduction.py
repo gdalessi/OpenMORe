@@ -92,29 +92,61 @@ class PCA:
         self._nPCs = X.shape[1] -1
 
         if dictionary:
-            settings = dictionary[0]
+            settings = dictionary[0] 
             try:
                 self._nPCs = settings["number_of_eigenvectors"]
+                if self._nPCs < 0 or self._nPCs >= self.X.shape[1]:
+                    raise Exception
             except:
                 self._nPCs = self.X.shape[1]-1
-                print("Number of PCs to retain not given to dictionary. It will be automatically set equal to X.shape[1]-1.")
-                print("You can ignore this warning if the number of PCs has been assigned later via setter.")
+                print("WARNING")
+                print("\tNumber of PCs to retain not given to dictionary, or is not valid. It will be automatically set equal to: X.shape[1]-1.")
+                print("\tYou can ignore this warning if the number of PCs has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
             try:
                 self._center = settings["center"]
+                if not isinstance(self._center, bool):
+                    raise Exception
             except:
                 self._center = True
+                print("WARNING")
+                print("\tCentering decision not given to dictionary, or is not valid. It will be automatically set equal to: true.")
+                print("\tYou can ignore this warning if the centering decision has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
             try:
                 self._centering = settings["centering_method"]
+                if not isinstance(self._centering, str):
+                    raise Exception
+                elif self._centering.lower() != "mean" and self._centering.lower() != "min":
+                    raise Exception
             except:
                 self._centering = "mean"
+                print("WARNING")
+                print("\tCentering criterion not given to dictionary, or is not valid. It will be automatically set equal to: mean.")
+                print("\tYou can ignore this warning if the centering criterion has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
             try:
                 self._scale = settings["scale"]
+                if not isinstance(self._scale, bool):
+                    raise Exception
             except:
                 self._scale = True 
+                print("WARNING")
+                print("\tScaling decision not given to dictionary, or is not valid. It will be automatically set equal to: true.")
+                print("\tYou can ignore this warning if the scaling decision has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
             try: 
                 self._scaling = settings["scaling_method"]
+                if not isinstance(self._scaling, str):
+                    raise Exception
+                elif self._scaling.lower() != "auto" and self._scaling.lower() != "vast" and self._scaling.lower() != "pareto" and self._scaling.lower() != "range":
+                    raise Exception
             except:
                 self._scaling = "auto"
+                print("WARNING")
+                print("\tScaling criterion not given to dictionary, or is not valid. It will be automatically set equal to: auto.")
+                print("\tYou can ignore this warning if the scaling criterion has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
             try:
                 self._plot_explained_variance = settings["enable_plot_variance"]
             except:
@@ -220,7 +252,10 @@ class PCA:
     @set_num_to_plot.setter
     @accepts(object, int)
     def set_num_to_plot(self, new_number):
-        self._num_to_plot = new_number
+        if _num_to_plot <= self.X.shape[1]:
+            self._num_to_plot = new_number
+        else:
+            raise Exception("The number of the variable to plot cannot exceed the number of rows of the training matrix.")
 
 
     @staticmethod
@@ -290,14 +325,34 @@ class PCA:
         type X_rec: numpy array    
         '''
 
+        try:
+            self.evecs
+        except:
+            self.evecs, ____ = self.fit()
+            
+
         #Compute the centering and the scaling factors. Later they will be useful.
         self.mu = center(self.X, self.centering)
         self.sigma = scale(self.X, self.scaling)
         #Reconstruct the original matrix
         self.X_r = self.X_tilde @ self.evecs @ self.evecs.T
-        # Uncenter and unscale to get the reconstructed original matrix
-        X_unsc = unscale(self.X_r, self.sigma)
-        self.X_rec = uncenter(X_unsc, self.mu)
+        # Uncenter and unscale to get the reconstructed original matrix depending on
+        #the centering and scaling decisions:
+
+        #If the matrix has been centered and scaled, unscale and uncenter:
+        if self._center and self._scale:
+            X_unsc = unscale(self.X_r, self.sigma)
+            self.X_rec = uncenter(X_unsc, self.mu)
+        #If it has only been centered, uncenter:
+        elif self._center and not self._scale:
+            self.X_rec = uncenter(self.X_r, self.mu)
+        #If it has only been scaled, unscale:
+        elif self._scale and not self._center:
+            self.X_rec = unscale(self.X_r, self.sigma)
+        #Otherwise no additional operation is needed
+        else:
+            self.X_rec = self.X_r
+
 
         return self.X_rec
 
@@ -317,6 +372,11 @@ class PCA:
         '''
         #compute the explained variance by means of the cumulative sum of the
         #considered "q" eigenvalues
+        try: 
+            self.evals
+        except:
+            self.evecs, self.evals = self.fit()
+        
         explained_variance = np.cumsum(self.evals)/sum(self.ALLevals)
         explained = explained_variance[-1]
         #If the plot boolean is True, produce an image to show the explained variance curve.
@@ -325,7 +385,7 @@ class PCA:
             fig = plt.figure()
             axes = fig.add_axes([0.15,0.15,0.7,0.7], frameon=True)
             axes.plot(np.linspace(1, len(explained_variance), len(explained_variance)), explained_variance, color='b', marker='s', linestyle='-', linewidth=2, markersize=4, markerfacecolor='b', label='Cumulative explained')
-            axes.plot([self.eigens, self.eigens], [explained_variance[0], explained_variance[-1]], color='r', marker='s', linestyle='-', linewidth=2, markersize=4, markerfacecolor='r', label='Explained by {} PCs'.format(self.eigens))
+            axes.plot([self._nPCs, self._nPCs], [explained_variance[0], explained_variance[-1]], color='r', marker='s', linestyle='-', linewidth=2, markersize=4, markerfacecolor='r', label='Explained by {} PCs'.format(self._nPCs))
             axes.set_xlabel('Number of PCs [-]')
             axes.set_ylabel('Explained variance [-]')
             axes.set_title('Variance explained by {} PCs: {}'.format(self.eigens, round(explained,3)))
@@ -348,6 +408,12 @@ class PCA:
         '''
         #Project the full matrix on the reduced basis
         #Z = XA --> (nxq) = (nxp) x (pxq)
+        try:
+            self.evecs
+        except:
+            self.evecs, ____ = self.fit()
+        
+
         self.scores = self.X_tilde @ self.evecs
 
         return self.scores
@@ -405,6 +471,11 @@ class PCA:
 
         '''
 
+        try:
+            self.evecs
+        except:
+            self.evecs, ____ = self.fit()
+
         #plot
         matplotlib.rcParams.update({'font.size' : 18, 'text.usetex' : True})
         fig = plt.figure()
@@ -424,19 +495,22 @@ class PCA:
         red line, the better it is the reconstruction.
 
         '''
-        #perform PCA
-        self.fit()
-        #recontruct the original matrix from the reduced manifold:
-        #X_rec = Z*A^{T}
-        #it is possible to do this because the matrix A is orthonormal, i.e., A^{-1} = A^{T}
-        reconstructed_ = self.recover()
+        try:
+            self.X_rec
+        except:
+            #perform PCA
+            #self.fit()
+            #recontruct the original matrix from the reduced manifold:
+            #X_rec = Z*A^{T}
+            #it is possible to do this because the matrix A is orthonormal, i.e., A^{-1} = A^{T}
+            self.X_rec = self.recover()
 
         #plot
         matplotlib.rcParams.update({'font.size' : 18, 'text.usetex' : True})
         fig = plt.figure()
         axes = fig.add_axes([0.25,0.15,0.7,0.7], frameon=True)
         axes.plot(self.X[:,self._num_to_plot], self.X[:,self._num_to_plot], color='r', linestyle='-', linewidth=2, markerfacecolor='b')
-        axes.scatter(self.X[:,self._num_to_plot], reconstructed_[:,self._num_to_plot], 1, color= 'k')
+        axes.scatter(self.X[:,self._num_to_plot], self.X_rec[:,self._num_to_plot], 1, color= 'k')
         axes.set_xlabel('Original variable')
         axes.set_ylabel('Reconstructed from PCA manifold')
         plt.xlim(min(self.X[:,self._num_to_plot]), max(self.X[:,self._num_to_plot]))
@@ -473,10 +547,11 @@ class PCA:
         new_mask:   the vector containing the ID of the non-outlier observations 
 
         '''
+        
         #Leverage points removal:
         #Compute the PCA scores. Override the eventual number of PCs: ALL the
         #PCs are needed, as the outliers are given by the last PCs examination
-        input_eigens = self.eigens
+        input_eigens = self._nPCs
         self.eigens = self.X.shape[1]-1
         PCs, eigval = self.fit()
         scores = self.get_scores()
@@ -805,8 +880,19 @@ class LPCA(PCA):
             self.X_rec[positions] = C_
 
         #unscale and uncenter to get back the original values
-        self.X_rec = unscale(self.X_rec, sigma_global)
-        self.X_rec = uncenter(self.X_rec, mu_global)
+
+        if self._center and self._scale:
+            X_unsc = unscale(self.X_r, sigma_global)
+            self.X_rec = uncenter(X_unsc, mu_global)
+        #If it has only been centered, uncenter:
+        elif self._center and not self._scale:
+            self.X_rec = uncenter(self.X_r, mu_global)
+        #If it has only been scaled, unscale:
+        elif self._scale and not self._center:
+            self.X_rec = unscale(self.X_r, sigma_global)
+        #Otherwise no additional operation is needed
+        else:
+            self.X_rec = self.X_rec
 
         return self.X_rec
 
@@ -1055,7 +1141,7 @@ class variables_selection(PCA):
             try:
                 self._method = settings["method"]
             except:
-                self.method = 'procustes'
+                self._method = 'procustes'
                 print("Selection method not given to dictionary. It will be automatically set equal to 'procrustes'.")
                 print("You can ignore this warning if the selection method has been assigned later via setter.")
             try:
@@ -1162,7 +1248,6 @@ class variables_selection(PCA):
         type labels: array
         '''
 
-        print("Selecting global variables via PCA and Procustes Analysis...")
         #load the variables' labels (or the numbers, if the path is not given)
         self.load_labels()
         variables_selection.check_sanity_input(self.X, self.labels, self._n_ret)
@@ -1171,7 +1256,8 @@ class variables_selection(PCA):
         self.X_tilde = PCA.preprocess_training(self.X, self.to_center, self.to_scale, self.centering, self.scaling)
         self.var_num = np.linspace(0, self.X.shape[1]-1, self.X.shape[1], dtype=int)
         if self._method.lower() == 'procustes':
-
+            print("Selecting global variables via PCA and Procustes Analysis...")
+            
             #Start with PCA, and compute the scores (Z)
             eigenvec = PCA_fit(self.X_tilde, self._nPCs)
             Z = self.X_tilde @ eigenvec[0]
@@ -1206,7 +1292,7 @@ class variables_selection(PCA):
             return self.labels, self.var_num
 
         elif self._method.lower() == 'b2':
-
+            print("Selecting global variables via B2 method..")
             #Number of variables before the elimination starts:
             max_var = self.X.shape[1]
             counter = 1
@@ -1238,6 +1324,7 @@ class variables_selection(PCA):
             return self.labels, self.var_num
 
         elif self._method.lower() == 'b4':
+            print("Selecting global variables via B4 method..")
 
             model = PCA(self.X)
             if self._nPCs < self._n_ret:
@@ -1247,7 +1334,7 @@ class variables_selection(PCA):
                 self._nPCs = self._n_ret
 
             model.eigens = self._nPCs
-            PCs,eigvals = model.fit()
+            PCs, eigvals = model.fit()
             PVs = []
             self.var_num = []
 

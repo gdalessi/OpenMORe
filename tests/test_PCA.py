@@ -30,12 +30,12 @@ class testPCA(unittest.TestCase):
 
     def setUp(self):
         self.X = np.random.rand(30,5)
-        self.nPCtest = 3
+        self.nPCtest = 1
         self.kernelType = 'rbf'
-        self.nVarTest = 4
+        self.nVarTest = 3
         self.selMethod1 = 'procustes'
-        self.selMethod2 = 'b2'
-        self.selMethod3 = 'b4'
+        self.selMethod2 = 'b4'
+        self.selMethod3 = 'b2'
 
 
     def tearDown(self):
@@ -79,6 +79,8 @@ class testPCA(unittest.TestCase):
 
         linearSelection.method = self.selMethod3
         labels3, ____ = linearSelection.fit()
+
+        
 
         self.assertEqual(len(labels1), self.nVarTest)
         self.assertEqual(len(labels2), self.nVarTest)
