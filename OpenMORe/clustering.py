@@ -122,51 +122,108 @@ class lpca:
             settings = dictionary[0]
             try:
                 self._k = settings["number_of_clusters"]
+                if not isinstance(self._k, int):
+                    raise Exception
             except:
                 self._k = 2
-                print("Number of clusters not given to dictionary. Data will be automatically partitioned with k = 2..")
-                print("You can ignore this warning if 'k' has been assigned later via setter.")
-                
+                print("WARNING")
+                print("\tAn exception occured with regard to the input value for the number of clusters (k). It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: 2.")
+                print("\tYou can ignore this warning if the number of clusters (k) has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
+            
             try:
                 self._nPCs = settings["number_of_eigenvectors"]
+                if self._nPCs < 0 or self._nPCs >= self.X.shape[1]:
+                    raise Exception
             except:
-                self._nPCs = self.X.shape[1]-1
-                print("Number of PCs to retain not given to dictionary. It will be automatically set equal to X.shape[1]-1.")
-                print("You can ignore this warning if the number of PCs has been assigned later via setter.")
+                self._nPCs = int(self.X.shape[1]/2)
+                print("WARNING")
+                print("\tAn exception occured with regard to the input value for the number of PCs. It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: X.shape[1]-1.")
+                print("\tYou can ignore this warning if the number of PCs has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
+            try:
+                self._center = settings["center"]
+                if not isinstance(self._center, bool):
+                    raise Exception
+            except:
+                self._center = True
+                print("WARNING")
+                print("\tAn exception occured with regard to the input value for the centering decision. It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: true.")
+                print("\tYou can ignore this warning if the centering decision has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
+            try:
+                self._centering = settings["centering_method"]
+                if not isinstance(self._centering, str):
+                    raise Exception
+                elif self._centering.lower() != "mean" and self._centering.lower() != "min":
+                    raise Exception
+            except:
+                self._centering = "mean"
+                print("WARNING")
+                print("\tAn exception occured with regard to the input value for the centering criterion . It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: mean.")
+                print("\tYou can ignore this warning if the centering criterion has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
+            try:
+                self._scale = settings["scale"]
+                if not isinstance(self._scale, bool):
+                    raise Exception
+            except:
+                self._scale = True 
+                print("WARNING")
+                print("\tAn exception occured with regard to the input value for the scaling decision. It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: true.")
+                print("\tYou can ignore this warning if the scaling decision has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
+            try: 
+                self._scaling = settings["scaling_method"]
+                if not isinstance(self._scaling, str):
+                    raise Exception
+                elif self._scaling.lower() != "auto" and self._scaling.lower() != "vast" and self._scaling.lower() != "pareto" and self._scaling.lower() != "range":
+                    raise Exception
+            except:
+                self._scaling = "auto"
+                print("WARNING")
+                print("\tAn exception occured with regard to the input value for the scaling criterion. It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: auto.")
+                print("\tYou can ignore this warning if the scaling criterion has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
             try:
                 self._method = settings["initialization_method"]
+                if not isinstance(self._method, str):
+                    raise Exception
+                elif self._method.lower() != "uniform" or self._method.lower() != "kmeans" or self._method.lower() != "pkcia" or self._method.lower() != "observations" or self._method.lower() != "random":
+                    raise Exception
             except:
                 self._method = 'uniform'
-                print("Initialization method not given to dictionary. It will be automatically set equal to 'uniform'.")
-                print("You can ignore this warning if the initialization method has been assigned later via setter.")
+                print("WARNING")
+                print("\tAn exception occured with regard to the input value for the initialization criterion. It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: uniform.")
+                print("\tYou can ignore this warning if the initialization criterion has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
             try:
-                self._correction = settings["correction_factor"]         
+                self._correction = settings["correction_factor"]   
+                if not isinstance(self._correction, str):
+                    raise Exception
+                elif self._correction != "off" or self._correction != "phc_multi" or self._correction != "c_range" or self._correction != "uncorrelation" or self._correction != "local_variance" or self._correction !=  "local_skewness":
+                    raise Exception    
             except:
                 self._correction = "off"
-                print("Correction factor not given to dictionary. It will be automatically set equal to 'off'.")
+                print("Correction factor automatically set equal to 'off'.")
                 print("You can ignore this warning if the correction factor has been assigned later via setter.")
             try:
                 self._adaptive = settings["adaptive_PCs"]
+                if not isinstance(self._adaptive, bool):
+                    raise Exception
             except:
                 self._adaptive = False
             try:
-                self._center = settings["center"]
-            except:
-                self._center = True
-            try:
-                self._centering = settings["centering_method"]
-            except:
-                self._centering = "mean"
-            try:
-                self._scale = settings["scale"]
-            except:
-                self._scale = True 
-            try: 
-                self._scaling = settings["scaling_method"]
-            except:
-                self._scaling = "auto"
-            try:
                 self._writeFolder = settings["write_stats"]
+                if not isinstance(self._writeFolder, bool):
+                    raise Exception
             except:
                 self._writeFolder = True
 
@@ -741,50 +798,108 @@ class fpca(lpca):
 
             try:
                 self._k = settings["number_of_clusters"]
+                if not isinstance(self._k, int):
+                    raise Exception
             except:
                 self._k = 2
-                print("Number of clusters not given to dictionary. Data will be automatically partitioned with k = 2..")
-                print("You can ignore this warning if 'k' has been assigned later via setter.")
+                print("WARNING")
+                print("\tAn exception occured with regard to the input value for the number of clusters (k). It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: 2.")
+                print("\tYou can ignore this warning if the number of clusters (k) has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
+            
             try:
                 self._nPCs = settings["number_of_eigenvectors"]
+                if self._nPCs < 0 or self._nPCs >= self.X.shape[1]:
+                    raise Exception
             except:
                 self._nPCs = self.X.shape[1]-1
-                print("Number of PCs to retain not given to dictionary. It will be automatically set equal to X.shape[1]-1.")
-                print("You can ignore this warning if the number of PCs has been assigned later via setter.")
+                print("WARNING")
+                print("\tAn exception occured with regard to the input value for the number of PCs. It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: X.shape[1]-1.")
+                print("\tYou can ignore this warning if the number of PCs has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
+            try:
+                self._center = settings["center"]
+                if not isinstance(self._center, bool):
+                    raise Exception
+            except:
+                self._center = True
+                print("WARNING")
+                print("\tAn exception occured with regard to the input value for the centering decision. It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: true.")
+                print("\tYou can ignore this warning if the centering decision has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
+            try:
+                self._centering = settings["centering_method"]
+                if not isinstance(self._centering, str):
+                    raise Exception
+                elif self._centering.lower() != "mean" and self._centering.lower() != "min":
+                    raise Exception
+            except:
+                self._centering = "mean"
+                print("WARNING")
+                print("\tAn exception occured with regard to the input value for the centering criterion . It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: mean.")
+                print("\tYou can ignore this warning if the centering criterion has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
+            try:
+                self._scale = settings["scale"]
+                if not isinstance(self._scale, bool):
+                    raise Exception
+            except:
+                self._scale = True 
+                print("WARNING")
+                print("\tAn exception occured with regard to the input value for the scaling decision. It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: true.")
+                print("\tYou can ignore this warning if the scaling decision has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
+            try: 
+                self._scaling = settings["scaling_method"]
+                if not isinstance(self._scaling, str):
+                    raise Exception
+                elif self._scaling.lower() != "auto" and self._scaling.lower() != "vast" and self._scaling.lower() != "pareto" and self._scaling.lower() != "range":
+                    raise Exception
+            except:
+                self._scaling = "auto"
+                print("WARNING")
+                print("\tAn exception occured with regard to the input value for the scaling criterion. It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: auto.")
+                print("\tYou can ignore this warning if the scaling criterion has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
             try:
                 self._method = settings["initialization_method"]
+                if not isinstance(self._method, str):
+                    raise Exception
+                elif self._method.lower() != "uniform" or self._method.lower() != "kmeans" or self._method.lower() != "pkcia" or self._method.lower() != "observations" or self._method.lower() != "random":
+                    raise Exception
             except:
                 self._method = 'uniform'
-                print("Initialization method not given to dictionary. It will be automatically set equal to 'uniform'.")
-                print("You can ignore this warning if the initialization method has been assigned later via setter.")
+                print("WARNING")
+                print("\tAn exception occured with regard to the input value for the initialization criterion. It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: uniform.")
+                print("\tYou can ignore this warning if the initialization criterion has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
             try:
-                self._correction = settings["correction_factor"]
+                self._correction = settings["correction_factor"]   
+                if not isinstance(self._correction, str):
+                    raise Exception
+                elif self._correction != "off" or self._correction != "phc_multi" or self._correction != "c_range" or self._correction != "uncorrelation" or self._correction != "local_variance" or self._correction !=  "local_skewness":
+                    raise Exception    
             except:
                 self._correction = "off"
-                print("Correction factor not given to dictionary. It will be automatically set equal to 'off'.")
+                print("Correction factor automatically set equal to 'off'.")
                 print("You can ignore this warning if the correction factor has been assigned later via setter.")
             try:
                 self._adaptive = settings["adaptive_PCs"]
+                if not isinstance(self._adaptive, bool):
+                    raise Exception
             except:
                 self._adaptive = False
             try:
-                self._center = settings["center"]
-            except:
-                self._center = True
-            try:
-                self._centering = settings["centering_method"]
-            except:
-                self._centering = "mean"
-            try:
-                self._scale = settings["scale"]
-            except:
-                self._scale = True 
-            try: 
-                self._scaling = settings["scaling_method"]
-            except:
-                self._scaling = "auto"
-            try:
                 self._writeFolder = settings["write_stats"]
+                if not isinstance(self._writeFolder, bool):
+                    raise Exception
             except:
                 self._writeFolder = True
 
@@ -918,26 +1033,64 @@ class KMeans(lpca):
             settings = dictionary[0]
             try:
                 self._k = settings["number_of_clusters"]
+                if not isinstance(self._k, int):
+                    raise Exception
             except:
                 self._k = 2
-                print("Number of clusters not given to dictionary. Data will be automatically partitioned with k = 2..")
-                print("You can ignore this warning if 'k' has been assigned later via setter.")
+                print("WARNING")
+                print("\tAn exception occured with regard to the input value for the number of clusters (k). It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: 2.")
+                print("\tYou can ignore this warning if the number of clusters (k) has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
             try:
                 self._center = settings["center"]
+                if not isinstance(self._center, bool):
+                    raise Exception
             except:
                 self._center = True
+                print("WARNING")
+                print("\tAn exception occured with regard to the input value for the centering decision. It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: true.")
+                print("\tYou can ignore this warning if the centering decision has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
             try:
                 self._centering = settings["centering_method"]
+                if not isinstance(self._centering, str):
+                    raise Exception
+                elif self._centering.lower() != "mean" and self._centering.lower() != "min":
+                    raise Exception
             except:
                 self._centering = "mean"
+                print("WARNING")
+                print("\tAn exception occured with regard to the input value for the centering criterion . It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: mean.")
+                print("\tYou can ignore this warning if the centering criterion has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
             try:
                 self._scale = settings["scale"]
+                if not isinstance(self._scale, bool):
+                    raise Exception
             except:
                 self._scale = True 
+                print("WARNING")
+                print("\tAn exception occured with regard to the input value for the scaling decision. It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: true.")
+                print("\tYou can ignore this warning if the scaling decision has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
             try: 
                 self._scaling = settings["scaling_method"]
+                if not isinstance(self._scaling, str):
+                    raise Exception
+                elif self._scaling.lower() != "auto" and self._scaling.lower() != "vast" and self._scaling.lower() != "pareto" and self._scaling.lower() != "range":
+                    raise Exception
             except:
                 self._scaling = "auto"
+                print("WARNING")
+                print("\tAn exception occured with regard to the input value for the scaling criterion. It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: auto.")
+                print("\tYou can ignore this warning if the scaling criterion has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
+            
 
     @property
     def initMode(self):
@@ -1151,30 +1304,76 @@ class spectralClustering():
             settings = dictionary[0]
             try:
                 self._k = settings["number_of_clusters"]
+                if not isinstance(self._k, int):
+                    raise Exception
             except:
                 self._k = 2
-                print("Number of clusters not given to dictionary. Data will be automatically partitioned with k = 2..")
-                print("You can ignore this warning if 'k' has been assigned later via setter.")
+                print("WARNING")
+                print("\tAn exception occured with regard to the input value for the number of clusters (k). It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: 2.")
+                print("\tYou can ignore this warning if the number of clusters (k) has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
             try:
                 self._center = settings["center"]
+                if not isinstance(self._center, bool):
+                    raise Exception
             except:
                 self._center = True
+                print("WARNING")
+                print("\tAn exception occured with regard to the input value for the centering decision. It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: true.")
+                print("\tYou can ignore this warning if the centering decision has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
             try:
                 self._centering = settings["centering_method"]
+                if not isinstance(self._centering, str):
+                    raise Exception
+                elif self._centering.lower() != "mean" and self._centering.lower() != "min":
+                    raise Exception
             except:
                 self._centering = "mean"
+                print("WARNING")
+                print("\tAn exception occured with regard to the input value for the centering criterion . It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: mean.")
+                print("\tYou can ignore this warning if the centering criterion has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
             try:
                 self._scale = settings["scale"]
+                if not isinstance(self._scale, bool):
+                    raise Exception
             except:
                 self._scale = True 
+                print("WARNING")
+                print("\tAn exception occured with regard to the input value for the scaling decision. It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: true.")
+                print("\tYou can ignore this warning if the scaling decision has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
             try: 
                 self._scaling = settings["scaling_method"]
+                if not isinstance(self._scaling, str):
+                    raise Exception
+                elif self._scaling.lower() != "auto" and self._scaling.lower() != "vast" and self._scaling.lower() != "pareto" and self._scaling.lower() != "range":
+                    raise Exception
             except:
                 self._scaling = "auto"
+                print("WARNING")
+                print("\tAn exception occured with regard to the input value for the scaling criterion. It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: auto.")
+                print("\tYou can ignore this warning if the scaling criterion has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
             try:
                 self._sigma = settings["sigma"]
+                if not isinstance(self._sigma, float) and not isinstance(self._sigma, int):
+                    raise Exception
+                elif self._sigma < 0:
+                    raise Exception
             except:
                 self._sigma = 1.0
+                print("WARNING")
+                print("\tAn exception occured with regard to the input value for sigma. It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: auto.")
+                print("\tYou can ignore this warning if sigma has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
 
 
     @property

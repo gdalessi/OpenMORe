@@ -100,7 +100,8 @@ class PCA:
             except:
                 self._nPCs = self.X.shape[1]-1
                 print("WARNING")
-                print("\tNumber of PCs to retain not given to dictionary, or is not valid. It will be automatically set equal to: X.shape[1]-1.")
+                print("\tAn exception occured with regard to the input value for the number of PCs. It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: X.shape[1]-1.")
                 print("\tYou can ignore this warning if the number of PCs has been assigned later via setter.")
                 print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
             try:
@@ -110,7 +111,8 @@ class PCA:
             except:
                 self._center = True
                 print("WARNING")
-                print("\tCentering decision not given to dictionary, or is not valid. It will be automatically set equal to: true.")
+                print("\tAn exception occured with regard to the input value for the centering decision. It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: true.")
                 print("\tYou can ignore this warning if the centering decision has been assigned later via setter.")
                 print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
             try:
@@ -122,7 +124,8 @@ class PCA:
             except:
                 self._centering = "mean"
                 print("WARNING")
-                print("\tCentering criterion not given to dictionary, or is not valid. It will be automatically set equal to: mean.")
+                print("\tAn exception occured with regard to the input value for the centering criterion . It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: mean.")
                 print("\tYou can ignore this warning if the centering criterion has been assigned later via setter.")
                 print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
             try:
@@ -132,7 +135,8 @@ class PCA:
             except:
                 self._scale = True 
                 print("WARNING")
-                print("\tScaling decision not given to dictionary, or is not valid. It will be automatically set equal to: true.")
+                print("\tAn exception occured with regard to the input value for the scaling decision. It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: true.")
                 print("\tYou can ignore this warning if the scaling decision has been assigned later via setter.")
                 print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
             try: 
@@ -144,25 +148,58 @@ class PCA:
             except:
                 self._scaling = "auto"
                 print("WARNING")
-                print("\tScaling criterion not given to dictionary, or is not valid. It will be automatically set equal to: auto.")
+                print("\tAn exception occured with regard to the input value for the scaling criterion. It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: auto.")
                 print("\tYou can ignore this warning if the scaling criterion has been assigned later via setter.")
                 print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
             try:
                 self._plot_explained_variance = settings["enable_plot_variance"]
+                if not isinstance(self._plot_explained_variance, bool):
+                    raise Exception
             except:
                 self._plot_explained_variance = True 
+                print("WARNING")
+                print("\tAn exception occured with regard to the input value for decision to plot the variance. It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: True.")
+                print("\tYou can ignore this warning if the decision has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
             try:
                 self._assessPCs = settings["set_criterion_autoPCs"]
+                if not isinstance(self._assessPCs, str):
+                    raise Exception
+                elif self._assessPCs.lower() != "var" or self._assessPCs.lower() != "nrmse":
+                    raise Exception
             except:
                 self._assessPCs = "var"
+                print("WARNING")
+                print("\tAn exception occured with regard to the input value for the auto-assessment of the PCs number. It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: var.")
+                print("\tYou can ignore this warning if it has been assigned later via setter, or in case the precise number of eigenvectors to retain has been set.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
             try:
                 self._threshold_var = settings["variance_to_explain"]
+                if not isinstance(self._threshold_var, float) and not isinstance(self._threshold_var, int):
+                    raise Exception
+                elif self._threshold_var < 0 or self._threshold_var > 1:
+                    raise Exception
             except:
                 self._threshold_var = 0.95
+                print("WARNING")
+                print("\tAn exception occured with regard to the input value for the explained variance threshold. It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: 0.95.")
+                print("\tYou can ignore this warning if it has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
             try:
                 self._num_to_plot = settings["variable_to_plot"]
+                if not isinstance(self._num_to_plot, int) or self._num_to_plot > self.X.shape[1]:
+                    raise Exception
             except:
                 self._num_to_plot = 0
+                print("WARNING")
+                print("\tAn exception occured with regard to the input value for the number of the variable/PC to plot. It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: 0.")
+                print("\tYou can ignore this warning if it has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
 
     @property
     def eigens(self):
@@ -1127,45 +1164,94 @@ class variables_selection(PCA):
 
         super().__init__(self.X)
 
-        self._method = 'B2' #'B2', 'B4', "Procustes", "procustes_rotation"
+        self._method = 'b2' #'B2', 'B4', "Procustes", "procustes_rotation"
 
         if dictionary:
             settings = dictionary[0]
 
             try:
                 self._nPCs = settings["number_of_eigenvectors"]
+                if self._nPCs < 0 or self._nPCs >= self.X.shape[1]:
+                    raise Exception
             except:
                 self._nPCs = self.X.shape[1]-1
-                print("Number of PCs to retain not given to dictionary. It will be automatically set equal to X.shape[1]-1.")
-                print("You can ignore this warning if the number of PCs has been assigned later via setter.")
+                print("WARNING")
+                print("\tAn exception occured with regard to the input value for the number of PCs. It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: X.shape[1]-1.")
+                print("\tYou can ignore this warning if the number of PCs has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
             try:
                 self._method = settings["method"]
+                if not isinstance(self._method, str):
+                    raise Exception
+                elif self._method.lower() != "procustes" and self._method.lower() != "b2" and self._method.lower() != "b4":
+                    raise Exception
             except:
                 self._method = 'procustes'
-                print("Selection method not given to dictionary. It will be automatically set equal to 'procrustes'.")
-                print("You can ignore this warning if the selection method has been assigned later via setter.")
+                print("WARNING")
+                print("\tAn exception occured with regard to the input value for the variables selection method. It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: procustes.")
+                print("\tYou can ignore this warning if the variables selection method has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
             try:
                 self._center = settings["center"]
+                if not isinstance(self._center, bool):
+                    raise Exception
             except:
                 self._center = True
+                print("WARNING")
+                print("\tAn exception occured with regard to the input value for the centering decision. It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: true.")
+                print("\tYou can ignore this warning if the centering decision has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
             try:
                 self._centering = settings["centering_method"]
+                if not isinstance(self._centering, str):
+                    raise Exception
+                elif self._centering.lower() != "mean" and self._centering.lower() != "min":
+                    raise Exception
             except:
                 self._centering = "mean"
+                print("WARNING")
+                print("\tAn exception occured with regard to the input value for the centering criterion . It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: mean.")
+                print("\tYou can ignore this warning if the centering criterion has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
             try:
                 self._scale = settings["scale"]
+                if not isinstance(self._scale, bool):
+                    raise Exception
             except:
                 self._scale = True 
+                print("WARNING")
+                print("\tAn exception occured with regard to the input value for the scaling decision. It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: true.")
+                print("\tYou can ignore this warning if the scaling decision has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
             try: 
                 self._scaling = settings["scaling_method"]
+                if not isinstance(self._scaling, str):
+                    raise Exception
+                elif self._scaling.lower() != "auto" and self._scaling.lower() != "vast" and self._scaling.lower() != "pareto" and self._scaling.lower() != "range":
+                    raise Exception
             except:
                 self._scaling = "auto"
+                print("WARNING")
+                print("\tAn exception occured with regard to the input value for the scaling criterion. It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: auto.")
+                print("\tYou can ignore this warning if the scaling criterion has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
             try:
                 self._n_ret = settings["number_of_variables"]
+                if not isinstance(self._n_ret,int) or self._n_ret >= self.X.shape[1] or self._n_ret < 0:
+                    raise Exception
             except:
-                raise Exception("Number of variables to retain (settings[number_of_variables]) not set in the dictionary.")
-                print("Exiting with error..")
-                exit()
+                print("WARNING")
+                print("\tAn exception occured with regard to the input value for the number of variables to retain. It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: 1.")
+                print("\tYou can ignore this warning if the scaling criterion has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
+                self._n_ret = 1
             try:
                 self._path = settings["path_to_labels"]
             except:
@@ -1409,12 +1495,30 @@ class SamplePopulation():
         
             try:
                 self._method = settings["method"]
+
+                if not isinstance(self._method, str):
+                    raise Exception
+                elif self._method.lower() != "random" or self._method.lower() != "lpca" or self._method.lower() != 'kmeans' or self._method.lower() != "stratified":
+                    raise Exception
             except:
                 self._method = "random"
+                print("WARNING")
+                print("\tAn exception occured with regard to the input value for the sampling method. It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: random.")
+                print("\tYou can ignore this warning if the sampling method has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
             try:
                 self._dimensions = settings["final_size"]
+
+                if not isinstance(self._dimensions, int) or self._dimensions > self.X.shape[0] or self._dimensions < 0:
+                    raise Exception
             except:
                 self._dimensions = int(self.X.shape[0]/2)
+                print("WARNING")
+                print("\tAn exception occured with regard to the input value for the sampled dataset dimensions. It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: X.shape[0] / 2.")
+                print("\tYou can ignore this warning if the sampled dataset dimensions has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
 
     @property
     def sampling_strategy(self):
@@ -1449,14 +1553,16 @@ class SamplePopulation():
             miniX:      sampled matrix with the prescribed number of observations 
             type miniX: numpy matrix
             '''
-            #Center and scale the matrix (auto preset)
+            #Center and scale the matrix (auto preset). There's no harm in doing this even if the 
+            #data are univariate, so the code does it by default just in case the input consists of multivariate data.
             self.X_tilde = center_scale(self.X, center(self.X,'mean'), scale(self.X, 'auto'))
             self.__batchSize = int(self._dimensions / self.__k)
 
             if self._method.lower() == 'random':
                 #Randomly shuffle the observations and take the prescribed number
                 np.random.shuffle(self.X)
-                miniX = self.X[:self.__batchSize,:]
+                miniX = self.X[:self._dimensions,:]
+            
             elif self._method.lower() == 'kmeans':
                 #Perform KMeans and take (randomly) from each cluster a certain
                 #batch to form the sampled matrix.
@@ -1467,8 +1573,8 @@ class SamplePopulation():
                 miniX = self.X[1:3,:]
                 for ii in range(0, max(id)+1):
                     cluster_ = get_cluster(self.X, id, ii)
-                    #If the cluster contains less observation than the batch
-                    #size, then take all the clusters' observations.
+                    #If the cluster contains less observations than the batch
+                    #size, then take all the cluster's observations.
                     if cluster_.shape[0] < self.__batchSize:
                         miniX = np.concatenate((miniX, cluster_), axis=0)
                     else:
@@ -1476,9 +1582,7 @@ class SamplePopulation():
                         #batchsize observations.
                         np.random.shuffle(cluster_)
                         miniX = np.concatenate((miniX, cluster_[:self.__batchSize,:]), axis=0)
-                        if miniX.shape[0] < self._dimensions and ii == max(id):
-                            delta = self._dimensions - miniX.shape[0]
-                            miniX= np.concatenate((miniX, cluster_[(self.__batchSize+1):(self.__batchSize+1+delta),:]), axis=0)
+            
             elif self._method.lower() == 'lpca':
                 #Do the exact same thing done in KMeans, but using the LPCA
                 #clustering algorithm. The number of PCs is automatically
@@ -1494,14 +1598,14 @@ class SamplePopulation():
                 miniX = self.X[1:3,:]
                 for ii in range(0, max(id)+1):
                     cluster_ = get_cluster(self.X, id, ii)
+                    #If the cluster contains less observations than the batch
+                    #size, then take all the cluster's observations.
                     if cluster_.shape[0] < self.__batchSize:
                         miniX = np.concatenate((miniX, cluster_), axis=0)
                     else:
                         np.random.shuffle(cluster_)
                         miniX = np.concatenate((miniX, cluster_[:self.__batchSize,:]), axis=0)
-                        if miniX.shape[0] < self._dimensions and ii == max(id):
-                            delta = self._dimensions - miniX.shape[0]
-                            miniX= np.concatenate((miniX, cluster_[(self.__batchSize+1):(self.__batchSize+1+delta),:]), axis=0)
+
             elif self._method.lower() == 'stratified':
                 #Condition the dataset dividing the interval of one variable in
                 #'k' bins and sample from each bin. The default variable to
@@ -1513,23 +1617,29 @@ class SamplePopulation():
                 else:
                     min_con = np.min(self._conditioning)
                     max_con = np.max(self._conditioning)
-                #Compute the extension of each bin (delta_step)
+                #Compute the extension of each bin (delta_step). 100 bins are imposed for the partitioning of the vector:
                 self.__kHardConditioning = 100
                 local_batchSize = int(self._dimensions/self.__kHardConditioning)
+                #compute the extension of each bin
                 delta_step = ((max_con - min_con) / self.__kHardConditioning)
                 counter = 0
+                #var left is the minimum value of the conditioning variable:
+                # min con --> | ....... conditioning vector ....... | <-- max con
                 var_left = min_con
                 #initialize the sampled matrix miniX
                 miniX = self.X[1:3,:]
                 while counter <= self.__kHardConditioning:
-                    #Compute the two extremes, and take all the observations in
+                    #Compute the two extremes for each bin, and take all the observations in
                     #the dataset which lie in the interval.
+                    # var_left --> | ... bin_{i} ... | <-- var_right = var_left + delta_step
                     var_right = var_left + delta_step
+                    #take all the observations in this interval: [var_left; var_right] and form a cluster
                     if not self.__condVec:
                         mask = np.logical_and(self.X[:,self._conditioning] >= var_left, self.X[:,self._conditioning] < var_right)
                     else:
                         mask = np.logical_and(self._conditioning >= var_left, self._conditioning < var_right)
                     cluster_ = self.X[mask,:]
+
                     #Also in this case, if the cluster size is lower than the
                     #batch size, take all the cluster.
                     if cluster_.shape[0] <= local_batchSize:
@@ -1537,6 +1647,7 @@ class SamplePopulation():
                         var_left += delta_step
                         counter+=1
                     else:
+                        #otherwise, shuffle and take a number of observations equal to the bin's dimension:
                         np.random.shuffle(cluster_)
                         #add the new observations to the sampled matrix
                         miniX = np.concatenate((miniX, cluster_[:local_batchSize,:]), axis=0)
@@ -1546,7 +1657,10 @@ class SamplePopulation():
                 raise Exception("The selected sampling method is not valid. Please choose between: 'random', 'kmeans', 'lpca', 'stratified'.")
 
             #it can happen that few observations are missing to reach the prescribed number of observations of
-            #the sampled matrix. In this case, fill the gap with random observations from the training matrix
+            #the sampled matrix. It is due to the fact that it can happen that the number of observations in each cluster
+            #is lower than the number required for the bin, i.e., it is verified the condition: cluster_.shape[0] < self.__batchSize.
+            
+            #In this case, fill the gap with random observations from the training matrix to get the required number of observations
             if miniX.shape[0] < self._dimensions:
                 np.random.shuffle(self.X)
                 delta = self._dimensions - miniX.shape[0]
@@ -1681,49 +1795,103 @@ class NMF():
         if dictionary:
             settings = dictionary[0]
             try:
-                self._center = settings["center"]
-            except:
-                self._center = True
-            try:
-                self._centering = settings["centering_method"]
-            except:
-                self._centering = "mean"
-            try:
-                self._scale = settings["scale"]
-            except:
-                self._scale = True 
-            try: 
-                self._scaling = settings["scaling_method"]
-            except:
-                self._scaling = "auto"
-            try:
                 self._dim = settings["number_of_features"]
+                if self._dim < 0 or self._dim > self.X.shape[1]:
+                    raise Exception
             except:
                 self._dim = self.X.shape[1]
-                print("Number of features to retain not given to dictionary. It will be automatically set equal to X.shape[1].")
-                print("You can ignore this warning if the number of PCs has been assigned later via setter.")
+                print("WARNING")
+                print("\tAn exception occured with regard to the input value for the number of features. It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: X.shape[1]-1.")
+                print("\tYou can ignore this warning if the number of features has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
+            try:
+                self._center = settings["center"]
+                if not isinstance(self._center, bool):
+                    raise Exception
+            except:
+                self._center = True
+                print("WARNING")
+                print("\tAn exception occured with regard to the input value for the centering decision. It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: true.")
+                print("\tYou can ignore this warning if the centering decision has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
+            try:
+                self._centering = settings["centering_method"]
+                if not isinstance(self._centering, str):
+                    raise Exception
+                elif self._centering.lower() != "mean" and self._centering.lower() != "min":
+                    raise Exception
+            except:
+                self._centering = "mean"
+                print("WARNING")
+                print("\tAn exception occured with regard to the input value for the centering criterion . It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: mean.")
+                print("\tYou can ignore this warning if the centering criterion has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
+            try:
+                self._scale = settings["scale"]
+                if not isinstance(self._scale, bool):
+                    raise Exception
+            except:
+                self._scale = True 
+                print("WARNING")
+                print("\tAn exception occured with regard to the input value for the scaling decision. It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: true.")
+                print("\tYou can ignore this warning if the scaling decision has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
+            try: 
+                self._scaling = settings["scaling_method"]
+                if not isinstance(self._scaling, str):
+                    raise Exception
+                elif self._scaling.lower() != "auto" and self._scaling.lower() != "vast" and self._scaling.lower() != "pareto" and self._scaling.lower() != "range":
+                    raise Exception
+            except:
+                self._scaling = "auto"
+                print("WARNING")
+                print("\tAn exception occured with regard to the input value for the scaling criterion. It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: auto.")
+                print("\tYou can ignore this warning if the scaling criterion has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
             try:
                 self._algorithm = settings["optimization_algorithm"]
+                if not isinstance(self._algorithm, str):
+                    raise Exception
+                elif self._algorithm != "als" or self._algorithm != "mur":
+                    raise Exception
             except:
                 self._algorithm = 'als'
-                print("NMF algorithm not given to dictionary. It will be automatically set equal to Alternating Least Squares (als).")
-                print("You can ignore this warning if the algorithm has been assigned later via setter.")
+                print("WARNING")
+                print("\tAn exception occured with regard to the input value for the NMF algorithm. It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: auto.")
+                print("\tYou can ignore this warning if the NMF algorithm has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
             try:
                 self._method = settings["als_method"]
+                if not isinstance(self._method, str):
+                    raise Exception
             except:
                 self._method = "standard"
+                print("\tALS type automatically set equal to: auto.")
             try:
                 self._eta = settings["sparsity_eta"]
+                if not isinstance(self._eta, float):
+                    raise Exception
             except:
                 self._eta = 0.01
             try:
                 self._beta = settings["sparsity_beta"]
+                if not isinstance(self._beta, float):
+                    raise Exception
             except:
                 self._beta = 0.01
             try:
                 self._metric = settings["optimization_metric"]
+                if not isinstance(self._metric, str):
+                    raise Exception
             except:
                 self._metric = 'frobenius'
+                print("Using Frobenius norm to compute the reconstruction accuracy.")
 
 
     @property
