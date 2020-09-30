@@ -1298,27 +1298,28 @@ class variables_selection(PCA):
             counter = 1
             #While the number of variables is larger than the number you want to retain ('m'), go on
             #with the elimination process:
+
+            #Perform PCA:
+            model = PCA(self.X)
+            model.eigens = self.X.shape[1] -1
+            PCs,eigvals = model.fit()
             while max_var > self.retained:
-                #Perform PCA:
-                model = PCA(self.X)
-                model.eigens = self._nPCs
-                PCs,eigvals = model.fit()
                 #Check which variable has the max weight on the last PC. Python starts to count from
                 #zero, that's why the last number is "self._nPCs -1" and not "self._nPCs"
-                max_on_last = np.max(np.abs(PCs[:,PCs.shape[1]- counter]))
-                argmax_on_last = np.argmax(np.abs(PCs[:,PCs.shape[1]- counter]))
+                max_on_last = np.max(np.abs(PCs[:,-counter]))
+                argmax_on_last = np.argmax(np.abs(PCs[:,-counter]))
                 #Delete the selected variable from the original matrix
-                self.X = np.delete(self.X, argmax_on_last, axis=1)
+                #self.X = np.delete(self.X, argmax_on_last, axis=1)
                 #same for the labels
                 self.labels = np.delete(self.labels, argmax_on_last, axis=0)
                 #same for the numbers list
                 self.var_num = np.delete(self.var_num, argmax_on_last, axis=0)
                 #same for the corresponding PC rows
                 PCs = np.delete(PCs, argmax_on_last, axis =0)
-                print("Current number of variables: {}".format(self.X.shape[1]))
+                print("Current number of variables: {}".format(len(self.labels)))
                 #Get the current number of variables for the while loop
                 counter += 1
-                max_var = self.X.shape[1]
+                max_var = len(self.labels)
 
 
             return self.labels, self.var_num
