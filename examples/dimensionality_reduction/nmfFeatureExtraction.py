@@ -16,9 +16,9 @@ file_options = {
 settings = {
     #Preprocessing settings (only Range is allowed)
     "center"                    : False,
-    "centering"                 : 'min',
+    "centering_method"          : 'min',
     "scale"                     : True,
-    "scaling"                   : "auto",
+    "scaling_method"            : "auto",
 
     #set the reduced dimensionality
     "number_of_features"        : 8,

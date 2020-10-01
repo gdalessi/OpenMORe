@@ -23,7 +23,7 @@ import time
 
 import matplotlib
 import matplotlib.pyplot as plt
-__all__ = ["unscale", "uncenter", "center", "scale", "center_scale", "evaluate_clustering_PHC", "fastSVD", "get_centroids", "get_cluster", "get_all_clusters", "explained_variance", "evaluate_clustering_DB", "NRMSE", "PCA_fit", "accepts", "readCSV", "allowed_centering","allowed_scaling", "varimax_rotation", "get_medianoids", "get_medoids"]
+__all__ = ["unscale", "uncenter", "center", "scale", "center_scale", "evaluate_clustering_PHC", "fastSVD", "get_centroids", "get_cluster", "get_all_clusters", "explained_variance", "evaluate_clustering_DB", "NRMSE", "PCA_fit", "readCSV", "varimax_rotation", "get_medianoids", "get_medoids"]
 
 
 # ------------------------------
@@ -664,51 +664,4 @@ def varimax_rotation(X, b, normalize=True):
         rot_loadings[:,ii] = loadings[:,ii] * norm_factor[ii]
 
     return rot_loadings
-
-
-
-# ------------------------------
-# Decorators (alphabetical order)
-# ------------------------------
-
-def accepts(*types):
-    """
-    Checks argument types.
-    """
-    def decorator(f):
-        assert len(types) == f.__code__.co_argcount
-        @functools.wraps(f)
-        def wrapper(*args, **kwds):
-            for (a, t) in zip(args, types):
-                assert isinstance(a, t), "The input argument %r must be of type <%s>" % (a,t)
-            return f(*args, **kwds)
-        wrapper.__name__ = f.__name__
-        return wrapper
-    return decorator
-
-def allowed_centering(func):
-    '''
-    Checks the user input for centering criterion.
-    Exit with error if the centering is not allowed.
-    '''
-    def func_check(dummy, x):
-        if x.lower() != 'mean' and x.lower() != 'min':
-            raise Exception("Centering criterion not allowed. Supported options: 'mean', 'min'. Exiting with error..")
-            exit()
-        res = func(dummy, x)
-        return res
-    return func_check
-
-
-def allowed_scaling(func):
-    '''
-    Checks the user input for scaling criterion.
-    Exit with error if the scaling is not allowed.
-    '''
-    def func_check(dummy, x):
-        if x.lower() != 'auto' and x.lower() != 'pareto' and x.lower() != 'range' and x.lower() != 'vast':
-            raise Exception("Scaling criterion not allowed. Supported options: 'auto', 'vast', 'pareto' or 'range'. Exiting with error..")
-            exit()
-        res = func(dummy, x)
-        return res
-    return func_check
+    

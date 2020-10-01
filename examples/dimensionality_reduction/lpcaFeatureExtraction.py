@@ -12,8 +12,10 @@ file_options = {
 
 settings ={
     #centering and scaling options
-    "centering"                     :   "mean",
-    "scaling"                       :   "auto",
+    "center"                        :   True,
+    "centering_method"              :   "mean",
+    "scale"                         :   True,
+    "scaling_method"                :   "auto",
 
     #set the number of PCs:
     "number_of_eigenvectors"        :   5,
