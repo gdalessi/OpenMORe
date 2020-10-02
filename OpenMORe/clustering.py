@@ -202,7 +202,7 @@ class lpca:
                 self._correction = settings["correction_factor"]   
                 if not isinstance(self._correction, str):
                     raise Exception
-                elif self._correction != "off" or self._correction != "phc_multi" or self._correction != "c_range" or self._correction != "uncorrelation" or self._correction != "local_variance" or self._correction !=  "local_skewness":
+                elif self._correction != "off" and self._correction != "phc_multi" and self._correction != "c_range" and self._correction != "uncorrelation" and self._correction != "local_variance" and self._correction !=  "local_skewness":
                     raise Exception    
             except:
                 self._correction = "off"
@@ -283,7 +283,7 @@ class lpca:
             self._correction = "off"
             warnings.warn("An exception occured with regard to the input value for the correction factor to use . It could be not acceptable, or not given to the dictionary.")
             print("\tCorrection factor automatically set equal to 'off'.")
-        elif self._correction != "off" or self._correction != "phc_multi" or self._correction != "c_range" or self._correction != "uncorrelation" or self._correction != "local_variance" or self._correction !=  "local_skewness":
+        elif self._correction != "off" and self._correction != "phc_multi" and self._correction != "c_range" and self._correction != "uncorrelation" and self._correction != "local_variance" and self._correction !=  "local_skewness":
             self._correction = "off" 
             warnings.warn("An exception occured with regard to the input value for the correction factor to use . It could be not acceptable, or not given to the dictionary.")
             print("\tCorrection factor automatically set equal to 'off'.")
@@ -516,7 +516,7 @@ class lpca:
         iteration = 0
         eps_rec = 1.0
         residuals = np.array(0)
-        iter_max = 250
+        iter_max = 500
         eps_tol = 1E-16
         return iteration, eps_rec, residuals, iter_max, eps_tol
 
@@ -909,42 +909,6 @@ class fpca(lpca):
                 print("\tIt will be automatically set equal to: auto.")
                 print("\tYou can ignore this warning if the scaling criterion has been assigned later via setter.")
                 print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
-            try:
-                self._method = settings["initialization_method"]
-                if not isinstance(self._method, str):
-                    raise Exception
-                elif self._method.lower() != "uniform" or self._method.lower() != "kmeans" or self._method.lower() != "pkcia" or self._method.lower() != "observations" or self._method.lower() != "random":
-                    raise Exception
-            except:
-                self._method = 'uniform'
-                self._method = 'uniform'
-                warnings.warn("An exception occured with regard to the input value for the initialization criterion. It could be not acceptable, or not given to the dictionary.")
-                print("\tIt will be automatically set equal to: uniform.")
-                print("\tYou can ignore this warning if the initialization criterion has been assigned later via setter.")
-                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
-            try:
-                self._correction = settings["correction_factor"]   
-                if not isinstance(self._correction, str):
-                    raise Exception
-                elif self._correction != "off" or self._correction != "phc_multi" or self._correction != "c_range" or self._correction != "uncorrelation" or self._correction != "local_variance" or self._correction !=  "local_skewness":
-                    raise Exception    
-            except:
-                self._correction = "off"
-                print("Correction factor automatically set equal to 'off'.")
-                print("You can ignore this warning if the correction factor has been assigned later via setter.")
-            try:
-                self._adaptive = settings["adaptive_PCs"]
-                if not isinstance(self._adaptive, bool):
-                    raise Exception
-            except:
-                self._adaptive = False
-            try:
-                self._writeFolder = settings["write_stats"]
-                if not isinstance(self._writeFolder, bool):
-                    raise Exception
-            except:
-                self._writeFolder = True
-
 
 
     def condition(self):
@@ -1078,7 +1042,6 @@ class KMeans(lpca):
                 if not isinstance(self._k, int) or self._k <= 1:
                     raise Exception
             except:
-                self._k = 2
                 self._k = 2
                 warnings.warn("An exception occured with regard to the input value for the number of clusters (k). It could be not acceptable, or not given to the dictionary.")
                 print("\tIt will be automatically set equal to: 2.")

@@ -1517,9 +1517,7 @@ class variables_selection(PCA):
                 #zero, that's why the last number is "self._nPCs -1" and not "self._nPCs"
                 max_on_last = np.max(np.abs(PCs[:,-counter]))
                 argmax_on_last = np.argmax(np.abs(PCs[:,-counter]))
-                #Delete the selected variable from the original matrix
-                #self.X = np.delete(self.X, argmax_on_last, axis=1)
-                #same for the labels
+                #Delete the corresponding label
                 self.labels = np.delete(self.labels, argmax_on_last, axis=0)
                 #same for the numbers list
                 self.var_num = np.delete(self.var_num, argmax_on_last, axis=0)
