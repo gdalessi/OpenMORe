@@ -1292,7 +1292,7 @@ class variables_selection(PCA):
                 self._method = settings["method"]
                 if not isinstance(self._method, str):
                     raise Exception
-                elif self._method.lower() != "procustes" and self._method.lower() != "b2" and self._method.lower() != "b4":
+                elif self._method.lower() != "procustes" and self._method.lower() != "b2" and self._method.lower() != "b4" and self._method.lower() != "procustes_rotation" and self._method.lower() != "b2_rotation" and self._method.lower() != "b4_rotation":
                     raise Exception
             except:
                 self._method = 'procustes'
@@ -1550,11 +1550,111 @@ class variables_selection(PCA):
                 #Check the largest weight on the first 'm' PCs and add it to the PVs list.
                 argmax_= np.argmax(np.abs(PCs[:,ii]))
                 PVs.append(self.labels[argmax_])
-                self.var_num = argmax_
+                #self.var_num = argmax_
+                self.var_num.append(argmax_)
                 #Set the variable weight to zero on all the PCs, to avoid repetition in the PVs list.
-                PCs = np.delete(PCs, argmax_, axis=0)
+                #PCs = np.delete(PCs, argmax_, axis=0)
+                PCs[argmax_,:] = 0
 
             return PVs, self.var_num
+
+        elif self._method.lower() == 'procustes_rotation':
+
+            #Start with PCA, and compute the scores (Z)
+            eigenvec = PCA_fit(self.X_tilde, self._nPCs)
+            Z = self.X_tilde @ eigenvec[0]
+            #Start the backward elimination:
+            while self.X_tilde.shape[1] > self._n_ret:
+                M2 = 1E12
+                M2_tmp = 0
+                var_tmp = 0
+
+                for ii in range(0,self.X_tilde.shape[1]):
+                    #Delete each variable from the original matrix (one at the time)
+                    X_cut = np.delete(self.X_tilde, ii, axis=1)
+                    #Compute the scores of the reduced matrix, after PCA
+                    eigenvec = PCA_fit(X_cut, self._nPCs)
+                    #ROTATE THE MODES VIA VARIMAX
+                    rotated_PCs = varimax_rotation(self.X_tilde, eigenvec[0], normalize=True)
+                    Z_tilde = X_cut @ rotated_PCs
+                    #Compute the reduced scores covariance matrix, and then apply SVD
+                    covZZ = np.transpose(Z_tilde) @ Z
+                    u, s, vh = np.linalg.svd(covZZ, full_matrices=True)
+                    #Compute the Procustes Analysis score M2 for the matrix without the 'ii' variable
+                    M2_tmp = np.trace((np.transpose(Z) @ Z) + (np.transpose(Z_tilde) @ Z_tilde) - 2*s)
+                    #If the Silhouette score M2 is lower than the previous one in M2_tmp, store the
+                    #variable 'ii' to remove it after the for loop
+                    if M2_tmp < M2:
+                        M2 = M2_tmp
+                        var_tmp = ii
+                #Remove the variable from the matrix and the labels list
+                self.X_tilde = np.delete(self.X_tilde, var_tmp, axis=1)
+                self.labels = np.delete(self.labels, var_tmp, axis=0)
+                self.var_num = np.delete(self.var_num, var_tmp, axis=0)
+                print("Current number of variables: {}".format(self.X_tilde.shape[1]))
+
+            return self.labels, self.var_num
+
+        
+        elif self._method.lower() == 'b2_rotation':
+            print("Selecting global variables via B2 method..")
+            #Number of variables before the elimination starts:
+            max_var = self.X.shape[1]
+            counter = 1
+            #While the number of variables is larger than the number you want to retain ('m'), go on
+            #with the elimination process:
+
+            #Perform PCA:
+            model = PCA(self.X)
+            model.eigens = self.X.shape[1] -1
+            PCs,eigvals = model.fit()
+            PCs = varimax_rotation(self.X_tilde, PCs, normalize=True)
+            while max_var > self.retained:
+                #Check which variable has the max weight on the last PC. Python starts to count from
+                #zero, that's why the last number is "self._nPCs -1" and not "self._nPCs"
+                max_on_last = np.max(np.abs(PCs[:,-counter]))
+                argmax_on_last = np.argmax(np.abs(PCs[:,-counter]))
+                #Delete the corresponding label
+                self.labels = np.delete(self.labels, argmax_on_last, axis=0)
+                #same for the numbers list
+                self.var_num = np.delete(self.var_num, argmax_on_last, axis=0)
+                #same for the corresponding PC rows
+                PCs = np.delete(PCs, argmax_on_last, axis =0)
+                print("Current number of variables: {}".format(len(self.labels)))
+                #Get the current number of variables for the while loop
+                counter += 1
+                max_var = len(self.labels)
+            
+            return self.labels, self.var_num
+
+        
+        elif self._method.lower() == 'b4_rotation':
+            print("Selecting global variables via B4 method..")
+
+            model = PCA(self.X)
+            if self._nPCs < self._n_ret:
+                print("For the B4 it is not possible to choose a number of PCs lower than the required number of variables.")
+                print("The number of PCs will be set equal to the required number of variables.")
+                print(" ")
+                self._nPCs = self._n_ret
+
+            model.eigens = self._nPCs
+            PCs, eigvals = model.fit()
+            PCs = varimax_rotation(self.X_tilde, PCs, normalize=True)
+            PVs = []
+            self.var_num = []
+
+            for ii in range(0, self._n_ret):
+                #Check the largest weight on the first 'm' PCs and add it to the PVs list.
+                argmax_= np.argmax(np.abs(PCs[:,ii]))
+                PVs.append(self.labels[argmax_])
+                self.var_num.append(argmax_)
+                #Set the variable weight to zero on all the PCs, to avoid repetition in the PVs list.
+                #PCs = np.delete(PCs, argmax_, axis=0)
+                PCs[argmax_,:] = 0
+
+            return PVs, self.var_num
+
 
         else:
             raise Exception("Variables selection method not supported. Please choose one between 'B2', 'Procustes', 'Procustes_rotation'.")

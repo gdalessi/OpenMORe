@@ -23,7 +23,7 @@ import time
 
 import matplotlib
 import matplotlib.pyplot as plt
-__all__ = ["unscale", "uncenter", "center", "scale", "center_scale", "evaluate_clustering_PHC", "fastSVD", "get_centroids", "get_cluster", "get_all_clusters", "explained_variance", "evaluate_clustering_DB", "NRMSE", "PCA_fit", "readCSV", "varimax_rotation", "get_medianoids", "get_medoids"]
+__all__ = ["unscale", "uncenter", "center", "scale", "center_scale", "evaluate_clustering_PHC", "fastSVD", "get_centroids", "get_cluster", "get_all_clusters", "explained_variance", "evaluate_clustering_DB", "NRMSE", "PCA_fit", "readCSV", "varimax_rotation", "get_medianoids", "split_for_validation", "get_medoids"]
 
 
 # ------------------------------

@@ -41,7 +41,7 @@ class VQPCA(clustering.lpca):
 
         super().__init__(X)
         self.k = int(max(self.idx) +1)
-        self.nPCs = round(self.Y.shape[1] - 1)#(self.Y.shape[1]) /10) Use a very high number of PCs to classify,removing only the last 20% which contains noise
+        self.nPCs = 2 #round(self.Y.shape[1] - 1)#(self.Y.shape[1]) /10) Use a very high number of PCs to classify,removing only the last 20% which contains noise
 
     def check_sanity_input(self):
         if self.X.shape[0] > len(self.idx) or self.X.shape[0] < len(self.idx):
