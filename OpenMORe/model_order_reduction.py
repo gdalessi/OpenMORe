@@ -1292,8 +1292,18 @@ class variables_selection(PCA):
                 self._method = settings["method"]
                 if not isinstance(self._method, str):
                     raise Exception
-                elif self._method.lower() != "procustes" and self._method.lower() != "b2" and self._method.lower() != "b4" and self._method.lower() != "procustes_rotation" and self._method.lower() != "b2_rotation" and self._method.lower() != "b4_rotation":
+                elif self._method.lower() != "procustes" and self._method.lower() != "b2" and self._method.lower() != "b4" and self._method.lower() != "procustes_rotation" and self._method.lower() != "b2_rotation" and self._method.lower() != "b4_rotation" and self._method.lower() != "mccabe" and self._method.lower() != "mccabe_rotation":
                     raise Exception
+
+                if self._method.lower() == "mccabe" or self._method.lower() == "mccabe_rotation":
+                    try:
+                        self._McCriterion = settings["McCabe_criterion"]
+                    except:
+                        self._McCriterion = 1
+                        warnings.warn("An exception occured with regard to the input value for the McCabe criterion. It could be not acceptable, or not given to the dictionary.")
+                        print("\tIt will be automatically set equal to: 1.")
+        
+
             except:
                 self._method = 'procustes'
                 warnings.warn("An exception occured with regard to the input value for the variables selection method. It could be not acceptable, or not given to the dictionary.")
@@ -1442,7 +1452,8 @@ class variables_selection(PCA):
     def check_sanity_input(X, labels, retained):
         #print(labels)
         if X.shape[1] != len(labels):
-            print("Variables number: {}, Labels length: {}".format(X.shape[1], labels.shape[1]))
+            print("Variables number: {}, Labels length: {}".format(X.shape[1], len(labels)))#.shape[1]))
+            print(labels)
             raise Exception("The number of variables does not match the labels.")
             exit()
         elif retained >= X.shape[1]:
@@ -1656,10 +1667,228 @@ class variables_selection(PCA):
             return PVs, self.var_num
 
 
-        else:
-            raise Exception("Variables selection method not supported. Please choose one between 'B2', 'Procustes', 'Procustes_rotation'.")
-            print("Exiting with error..")
-            exit()
+        elif self.method.lower() == 'mccabe':
+            '''
+            The following lines for the McCabe PVs extraction were written by Nadia Bernair, from Université Libre de Bruxelles, Faculty of Electromechanical engineering (mechatronics), in the 
+            context of her MA2 project: "Application of reduced order models and machine learning techniques for reacting flows".
+            '''
+            import itertools
+
+            ret_index = list(itertools.combinations(range(self.X.shape[1]), self._n_ret))
+            n_comb = len(ret_index)
+
+            model = PCA(self.X)
+            eigvec, eigval = model.fit()
+
+            MC_1_min = 1.0e+16
+            MC_2_min = 1.0e+16
+            MC_3_min = 1.0e+16
+
+            ret_name= np.linspace(0, self.X.shape[1]-1, self.X.shape[1], dtype=int) 
+            disc_index = [0] * self.X.shape[1]    
+
+            sumcov=0
+
+            for i in range(0,n_comb-1):     
+                print("Combination number: {} out of: {}".format(i, n_comb-1))
+                p=0
+
+                for j in range(0,self.X.shape[1]-1):
+
+                    a= True 
+                    for k in range(0,self._n_ret): 
+                        if j == ret_index[i][k]:
+                            a = False 
+                            
+                    if a == True:
+                        disc_index[p]=j
+                        p=p+1
+
+                  
+                sub_scal_data_1 = np.zeros((self.X.shape[0], self._n_ret))
+                sub_name_1= np.zeros((1, self._n_ret))
+                    
+                
+                sub_scal_data_2 = np.zeros((self.X.shape[0], p-1))
+                sub_name_2= np.zeros((1, p-1))
+
+
+                for j in range(self._n_ret):  
+                    sub_scal_data_1[:,j] = self.X_tilde[:,ret_index[i][j]]
+                    sub_name_1[0][j] = ret_index[i][j]
+        
+        
+                for j in range(p-1):
+                        sub_scal_data_2[:,j] = self.X_tilde[:,disc_index[j]]
+                        sub_name_2[0][j] = disc_index[j]
+    
+                # compute the covariance matrix : variance en chaque dim (sym)
+
+                cov_data_11 = (1/(self.X.shape[0] -1))*(np.transpose(sub_scal_data_1).dot(sub_scal_data_1))
+                cov_data_22 = (1/(self.X.shape[0] -1))*(np.transpose(sub_scal_data_2).dot(sub_scal_data_2))
+                cov_data_12 = (1/(self.X.shape[0] -1))*(np.transpose(sub_scal_data_1).dot(sub_scal_data_2))
+                cov_data_21 = (1/(self.X.shape[0] -1))*(np.transpose(sub_scal_data_2).dot(sub_scal_data_1))
+
+                cov_data_22_1 = np.empty(cov_data_22.shape, dtype=float)
+
+                try:
+                    cov_data_22_1 = cov_data_22 - cov_data_21.dot(np.linalg.inv(cov_data_11).dot(cov_data_12))
+                    sumcov += cov_data_22_1
+                except:                                         #if singular use as cov the average cov obtain with the previous comb
+                    if i>0:
+                        cov_data_22_1=sumcov/i
+                    else: 
+                        voc_data_22_1=sumcov
+                
+                
+                eig_cov_data_22_1, ____ = LA.eig(cov_data_22_1)
+                
+                if self._McCriterion == 1:
+                    
+                    MC_1 = np.prod(eig_cov_data_22_1)       #the criterion : product of the eigenvalue = min
+        
+                    if MC_1 < MC_1_min:
+                        MC_1_min = MC_1
+                        ret_name = sub_name_1
+
+                elif self._McCriterion == 2:
+                    MC_2 = np.sum(eig_cov_data_22_1)
+        
+                    if MC_2 < MC_2_min:
+                        MC_2_min = MC_2
+                        ret_name = sub_name_1
+
+                elif self._McCriterion == 3:
+                    MC_3 = np.sum(eig_cov_data_22_1**2)
+
+                    if MC_3 < MC_3_min:
+                        MC_3_min = MC_3
+                        ret_name = sub_name_1
+
+                else:
+                    raise Exception("The selected McCabe criterion of choice is not available. Please choose an integer between 1 and 3.")
+                    exit()
+
+                
+            ret_names = [int(x) for x in ret_name[0]]
+            Y = self.X[:, ret_names]
+
+            return ret_names
+
+
+        
+        elif self.method.lower() == 'mccabe_rotation':
+            '''
+            The following lines for the McCabe PVs extraction (+ rotation) were written by Nadia Bernair, from Université Libre de Bruxelles, Faculty of Electromechanical engineering (mechatronics), in the 
+            context of her MA2 project: "Application of reduced order models and machine learning techniques for reacting flows".
+            '''
+
+            import itertools
+
+            ret_index = list(itertools.combinations(range(self.X.shape[1]), self._n_ret))
+            n_comb = len(ret_index)
+
+            model = PCA(self.X)
+            eigvec, eigval = model.fit()
+
+            #rotate the PCs
+            eigvec = varimax_rotation(self.X_tilde, eigvec, normalize=True)
+
+            MC_1_min = 1.0e+16
+            MC_2_min = 1.0e+16
+            MC_3_min = 1.0e+16
+
+            ret_name= np.linspace(0, self.X.shape[1]-1, self.X.shape[1], dtype=int) 
+            disc_index = [0] * self.X.shape[1]    
+
+            sumcov=0
+
+            for i in range(0,n_comb-1):     
+                print("Combination number: {} out of: {}".format(i, n_comb-1))
+                p=0
+
+                for j in range(0,self.X.shape[1]-1):
+
+                    a= True 
+                    for k in range(0,self._n_ret): 
+                        if j == ret_index[i][k]:
+                            a = False 
+                            
+                    if a == True:
+                        disc_index[p]=j
+                        p=p+1
+
+                  
+                sub_scal_data_1 = np.zeros((self.X.shape[0], self._n_ret))
+                sub_name_1= np.zeros((1, self._n_ret))
+                    
+                
+                sub_scal_data_2 = np.zeros((self.X.shape[0], p-1))
+                sub_name_2= np.zeros((1, p-1))
+
+
+                for j in range(self._n_ret):  
+                    sub_scal_data_1[:,j] = self.X_tilde[:,ret_index[i][j]]
+                    sub_name_1[0][j] = ret_index[i][j]
+        
+        
+                for j in range(p-1):
+                        sub_scal_data_2[:,j] = self.X_tilde[:,disc_index[j]]
+                        sub_name_2[0][j] = disc_index[j]
+    
+                # compute the covariance matrix : variance en chaque dim (sym)
+
+                cov_data_11 = (1/(self.X.shape[0] -1))*(np.transpose(sub_scal_data_1).dot(sub_scal_data_1))
+                cov_data_22 = (1/(self.X.shape[0] -1))*(np.transpose(sub_scal_data_2).dot(sub_scal_data_2))
+                cov_data_12 = (1/(self.X.shape[0] -1))*(np.transpose(sub_scal_data_1).dot(sub_scal_data_2))
+                cov_data_21 = (1/(self.X.shape[0] -1))*(np.transpose(sub_scal_data_2).dot(sub_scal_data_1))
+
+                cov_data_22_1 = np.empty(cov_data_22.shape, dtype=float)
+
+                try:
+                    cov_data_22_1 = cov_data_22 - cov_data_21.dot(np.linalg.inv(cov_data_11).dot(cov_data_12))
+                    sumcov += cov_data_22_1
+                except:                                         #if singular use as cov the average cov obtain with the previous comb
+                    if i>0:
+                        cov_data_22_1=sumcov/i
+                    else: 
+                        voc_data_22_1=sumcov
+                
+                
+                eig_cov_data_22_1, ____ = LA.eig(cov_data_22_1)
+                
+                if self._McCriterion == 1:
+                    
+                    MC_1 = np.prod(eig_cov_data_22_1)       #the criterion : product of the eigenvalue = min
+        
+                    if MC_1 < MC_1_min:
+                        MC_1_min = MC_1
+                        ret_name = sub_name_1
+
+                elif self._McCriterion == 2:
+                    MC_2 = np.sum(eig_cov_data_22_1)
+        
+                    if MC_2 < MC_2_min:
+                        MC_2_min = MC_2
+                        ret_name = sub_name_1
+
+                elif self._McCriterion == 3:
+                    MC_3 = np.sum(eig_cov_data_22_1**2)
+
+                    if MC_3 < MC_3_min:
+                        MC_3_min = MC_3
+                        ret_name = sub_name_1
+
+                else:
+                    raise Exception("The selected McCabe criterion of choice is not available. Please choose an integer between 1 and 3.")
+                    exit()
+
+                
+            ret_names = [int(x) for x in ret_name[0]]
+            
+
+            return ret_names
+
 
 
 
