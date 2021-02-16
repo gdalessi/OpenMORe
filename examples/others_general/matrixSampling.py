@@ -16,10 +16,10 @@ file_options = {
 settings = {
     #set the method which has to be used for the sampling.
     #available options: "random", "cluster", "stratified", "multistage"
-    "method"                    : "lpca",
+    "method"                    : "stratified",
 
     #set the final size of the sampled dataset
-    "final_size"                : 4000,
+    "final_size"                : 400,
 
     #enable the option to plot the accessed space (mkdir and save the images in the folder)
     "plot_accessed"             : False,

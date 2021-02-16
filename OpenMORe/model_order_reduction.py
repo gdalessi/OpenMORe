@@ -617,10 +617,12 @@ class PCA:
         for ii in range(0,self.X.shape[0]):
             t_sq = 0
             lam_j = 0
+            cumsum_tmp = 0
             for jj in range(input_eigens, scores.shape[1]):
-                t_sq += scores[ii,jj]**2
-                lam_j += eigval[jj]
-            scores_dist[ii] = t_sq/(lam_j + TOL)
+                t_sq = scores[ii,jj]**2
+                lam_j = eigval[jj]
+                cumsum_tmp += t_sq/(lam_j + TOL)
+            scores_dist[ii] = cumsum_tmp
 
         #Now compute the distance distribution, and delete the observations in the
         #upper 2% (done in the while loop) to get the outlier-free matrix.
