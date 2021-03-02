@@ -6,7 +6,7 @@ import numpy as np
 import os
 
 #######################################################################################
-# In this example, it's shown how to use the Varimax rotation to increase the quality 
+# In this example it's shown how to use the Varimax rotation to increase the quality 
 # of the lower-dimensional manifold
 #######################################################################################
 

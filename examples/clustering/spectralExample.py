@@ -7,7 +7,7 @@ import os
 import numpy as np
 
 ############################################################################
-# In this example, it's shown how to cluster a matrix X (turbo2D.csv) via
+# In this example it's shown how to cluster a matrix X (turbo2D.csv) via
 # Spectral Clustering. 
 ############################################################################
 

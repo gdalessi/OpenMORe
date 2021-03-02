@@ -8,7 +8,7 @@ from OpenMORe.utilities import *
 
 
 #######################################################################################
-# In this example, it's shown how to set the optimal number of clusters (a posteriori) 
+# In this example it's shown how to set the optimal number of clusters (a posteriori) 
 # via Davies Bouldin index. The LPCA clustering algorithm is used in this example.
 #######################################################################################
 

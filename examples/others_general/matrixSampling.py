@@ -7,7 +7,7 @@ import OpenMORe.model_order_reduction as model_order_reduction
 from OpenMORe.utilities import *
 
 ############################################################################
-# In this example, it's shown how to sample an input matrix X via OpenMORe. 
+# In this example it's shown how to sample an input matrix X via OpenMORe. 
 ############################################################################
 
 # Dictionary to load the input matrix, found in .csv format

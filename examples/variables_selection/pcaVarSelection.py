@@ -7,7 +7,7 @@ import OpenMORe.model_order_reduction as model_order_reduction
 from OpenMORe.utilities import *
 
 #######################################################################################
-# In this example, it's shown how to perform feature selection via PCA
+# In this example it's shown how to perform feature selection via PCA
 #######################################################################################
 
 # Dictionary to load the input matrix, found in .csv format

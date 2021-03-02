@@ -7,7 +7,7 @@ import OpenMORe.model_order_reduction as model_order_reduction
 from OpenMORe.utilities import *
 
 ############################################################################
-# In this example, it's shown how to remove the outliers via PCA from an 
+# In this example it's shown how to remove the outliers via PCA from an 
 # input matrix X, via OpenMORe. 
 ############################################################################
 

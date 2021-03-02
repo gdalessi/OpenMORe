@@ -7,7 +7,7 @@ import OpenMORe.model_order_reduction as model_order_reduction
 from OpenMORe.utilities import *
 
 ############################################################################
-# In this example, it's shown how to perform dimensionality reduction and 
+# In this example it's shown how to perform dimensionality reduction and 
 # feature extraction on a matrix X (turbo2D.csv) via Non-negative Matrix 
 # Factorization (NMF).
 ############################################################################

@@ -9,7 +9,7 @@ import OpenMORe.classification as classification
 
 
 ############################################################################
-# In this example, it's shown how to classify a new matrix Y (laminar2D.csv)
+# In this example it's shown how to classify a new matrix Y (laminar2D.csv)
 # via VQPCA,  on the basis of the clustering on a matrix X obtained
 # via 1D CFDF flames (cfdf.csv)
 ############################################################################
