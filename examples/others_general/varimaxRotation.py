@@ -5,20 +5,18 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 
+#######################################################################################
+# In this example, it's shown how to use the Varimax rotation to increase the quality 
+# of the lower-dimensional manifold
+#######################################################################################
+
+# Dictionary to load the input matrix, found in .csv format
 file_options = {
     "path_to_file"              : os.path.abspath(os.path.join(__file__ ,"../../../data/reactive_flow/")),
-    "input_file_name"           : "flameD.csv",
+    "input_file_name"           : "turbo2D.csv",
 }
 
-mesh_options = {
-    #set the mesh file options (the path goes up twice - it's ok)
-    "path_to_file"              : os.path.abspath(os.path.join(__file__ ,"../../../data/reactive_flow/")),
-    "mesh_file_name"            : "mesh.csv",
-
-    #eventually enable the clustering solution plot on the mesh
-    "plot_on_mesh"              : True,
-}
-
+# Dictionary with the instructions for the Varimax rotation (found in PCA class):
 settings ={
     #centering and scaling options
     "center"                    : True,
@@ -37,14 +35,12 @@ settings ={
 
 }
 
-
+# Load the input matrix:
 X = readCSV(file_options["path_to_file"], file_options["input_file_name"])
 
-
-
-model = model_order_reduction.PCA(X, settings)
 #perform the dimensionality reduction via Principal Component Analysis,
 #and return the eigenvectors of the reduced manifold
+model = model_order_reduction.PCA(X, settings)
 PCs, ____ = model.fit()
 
 #plot the original PC

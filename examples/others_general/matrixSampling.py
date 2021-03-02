@@ -6,34 +6,40 @@ import os
 import OpenMORe.model_order_reduction as model_order_reduction
 from OpenMORe.utilities import *
 
+############################################################################
+# In this example, it's shown how to sample an input matrix X via OpenMORe. 
+############################################################################
+
+# Dictionary to load the input matrix, found in .csv format
 file_options = {
     "path_to_file"              : os.path.abspath(os.path.join(__file__ ,"../../../data/reactive_flow/")),
-    "input_file_name"           : "flameD.csv",
+    "input_file_name"           : "turbo2D.csv",
 
     "labels_name"               : "labels.csv",
 }
 
+# Dictionary with the instructions for the sampling class:
 settings = {
     #set the method which has to be used for the sampling.
     #available options: "random", "cluster", "stratified", "multistage"
     "method"                    : "stratified",
 
     #set the final size of the sampled dataset
-    "final_size"                : 400,
+    "final_size"                : 1500,
 
     #enable the option to plot the accessed space (mkdir and save the images in the folder)
     "plot_accessed"             : False,
 }
 
+# Load the input matrix 
 X = readCSV(file_options["path_to_file"], file_options["input_file_name"])
 
 #In this case, we use the temperature vector as a conditioning variable for our multistage
-#approach. Other conditioning variables (e.g. mixture fraction) can be loaded separately.
+#approach. Other conditioning variables (e.g., mixture fraction) can be loaded separately.
 Temperature = X[:,0]
 
 reduceSize = model_order_reduction.SamplePopulation(X, settings)
 reduceSize.set_conditioning = Temperature
-
 miniX = reduceSize.fit()
 
 print("Training matrix sampled. New size: {}x{}".format(miniX.shape[0],miniX.shape[1]))

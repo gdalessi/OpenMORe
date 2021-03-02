@@ -6,11 +6,18 @@ import os
 import OpenMORe.model_order_reduction as model_order_reduction
 from OpenMORe.utilities import *
 
+############################################################################
+# In this example, it's shown how to remove the outliers via PCA from an 
+# input matrix X, via OpenMORe. 
+############################################################################
+
+# Dictionary to load the input matrix, found in .csv format
 file_options = {
     "path_to_file"              : os.path.abspath(os.path.join(__file__ ,"../../../data/dummy_data/")),
     "input_file_name"           : "outlier_data.csv",
 }
 
+# Dictionary with the instructions for the outlier removal class:
 settings ={
     #centering and scaling options
     "center"                    : True,
@@ -26,12 +33,13 @@ settings ={
     "method"                    : "orthogonal",
 }
 
-
+# Load the input matrix 
 X = readCSV(file_options["path_to_file"], file_options["input_file_name"])
 
+# Call the PCA class, where the removal method is implemented:
 model = model_order_reduction.PCA(X, settings)
 
-
+# Call the method, depending on the dictionary settings
 if settings["method"].lower() == "leverage":
     X_cleaned, ___, id = model.outlier_removal_leverage()
 elif settings["method"].lower() == "orthogonal":
@@ -51,8 +59,8 @@ fig = plt.figure()
 axes = fig.add_axes([0.2,0.15,0.7,0.7], frameon=True)
 axes.scatter(X[:,0], X[:,1], c='seagreen',alpha=0.9)
 axes.set_title("Full data with outliers")
-axes.set_xlabel('X [-]')
-axes.set_ylabel('Y [-]')
+axes.set_xlabel('$x [-]$')
+axes.set_ylabel('$y [-]$')
 plt.show()
 
 fig = plt.figure()
@@ -60,8 +68,8 @@ axes = fig.add_axes([0.2,0.15,0.7,0.7], frameon=True)
 axes.scatter(X[:,0], X[:,1], c='red',alpha=0.9)
 axes.scatter(X_cleaned[:,0], X_cleaned[:,1], c='darkblue',alpha=0.9)
 axes.set_title("Outliers identification (in red)")
-axes.set_xlabel('X [-]')
-axes.set_ylabel('Y [-]')
+axes.set_xlabel('$x [-]$')
+axes.set_ylabel('$y [-]$')
 plt.show()
 
 
@@ -70,6 +78,6 @@ axes = fig.add_axes([0.2,0.15,0.7,0.7], frameon=True)
 
 axes.scatter(X_cleaned[:,0], X_cleaned[:,1], c='darkblue',alpha=0.9)
 axes.set_title("Cleaned data without outliers")
-axes.set_xlabel('X [-]')
-axes.set_ylabel('Y [-]')
+axes.set_xlabel('$x [-]$')
+axes.set_ylabel('$y [-]$')
 plt.show()
