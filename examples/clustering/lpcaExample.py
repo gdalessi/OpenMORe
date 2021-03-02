@@ -6,24 +6,30 @@ import os
 import OpenMORe.clustering as clustering
 from OpenMORe.utilities import *
 
+############################################################################
+# In this example, it's shown how to cluster a matrix X (turbo2D.csv) via
+# Local Principal Component Analysis. The results are afterwards analyzed 
+# via PHC and DB index and visualized on the mesh. 
+############################################################################
 
+# Dictionary to load the input matrix, found in .csv format
 file_options = {
     #set the training matrix file options
     "path_to_file"              : os.path.abspath(os.path.join(__file__ ,"../../../data/reactive_flow/")),
-    "input_file_name"           : "flameD.csv",
+    "input_file_name"           : "turbo2D.csv",
 }
 
-
+# Dictionary to load the mesh, also found in .csv format
 mesh_options = {
     #set the mesh file options
     "path_to_file"              : os.path.abspath(os.path.join(__file__ ,"../../../data/reactive_flow/")),
-    "mesh_file_name"            : "mesh.csv",
+    "mesh_file_name"            : "mesh_turbo.csv",
 
     #eventually enable the clustering solution plot on the mesh
     "plot_on_mesh"              : True,
 }
 
-
+# Dictionary with the instruction for the LPCA algorithm:
 settings = {
     #centering and scaling options
     "center"                    : True,
@@ -47,17 +53,20 @@ settings = {
     "evaluate_clustering"       : True,     # --> enable the calculation of indeces to evaluate the goodness of the clustering
 }
 
-
+# Load the input matrix
 X = readCSV(file_options["path_to_file"], file_options["input_file_name"])
 
+# Start the clustering step: call the LPCA class and the fit() method.
+# It is returned 'index', a vector containing the clustering solution
 model = clustering.lpca(X, settings)
 index = model.fit()
 
+# Write down in a txt the clustering solution
 if settings["write_on_txt"]:
     np.savetxt("idx.txt", index)
 
 
-#eventually evaluate the goodness of the clustering solution
+# Eventually evaluate the goodness of the clustering solution
 if settings["evaluate_clustering"]:
 
     #evaluate the clustering solution
@@ -76,7 +85,7 @@ if settings["evaluate_clustering"]:
     text_file.close()
 
 
-#eventually plot the clustering solution on the mesh
+# Eventually plot the clustering solution on the mesh
 if mesh_options["plot_on_mesh"]:
     matplotlib.rcParams.update({'font.size' : 12, 'text.usetex' : True})
     mesh = np.genfromtxt(mesh_options["path_to_file"] + "/" + mesh_options["mesh_file_name"], delimiter= ',')

@@ -6,19 +6,27 @@ import matplotlib.pyplot as plt
 import OpenMORe.model_order_reduction as model_order_reduction
 from OpenMORe.utilities import *
 
+############################################################################
+# In this example, it's shown how to perform dimensionality reduction and 
+# feature extraction on a matrix X (turbo2D.csv) via Non-negative Matrix 
+# Factorization (NMF).
+############################################################################
+
+# Dictionary to load the input matrix, found in .csv format, and the mesh (also in .csv)
 file_options = {
     "path_to_file"              : os.path.abspath(os.path.join(__file__ ,"../../../data/reactive_flow/")),
-    "input_file_name"           : "flameD.csv",
+    "input_file_name"           : "turbo2D.csv",
 
-    "mesh_file_name"            : "mesh.csv",
+    "mesh_file_name"            : "mesh_turbo.csv",
 }
 
+# Dictionary with the instruction for the NMF algorithm:
 settings = {
-    #Preprocessing settings (only Range is allowed)
-    "center"                    : False,
+    #Preprocessing settings 
+    "center"                    : True,
     "centering_method"          : 'min',
     "scale"                     : True,
-    "scaling_method"            : "auto",
+    "scaling_method"            : "range",
 
     #set the reduced dimensionality
     "number_of_features"        : 8,
@@ -41,34 +49,34 @@ settings = {
 }
 
 
-
+# Load the input matrix and the associated mesh
 X = readCSV(file_options["path_to_file"], file_options["input_file_name"])
 mesh = np.genfromtxt(file_options["path_to_file"] + "/" + file_options["mesh_file_name"], delimiter= ',')
 
-
+# Start the dimensionality reduction and the feature extraction step:
+# call the NMF class and give in input X and the dictionary with the instructions
 model = model_order_reduction.NMF(X, settings)
+
+# Perform the feature extraction step
 W,H = model.fit()
+
+# Perform the clustering step via NMF
 idx = model.cluster()
 
 
+plt.rcParams.update({'font.size' : 12, 'text.usetex' : True})
 for ii in range(0, settings["number_of_features"]):
     fig = plt.figure()
     axes = fig.add_axes([0.2,0.15,0.7,0.7], frameon=True)
     axes.scatter(mesh[:,0], mesh[:,1], c=H.T[:,ii],alpha=0.5, cmap='gnuplot')
-    axes.set_xlabel('X')
-    axes.set_ylabel('Y')
+    axes.set_xlabel('$x\ [m]$')
+    axes.set_ylabel('$y\ [m]$')
     plt.show()
 
 
 fig = plt.figure()
 axes = fig.add_axes([0.2,0.15,0.7,0.7], frameon=True)
 axes.scatter(mesh[:,0], mesh[:,1], c=idx,alpha=0.5, cmap='gnuplot')
-axes.set_xlabel('X')
-axes.set_ylabel('Y')
+axes.set_xlabel('$x\ [m]$')
+axes.set_ylabel('$y\ [m]$')
 plt.show()
-
-PHC_coeff, PHC_deviations = evaluate_clustering_PHC(X, idx, method='PHC_standard')
-print("PHC is equal to: {}".format(PHC_coeff))
-
-
-

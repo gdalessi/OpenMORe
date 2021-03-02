@@ -1478,14 +1478,20 @@ class spectralClustering():
         if centering_decision and scaling_decision:
             mu, X_ = center(X, centering_method, True)
             sigma, X_tilde = scale(X_, scaling_method, True)
+
+            return X_tilde, mu, sigma
         elif centering_decision and not scaling_decision:
             mu, X_tilde = center(X, centering_method, True)
+
+            return X_tilde, mu
         elif scaling_decision and not centering_decision:
             sigma, X_tilde = scale(X, scaling_method, True)
+
+            return X_tilde, sigma
         else:
             X_tilde = X
 
-        return X_tilde, mu, sigma
+        
     
 
     def fit(self):
@@ -1537,27 +1543,19 @@ class spectralClustering():
         
         self.X_tilde = self.preprocess_training(self.X, self._center, self._scale, self._centering, self._scaling)
 
-
-        print("A")
-        print("SHAPE SELF X: {}".format(self.X.shape))
         
         reduceSize = model_order_reduction.SamplePopulation(self.X)
         reduceSize.sampling_strategy = "stratified"
         reduceSize.set_size = 1500
         reduceSize.set_conditioning = self.X[:,0]
         
-        print("B")
         miniX = reduceSize.fit()
-        print("SHAPE MINI: {}".format(miniX.shape))
-        print("C")
         
         miniX, mu, sigma = self.preprocess_training(miniX, self._center, self._scale, self._centering, self._scaling)
 
         #initialize the similarity matrix, whose dimensions are (nxn) --> WARNING: IT'S EXPENSIVE FOR LARGE MATRICES  
         W = np.zeros([miniX.shape[0], miniX.shape[0]], dtype=float)
-        
-        print("SHAPE MINI: {}".format(miniX.shape))
-        print("SHAPE W: {}".format(W.shape))
+
         print("Building weighted adjacency matrix..")
         for ii in range(0, miniX.shape[0]):
             for jj in range(0, miniX.shape[0]):
@@ -1593,7 +1591,7 @@ class spectralClustering():
         C_mat = np.empty((np.max(index)+1, self.X.shape[1]), dtype=float)
         idx = np.empty((self.X.shape[0],), dtype=int)
 
-        print("Algorithm found {} clusters.".format(np.max(index)+1))
+        print("The algorithm found {} clusters.".format(np.max(index)+1))
 
         trainingScalX = center_scale(self.X, mu, sigma)
 
