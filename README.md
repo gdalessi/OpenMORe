@@ -30,6 +30,7 @@ _Utilities:_
 - Numpy must be installed 
 - Scipy must be installed 
 - Matplotlib must be installed
+- Pandas must be installed
 - Scikit-learn is optional (only needed from the KPCA class)
 
 
@@ -51,7 +52,7 @@ OK
 ___________________________
 ```
 
-**Usage**: if the tests are successful, you can now use OpenMORe. In the "examples" folder there are some pre-set cases, organized according to the final aim (i.e., clustering/dimensionality-reduction/others_general/variables-selection). They are also fully commented to describe the required dictionary inputs.
+**Usage**: if the tests are successful, you can now use OpenMORe. In the "examples" folder there are some pre-set cases, organized according to the final purpose (e.g., clustering, dimensionality-reduction, variables-selection, others). They are also fully commented to describe the required dictionary inputs.
 In the “data/reactive_flow” folder, there is a collection of data (from a CFD simulation of a turbulent reacting jet) to run the examples and test the code, while in "data/dummy_data" you can find relatively simple data sets to test the scripts' functionality. 
 A detailed description of all the classes and functions is available in the detailed documentation and in the source code. 
 
