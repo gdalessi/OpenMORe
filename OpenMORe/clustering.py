@@ -1479,20 +1479,18 @@ class spectralClustering():
             mu, X_ = center(X, centering_method, True)
             sigma, X_tilde = scale(X_, scaling_method, True)
 
-            return X_tilde, mu, sigma
         elif centering_decision and not scaling_decision:
             mu, X_tilde = center(X, centering_method, True)
 
-            return X_tilde, mu
         elif scaling_decision and not centering_decision:
             sigma, X_tilde = scale(X, scaling_method, True)
 
-            return X_tilde, sigma
+
         else:
             X_tilde = X
+            
+        return X_tilde
 
-        
-    
 
     def fit(self):
 
@@ -1506,7 +1504,7 @@ class spectralClustering():
         '''
         
         print("Preprocessing training matrix..")
-        self.X_tilde = self.preprocess_training(self.X, self._center, self._scale, self._centering, self._scaling)
+        self.X_tilde = np.array(self.preprocess_training(self.X, self._center, self._scale, self._centering, self._scaling))
         #initialize the similarity matrix, whose dimensions are (nxn) --> WARNING: IT'S EXPENSIVE FOR LARGE MATRICES  
         W = np.zeros([self._n_obs, self._n_obs], dtype=float)
         print("Building weighted adjacency matrix..")
