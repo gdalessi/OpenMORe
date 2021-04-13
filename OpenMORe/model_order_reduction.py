@@ -22,6 +22,8 @@ import matplotlib
 import matplotlib.pyplot as plt
 import warnings
 import random
+import scipy.special as sp
+import math
 
 from .utilities import *
 from . import clustering
@@ -2801,18 +2803,39 @@ class NMF():
         return idx
 
 class Kernel_approximation:
-    def __init__(self, X, number_of_samples_to_pick, rank, sigma, number_of_matrices):
+    def __init__(self, X, dictionary):
 
         self.X = X
-        self._numberToPick = number_of_samples_to_pick
-        self._sigma = sigma 
-        self._rank = rank
-        self._p = number_of_matrices
-
         self._number_of_rows = self.X.shape[0]
         self._number_of_columns = self.X.shape[1]
+        
+        try:
+            self._numberToPick = dictionary["number_to_pick"]
+        except:
+            print("The number of columns to pick has not been given in input to the dictionary via the predefined entry: dictionary['number_to_pick']")
+            print("Exiting with error.")
+            exit()
+        
+        try:
+            self._sigma = dictionary["sigma"]
+        except:
+            print("The parameter sigma has not been given in input to the dictionary via the predefined entry: dictionary['sigma']")
+            exit()
 
+        try:
+            self._rank = dictionary["rank"]
+        except:
+            print("The parameter rank has not been given in input to the dictionary via the predefined entry: dictionary['rank']")
+            exit()
 
+        try:
+            self._p = dictionary["number_of_matrices"]
+        except:
+            self._p = 1
+            print("The number of matrices has not been specified. This could be a problem only if the Nystrom ensemble algorith is chosen.")
+            print("The parameter has automatically been set equal to 1")
+
+        
     @staticmethod
     def uniformRandomSamp(number_of_samples_possible_to_pick, number_of_samples_to_pick):
         #make a list of the possible indices that can be picked
@@ -2824,13 +2847,71 @@ class Kernel_approximation:
 
 
     @staticmethod
+    def randomSamplingWeightsDiagonal(Data, number_of_samples_to_pick):
+        n_obs = Data.shape[0]
+        probabilities = np.zeros(n_obs) #set all the probablities to zero
+        for i in range(n_obs):
+            probabilities[i] = RBFkernel(Data[i],Data[i])**2  #calculate the probablity of each component; equal to the square of the diagonalelements of the kernelmatrix
+        
+        total_probabilities = sum(probabilities)   #total probablity
+        probabilities = np.divide(probabilities,total_probabilities)  #scale to have in total a probability of 100%
+        
+        indices = np.linspace(0,n_obs-1,n_obs)  #make an array of indices from 0 to the index of the last element
+        selected_indices = np.random.choice(list(indices),number_of_samples_to_pick,probabilities.all()) #take randomly a number of samples with weights and with replacement
+        
+        return selected_indices
+
+
+    @staticmethod
     def RBFkernel(x1,x2, sigma):
         #x1 and x2 are the vectors that we are "comparing"
         x1 = np.array(x1)
         x2 = np.array(x2)
         xtot = np.subtract(x1,x2)
         xtot_norm_square = np.dot(xtot,xtot)
+        
         kernel = np.exp(-xtot_norm_square/2/sigma**2)
+        
+        return kernel
+
+    '''
+    Only RBF is available right now. The other kernels will be included later.
+    '''
+
+    @staticmethod
+    def PolynomialKernel(x1, x2, d, c):
+        #x1 and x2 are the vectors that we are "comparing"
+        #d is the degree of the polynomial
+        #c is a free parameter trading off the influence of higher-order versus lower-order terms in the polynomial
+        x1 = np.array(x1)
+        x2 = np.array(x2)
+        dot_product = np.dot(x1,x2)
+
+        kernel = (dot_product + c)**d
+        
+        return kernel
+
+    @staticmethod
+    def Maternkernel(x1, x2 , nu, rho, sigma):
+        #x1 and x2 are the vectors that we are "comparing"
+        #nu is typically 1/2, 3/2 or 5/2
+        
+        #calculate the distance between the two vectors
+        x1 = np.array(x1)
+        x2 = np.array(x2)
+        xtot = np.subtract(x1,x2)
+        distance = np.dot(xtot,xtot)**0.5
+
+        if(distance==0):    #if distance is equal to zero, the function return NaN, so make the distance very small but not zero
+            distance = 1e-16
+        
+        #calculate in parts and multiply at the end each part
+        part_1 = (sigma**2)*(2**(1-nu))/math.gamma(nu)
+        part_2 = (np.sqrt(2*nu)*distance/rho)**nu
+        part_3 = sp.kv(nu, np.sqrt(2*nu)*distance/rho)
+
+        kernel = part_1*part_2*part_3
+        
         return kernel
 
 
