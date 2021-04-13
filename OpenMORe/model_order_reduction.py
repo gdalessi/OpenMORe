@@ -2812,6 +2812,7 @@ class Kernel_approximation:
         self._number_of_rows = self.X.shape[0]
         self._number_of_columns = self.X.shape[1]
 
+
     @staticmethod
     def uniformRandomSamp(number_of_samples_possible_to_pick, number_of_samples_to_pick):
         #make a list of the possible indices that can be picked
@@ -2820,6 +2821,7 @@ class Kernel_approximation:
         selected_indices = random.sample(list(indices),number_of_samples_to_pick)
 
         return selected_indices
+
 
     @staticmethod
     def RBFkernel(x1,x2, sigma):
@@ -2831,7 +2833,8 @@ class Kernel_approximation:
         kernel = np.exp(-xtot_norm_square/2/sigma**2)
         return kernel
 
-    def Nystrom_standard(self):
+
+    def Nystrom_computeWC(self):
         #indices that were picked uniform randomly
         #these are the indices that will be used to make the C and W matrix
         indices = self.uniformRandomSamp(self._number_of_rows, self._numberToPick)
@@ -2856,6 +2859,13 @@ class Kernel_approximation:
                 C[counter_row_C][counter_row] = self.RBFkernel(self.X[int(i)],self.X[int(m)], self._sigma)
                 counter_row_C +=1
             counter_row +=1
+        
+        return W, C 
+
+
+    def Nystrom_standard(self):
+
+        W, C = self.Nystrom_computeWC()
 
         #eigenvalue decomposition of W
         W_eig_decomp = np.linalg.eig(W)
@@ -2912,43 +2922,16 @@ class Kernel_approximation:
 
         return K_approximation
 
+
     def Nystrom_ensemble(self):
         #all the calculated kernelmatrices are stored in the matrix K_temporary
         K_temporary = np.zeros(self._number_of_rows)  
         #use p times the standard Nyström algorithm and combine the approximated kernelmatrices together afterwards
         for iteration in range(self._p):
             print("Ensemble Nyström Method  --> iteration n.: {}".format(iteration))
-            #Nyström algorithm standard
-            
-            #indices of the columns that were sampled
-            indices = self.uniformRandomSamp(self._number_of_rows, self._numberToPick)
-            
-            #initialize the matrices W and C
-            C = np.zeros((self._number_of_rows,self._numberToPick))
-            W = np.zeros((self._numberToPick, self._numberToPick))
-            
-            #initialize counters that will be used in the next loop
-            counter_row = 0
-            counter_column_W = 0
-            counter_row_C = 0
-            
-            #fill the matrices W and C in with the sampled columns
-            for i in indices:
-                counter_column_W = 0
-                counter_row_C = 0
-                #fil W in
-                for j in indices:
-                    W[counter_row][counter_column_W] = self.RBFkernel(self.X[int(i)],self.X[int(j)], self._sigma)
-                    counter_column_W+=1
-                #fill C in
-                for k in range(self._number_of_rows):
-                    C[counter_row_C][counter_row] = self.RBFkernel(self.X[int(i)],self.X[int(k)], self._sigma)
-                    counter_row_C +=1
-                counter_row +=1
-                #see that the algorithm is running
-                #if(counter_row%100 == 0):
-                    #print(counter_row)
-            
+
+            W, C = self.Nystrom_computeWC()
+
             #calculate the pseudo inverse of W
             W_pinv = np.linalg.pinv(W)
             
@@ -2963,4 +2946,54 @@ class Kernel_approximation:
         #after the loop K_temporary becomes the final approximation of the kernelmatrix
         K_approximation = K_temporary
         
+        return K_approximation
+
+
+    def QRdecomposition(self):
+        W, C = self.Nystrom_computeWC()
+
+        #calculate the pseudoinverse of W    
+        W_pinv = np.linalg.pinv(W)
+
+        #calculate the QR decomposition of C
+        Q, R= np.linalg.qr(C)
+
+        #eigenvalue decomposition of the matrix R*W_pseudoinverse*R_transpose
+        eig_decomp = np.linalg.eig(np.matmul(R,np.matmul(W_pinv,np.transpose(R))))
+        sigma = eig_decomp[0]  #eigenvalues
+        V = eig_decomp[1]  #eigenvectors
+        
+        indices_max_eigval = np.zeros(self._rank)
+        copy_eigval = list(sigma)
+
+        #select the k biggest eigenvalues to make afterwards the low rank k kernelmatrix
+        for i in range(self._rank):
+            index_max = copy_eigval.index(max(copy_eigval)) #index of the biggest element
+            indices_max_eigval[i] = index_max
+            copy_eigval[index_max] = float('-inf')  #eigenvalue cannnot be selected again, because it is set to the minimal value possible
+
+        #make diagonalmatrix containing the biggest eigenvalues
+        #and take the equivalent eigenvectors
+        max_eigval = np.zeros(self._rank)
+        max_eigvect = np.zeros((self._numberToPick,self._rank))
+        counter = 0
+        for i in indices_max_eigval:
+            max_eigval[counter] = sigma[int(i)]
+            eigvect_column = [V[int(j)][int(i)] for j in range(self._numberToPick)]
+            counter_row = 0
+            for col_element in eigvect_column:
+                max_eigvect[counter_row][counter] = col_element
+                counter_row+=1
+            counter+=1
+
+        #make a diagonal matrix with the biggest eigenvalues
+        sigma_k = np.diag(max_eigval)
+
+        #eigenvectors of the k biggest eigenvalues
+        U = np.matmul(Q,max_eigvect)  #eigenvectors of the low rank k Kernelmatrix
+
+        #rebuild the approximated kernelmatrix with the eigenvectors and eigenvalues of the biggest eigenvalues
+        #K_rank_k = U*sigma_k*U_transpose
+        K_approximation = np.matmul(U,np.matmul(sigma_k,np.transpose(U)))
+
         return K_approximation
