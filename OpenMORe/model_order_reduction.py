@@ -21,6 +21,7 @@ from numpy import linalg as LA
 import matplotlib
 import matplotlib.pyplot as plt
 import warnings
+import random
 
 from .utilities import *
 from . import clustering
@@ -1525,7 +1526,7 @@ class variables_selection(PCA):
             model = PCA(self.X)
             model.eigens = self.X.shape[1] -1
             PCs,eigvals = model.fit()
-            while max_var > self.retained:
+            while max_var > self._n_ret:#self.retained:
                 #Check which variable has the max weight on the last PC. Python starts to count from
                 #zero, that's why the last number is "self._nPCs -1" and not "self._nPCs"
                 max_on_last = np.max(np.abs(PCs[:,-counter]))
@@ -2798,3 +2799,115 @@ class NMF():
         print("The final number of clusters is equal to: {}".format(np.max(idx+1)))
 
         return idx
+
+class Kernel_approximation:
+    def __init__(self, X, number_of_samples_to_pick, rank, sigma):
+
+        self.X = X
+        self._numberPossible = number_of_samples_possible_to_pick
+        self._numberToPick = number_of_samples_to_pick
+        self._sigma = sigma 
+        self._rank = rank
+
+    @staticmethod
+    def uniformRandomSamp(number_of_samples_possible_to_pick, number_of_samples_to_pick):
+        #make a list of the possible indices that can be picked
+        indices = np.linspace(0,number_of_samples_possible_to_pick-1,number_of_samples_possible_to_pick)
+        #pick a number of indices
+        selected_indices = random.sample(list(indices),number_of_samples_to_pick)
+
+        return selected_indices
+
+    @staticmethod
+    def RBFkernel(x1,x2, sigma):
+        #x1 and x2 are the vectors that we are "comparing"
+        x1 = np.array(x1)
+        x2 = np.array(x2)
+        xtot = np.subtract(x1,x2)
+        xtot_norm_square = np.dot(xtot,xtot)
+        kernel = np.exp(-xtot_norm_square/2/sigma**2)
+        return kernel
+
+    def Nystrom_standard(self):
+        number_of_rows = self.X.shape[0]
+        number_of_columns = self.X.shape[1]
+
+        #indices that were picked uniform randomly
+        #these are the indices that will be used to make the C and W matrix
+        indices = self.uniformRandomSamp(number_of_rows, self._numberToPick)
+
+        #initialize the C and W matrix
+        C = np.zeros((number_of_rows, self._numberToPick))
+        W = np.zeros((self._numberToPick, self._numberToPick))
+
+        #make some counters that will be used in the next loop
+        counter_row = 0
+        counter_column_W = 0
+        counter_row_C = 0
+
+        #fill in the W and C matrix with the sampled columns
+        for i in indices:
+            counter_column_W = 0
+            counter_row_C = 0
+            for j in indices:
+                W[counter_row][counter_column_W] = self.RBFkernel(self.X[int(i)],self.X[int(j)], self._sigma)
+                counter_column_W+=1
+            for m in range(number_of_rows):
+                C[counter_row_C][counter_row] = self.RBFkernel(self.X[int(i)],self.X[int(m)], self._sigma)
+                counter_row_C +=1
+            counter_row +=1
+
+        #eigenvalue decomposition of W
+        W_eig_decomp = np.linalg.eig(W)
+        W_diagonals = W_eig_decomp[0]
+        W_eigvect = W_eig_decomp[1]
+        
+        indices_max_eigval = np.zeros(self._rank)
+        copy_eigval = list(W_diagonals)
+
+        #select the k biggest eigenvalues to make afterwards the low rank k kernelmatrix
+        for i in range(self._rank):
+            index_max = copy_eigval.index(max(copy_eigval)) #index of the biggest element
+            indices_max_eigval[i] = index_max
+            copy_eigval[index_max] = float('-inf')  #eigenvalue cannnot be selected again, because it is set to the minimal value possible
+
+        #make diagonalmatrix containing the biggest eigenvalues
+        #and take the equivalent eigenvectors
+        max_eigval = np.zeros(self._rank)
+        max_eigvect = np.zeros((self._numberToPick,self._rank))
+        counter = 0
+        for i in indices_max_eigval:
+            max_eigval[counter] = W_diagonals[int(i)]
+            eigvect_column = [W_eigvect[int(j)][int(i)] for j in range(self._numberToPick)]
+            counter_row = 0
+            for col_element in eigvect_column:
+                max_eigvect[counter_row][counter] = col_element
+                counter_row+=1
+            counter+=1
+
+        #make a diagonal matrix with the biggest eigenvalues
+        sigma_k = np.diag(max_eigval)
+
+        #make L_nys
+        L_nys = np.matmul(np.matmul(C,max_eigvect),np.linalg.inv(sigma_k)**0.5)
+
+        #L_nys_transpose*L_nys to make a (k x k) matrix
+        matrix_rank_k = np.matmul(np.transpose(L_nys),L_nys)
+
+        #eigenvalue decomposition of this rank k matrix
+        matrix_rank_k_eig_decomp = np.linalg.eig(matrix_rank_k)
+        matrix_rank_k_diagonals = matrix_rank_k_eig_decomp[0]
+        matrix_rank_k_eigvect = matrix_rank_k_eig_decomp[1]
+
+        #diagonal matrix of the eigenvalues
+        sigma_tilde = np.diag(matrix_rank_k_diagonals)
+
+        #eigenvectors
+        U_nys_rank_k = np.matmul(np.matmul(L_nys,matrix_rank_k_eigvect),np.linalg.inv(sigma_tilde)**0.5)
+
+        lambda_nys_rank_k = sigma_tilde
+
+        #K_approximation = U*diagonal matrix of the eigenvalues*U_transpose
+        K_approximation = np.matmul(np.matmul(U_nys_rank_k,lambda_nys_rank_k),np.transpose(U_nys_rank_k))
+
+        return K_approximation
