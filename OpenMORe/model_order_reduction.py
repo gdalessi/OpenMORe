@@ -2801,13 +2801,16 @@ class NMF():
         return idx
 
 class Kernel_approximation:
-    def __init__(self, X, number_of_samples_to_pick, rank, sigma):
+    def __init__(self, X, number_of_samples_to_pick, rank, sigma, number_of_matrices):
 
         self.X = X
-        self._numberPossible = number_of_samples_possible_to_pick
         self._numberToPick = number_of_samples_to_pick
         self._sigma = sigma 
         self._rank = rank
+        self._p = number_of_matrices
+
+        self._number_of_rows = self.X.shape[0]
+        self._number_of_columns = self.X.shape[1]
 
     @staticmethod
     def uniformRandomSamp(number_of_samples_possible_to_pick, number_of_samples_to_pick):
@@ -2829,15 +2832,12 @@ class Kernel_approximation:
         return kernel
 
     def Nystrom_standard(self):
-        number_of_rows = self.X.shape[0]
-        number_of_columns = self.X.shape[1]
-
         #indices that were picked uniform randomly
         #these are the indices that will be used to make the C and W matrix
-        indices = self.uniformRandomSamp(number_of_rows, self._numberToPick)
+        indices = self.uniformRandomSamp(self._number_of_rows, self._numberToPick)
 
         #initialize the C and W matrix
-        C = np.zeros((number_of_rows, self._numberToPick))
+        C = np.zeros((self._number_of_rows, self._numberToPick))
         W = np.zeros((self._numberToPick, self._numberToPick))
 
         #make some counters that will be used in the next loop
@@ -2852,7 +2852,7 @@ class Kernel_approximation:
             for j in indices:
                 W[counter_row][counter_column_W] = self.RBFkernel(self.X[int(i)],self.X[int(j)], self._sigma)
                 counter_column_W+=1
-            for m in range(number_of_rows):
+            for m in range(self._number_of_rows):
                 C[counter_row_C][counter_row] = self.RBFkernel(self.X[int(i)],self.X[int(m)], self._sigma)
                 counter_row_C +=1
             counter_row +=1
@@ -2910,4 +2910,57 @@ class Kernel_approximation:
         #K_approximation = U*diagonal matrix of the eigenvalues*U_transpose
         K_approximation = np.matmul(np.matmul(U_nys_rank_k,lambda_nys_rank_k),np.transpose(U_nys_rank_k))
 
+        return K_approximation
+
+    def Nystrom_ensemble(self):
+        #all the calculated kernelmatrices are stored in the matrix K_temporary
+        K_temporary = np.zeros(self._number_of_rows)  
+        #use p times the standard Nyström algorithm and combine the approximated kernelmatrices together afterwards
+        for iteration in range(self._p):
+            print("Ensemble Nyström Method  --> iteration n.: {}".format(iteration))
+            #Nyström algorithm standard
+            
+            #indices of the columns that were sampled
+            indices = self.uniformRandomSamp(self._number_of_rows, self._numberToPick)
+            
+            #initialize the matrices W and C
+            C = np.zeros((self._number_of_rows,self._numberToPick))
+            W = np.zeros((self._numberToPick, self._numberToPick))
+            
+            #initialize counters that will be used in the next loop
+            counter_row = 0
+            counter_column_W = 0
+            counter_row_C = 0
+            
+            #fill the matrices W and C in with the sampled columns
+            for i in indices:
+                counter_column_W = 0
+                counter_row_C = 0
+                #fil W in
+                for j in indices:
+                    W[counter_row][counter_column_W] = self.RBFkernel(self.X[int(i)],self.X[int(j)], self._sigma)
+                    counter_column_W+=1
+                #fill C in
+                for k in range(self._number_of_rows):
+                    C[counter_row_C][counter_row] = self.RBFkernel(self.X[int(i)],self.X[int(k)], self._sigma)
+                    counter_row_C +=1
+                counter_row +=1
+                #see that the algorithm is running
+                #if(counter_row%100 == 0):
+                    #print(counter_row)
+            
+            #calculate the pseudo inverse of W
+            W_pinv = np.linalg.pinv(W)
+            
+            #K_approximation = C*W_pinv*C_transpose
+            Temporary_result = np.matmul(C,W_pinv)
+            K_approximation = np.matmul(Temporary_result,np.transpose(C))
+            
+            #K_ensemble = sum(1/p*K_approximated) with 1/p the weigth of each kernelmatrix
+            #in this case it is a uniform weigth
+            K_temporary = np.array(K_temporary) + 1/self._p*np.array(K_approximation)  #uniform coefficients
+
+        #after the loop K_temporary becomes the final approximation of the kernelmatrix
+        K_approximation = K_temporary
+        
         return K_approximation
