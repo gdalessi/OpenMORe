@@ -2802,7 +2802,24 @@ class NMF():
 
         return idx
 
+
 class Kernel_approximation:
+    '''
+    The aim of the following class is to provide the possibility to extend the use of kernel-based
+    learning to large matrices, by means of algorithms for the approximation of the Kernel matrix.
+
+    You can find additional information regarding the theoretical aspects behind the algorithms in:
+    [1] P. Indreas, M.W. Mahoney. Journal of machine learning research, pages 2153-2175, 2005.
+    [2] M. Li, J. T. Kwok, B-L Lu. ICML 2010 Proceedings, 27th International Conference on Machine Learning, pages 631-638, 2010.
+    [3] Kumar, Sanjiv, Mehryar Mohri, and Ameet Talwalkar. "Ensemble nystrom method." (2009).
+    [4] T. Hofmann, B. Scholkopf, A. Smola. Annals of statistics, pages 1171-1220, 2008.
+    [5] F. Pourkamali, S. Becker. Neurocomputing, pages 261-272, 2019.
+
+    The core of the following Python code for the Kernel matrix approximation has been developed by Grégoire Stéphane 
+    Corluy (Gregoire.Stephane.Corluy@vub.be) in the context of his MA1 thesis at Université Libre de Bruxelles and 
+    Vrije Universiteit Brussels, Faculty of Electromechanical engineering.
+    '''
+
     def __init__(self, X, dictionary):
 
         self.X = X
@@ -2811,6 +2828,11 @@ class Kernel_approximation:
         
         try:
             self._numberToPick = dictionary["number_to_pick"]
+
+            if not isinstance(self._numberToPick, int):
+                raise Exception(" ")
+                exit()
+                
         except:
             print("The number of columns to pick has not been given in input to the dictionary via the predefined entry: dictionary['number_to_pick']")
             print("Exiting with error.")
@@ -2818,22 +2840,102 @@ class Kernel_approximation:
         
         try:
             self._sigma = dictionary["sigma"]
+
+            if not isinstance(self._sigma, int) and not isinstance(self._sigma, float):
+                raise Exception(" ")
+                exit()
         except:
             print("The parameter sigma has not been given in input to the dictionary via the predefined entry: dictionary['sigma']")
             exit()
 
         try:
             self._rank = dictionary["rank"]
+
+            if not isinstance(self._rank, int):
+                raise Exception(" ")
+                exit()
+
         except:
             print("The parameter rank has not been given in input to the dictionary via the predefined entry: dictionary['rank']")
             exit()
 
         try:
             self._p = dictionary["number_of_matrices"]
+
         except:
             self._p = 1
             print("The number of matrices has not been specified. This could be a problem only if the Nystrom ensemble algorith is chosen.")
             print("The parameter has automatically been set equal to 1")
+
+        
+        try:
+            self._center = dictionary["center"]
+            if not isinstance(self._center, bool):
+                raise Exception
+        except:
+            self._center = True
+            warnings.warn("An exception occured with regard to the input value for the centering decision. It could be not acceptable, or not given to the dictionary.")
+            print("\tIt will be automatically set equal to: true.")
+            print("\tYou can ignore this warning if the centering decision has been assigned later via setter.")
+            print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
+        try:
+            self._centering = dictionary["centering_method"]
+            if not isinstance(self._centering, str):
+                raise Exception
+            elif self._centering.lower() != "mean" and self._centering.lower() != "min":
+                raise Exception
+        except:
+            self._centering = "mean"
+            warnings.warn("An exception occured with regard to the input value for the centering criterion . It could be not acceptable, or not given to the dictionary.")
+            print("\tIt will be automatically set equal to: mean.")
+            print("\tYou can ignore this warning if the centering criterion has been assigned later via setter.")
+            print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
+        try:
+            self._scale = dictionary["scale"]
+            if not isinstance(self._scale, bool):
+                raise Exception
+        except:
+            self._scale = True 
+            warnings.warn("An exception occured with regard to the input value for the scaling decision. It could be not acceptable, or not given to the dictionary.")
+            print("\tIt will be automatically set equal to: true.")
+            print("\tYou can ignore this warning if the scaling decision has been assigned later via setter.")
+            print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
+        try: 
+            self._scaling = dictionary["scaling_method"]
+            if not isinstance(self._scaling, str):
+                raise Exception
+            elif self._scaling.lower() != "auto" and self._scaling.lower() != "vast" and self._scaling.lower() != "pareto" and self._scaling.lower() != "range":
+                raise Exception
+        except:
+            self._scaling = "auto"
+            warnings.warn("An exception occured with regard to the input value for the scaling criterion. It could be not acceptable, or not given to the dictionary.")
+            print("\tIt will be automatically set equal to: auto.")
+            print("\tYou can ignore this warning if the scaling criterion has been assigned later via setter.")
+            print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
+
+        #Optional 
+        self._kernelType = dictionary["kernel_type"]
+        self._d = dictionary["polynomial_degree"]
+        self._c = dictionary["polynomial_freeParameter"]
+        self._nu = dictionary["nu_matern"]
+        self._rho = dictionary["rho_matern"]
+        self._sigmaMatern = dictionary["sigma_matern"]
+
+    
+    @staticmethod
+    def preprocess_training(X, centering_decision, scaling_decision, centering_method, scaling_method):
+
+        if centering_decision and scaling_decision:
+            mu, X_ = center(X, centering_method, True)
+            sigma, X_tilde = scale(X_, scaling_method, True)
+        elif centering_decision and not scaling_decision:
+            mu, X_tilde = center(X, centering_method, True)
+        elif scaling_decision and not centering_decision:
+            sigma, X_tilde = scale(X, scaling_method, True)
+        else:
+            X_tilde = X
+
+        return X_tilde
 
         
     @staticmethod
@@ -2874,9 +2976,6 @@ class Kernel_approximation:
         
         return kernel
 
-    '''
-    Only RBF is available right now. The other kernels will be included later.
-    '''
 
     @staticmethod
     def PolynomialKernel(x1, x2, d, c):
@@ -2919,6 +3018,9 @@ class Kernel_approximation:
         #indices that were picked uniform randomly
         #these are the indices that will be used to make the C and W matrix
         indices = self.uniformRandomSamp(self._number_of_rows, self._numberToPick)
+        
+        #sort the indices from small to big so that the for loops for W below can work
+        indices = sorted(indices)
 
         #initialize the C and W matrix
         C = np.zeros((self._number_of_rows, self._numberToPick))
@@ -2933,18 +3035,35 @@ class Kernel_approximation:
         for i in indices:
             counter_column_W = 0
             counter_row_C = 0
-            for j in indices:
-                W[counter_row][counter_column_W] = self.RBFkernel(self.X[int(i)],self.X[int(j)], self._sigma)
-                counter_column_W+=1
             for m in range(self._number_of_rows):
-                C[counter_row_C][counter_row] = self.RBFkernel(self.X[int(i)],self.X[int(m)], self._sigma)
+                #calculate the matrix C and if the element matches with an element from W, add the element also to W
+                                
+                #could speed up more by using the symmetry of the matrices, but it is complicated to implement
+                #as the symmetric matrix W is not clearly at one place in the matrix C, but the elements of matrix W are spread in the whole matrix C
+                if self._kernelType.lower() == "rbf":
+                    kernel_calculated = self.RBFkernel(self.X[int(i)],self.X[int(m)], self._sigma) #calculate the kernel only once for the common elements of C and W
+                elif self._kernelType.lower() == "matern":
+                    kernel_calculated = self.Maternkernel(self.X[int(i)],self.X[int(m)], self._nu, self._rho, self._sigmaMatern) #calculate the kernel only once for the common elements of C and W
+                elif self._kernelType.lower() == "polynomial" or self._kernelType.lower() == "poly":
+                    kernel_calculated = self.PolynomialKernel(self.X[int(i)],self.X[int(m)], self._d, self._c) #calculate the kernel only once for the common elements of C and W
+                else:
+                    print("The chosen Kernel is not available. Please check the spelling in your dictionary, or the available kernels in the documentation.")
+                    print("exiting with error.")
+                    exit()
+                C[counter_row_C][counter_row] = kernel_calculated
+                
+                #see if the calculated kernel is also an element of W
+                if(counter_column_W<=self._numberToPick-1): #avoid to be out the bounds of the vector
+                    if(m==indices[counter_column_W]): #W is a submatrix of C, only sometimes add the kernel to W
+                        W[counter_row][counter_column_W] = kernel_calculated
+                        counter_column_W+=1
                 counter_row_C +=1
             counter_row +=1
-        
-        return W, C 
+        return W, C  
 
 
     def Nystrom_standard(self):
+        self.X = self.preprocess_training(self.X, self._center, self._scale, self._centering, self._scaling)
 
         W, C = self.Nystrom_computeWC()
 
