@@ -23,7 +23,7 @@ import time
 
 import matplotlib
 import matplotlib.pyplot as plt
-__all__ = ["unscale", "uncenter", "center", "scale", "center_scale", "evaluate_clustering_PHC", "fastSVD", "get_centroids", "get_cluster", "get_all_clusters", "explained_variance", "evaluate_clustering_DB", "NRMSE", "PCA_fit", "readCSV", "varimax_rotation", "get_medianoids", "split_for_validation", "get_medoids"]
+__all__ = ["unscale", "uncenter", "center", "scale", "center_scale", "evaluate_clustering_PHC", "fastSVD", "get_centroids", "get_cluster", "get_all_clusters", "explained_variance", "evaluate_clustering_DB", "NRMSE", "PCA_fit", "readCSV", "varimax_rotation", "get_medianoids", "split_for_validation", "get_medoids", "RandomizedSVD"]
 
 
 # ------------------------------
@@ -244,8 +244,8 @@ def fastSVD(X_tilde, n_eigs):
     n_eigs = number of eigenvectors to retain -- dim: (scalar)
    
     - Output:
-    Z = scores matrix, projection of X on the eigenvectors -- dim: (observations x n_eigs)
-    A = modes matrix, Eigenvectors from SVD -- dim: (variables x n_eigs)
+    U, V, Sigma: matrices such that ||X_tilde - U @ Sigma @ V.T || < eps
+    
     '''
     rows, cols = X_tilde.shape 
     
@@ -264,7 +264,7 @@ def fastSVD(X_tilde, n_eigs):
         if ii == 0:
             H = X_tilde @ G         # (n x p) @ [(p x n) @ (n x l)] = (n x p) @ (p x l) = (n x l)
         else:
-            tmp = X_tilde @ (X_tilde.T @ H) 
+            tmp = X_tilde @ X_tilde.T @ H 
             H = np.concatenate((H, tmp), axis=1)
 
     #Step 3: decompose H with a QR decomposition, the column of the matrix
@@ -280,11 +280,12 @@ def fastSVD(X_tilde, n_eigs):
     V_tilde, Sig_tilde, Wt = np.linalg.svd(T, full_matrices=True)
     U_tilde = Q @ Wt.T 
 
-    Z = U_tilde[:, :n_eigs]         #scores
-    A = V_tilde[:,:n_eigs]          #modes
-    S = Sig_tilde[:n_eigs]
+    U = U_tilde[:, :n_eigs]         #modes
+    V = V_tilde[:, :n_eigs]
+    Sigma = Sig_tilde[:n_eigs]
+    
 
-    return Z, A, S
+    return U, V, Sigma
 
 
 
@@ -434,6 +435,41 @@ def PCA_fit(X, n_eig):
 
     else:
         raise Exception("The number of PCs exceeds the number of variables in the data-set.")
+
+
+def RandomizedSVD(W,k,p,q):
+    #W is a m x m matrix
+    #p is the oversampling parameter
+    #q is the number of steps of a power iteration typically set to 1 or 2 which speed up the decay of the singular values of W
+    #k is the rank of the low rank Kernelmatrix
+
+    m = len(W)
+    
+    #create a standard gaussianrandom matrix
+    omega = np.random.normal(0,1,(m,k+p))
+    
+    #Z = W*omega
+    Z = np.matmul(W,omega)
+    
+    #Y = (W**q-1)*Z
+    Y = np.matmul(np.linalg.matrix_power(W,q-1),Z)
+    
+    #calculate the QR decomposition of Y
+    Q,R = np.linalg.qr(Y)
+    
+    #solve B(Q_transpose*omega)=Q_transpose*Z
+    A =np.matmul(np.transpose(Q),omega)
+    D = np.matmul(np.transpose(Q),Z)
+    
+    B = np.matmul(D,np.linalg.pinv(A))
+    
+    #SVD
+    V,Lambda,V_tilde = np.linalg.svd(B)
+    
+    #eigenvectors = Q*V
+    U = np.matmul(Q,V)
+    
+    return U, Lambda
 
 
 def readCSV(path, name):

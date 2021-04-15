@@ -14,21 +14,21 @@ import numpy as np
 # dictionary to load the .csv file:
 file_options = {
     #set the training matrix file options
-    "path_to_file"              : os.path.abspath(os.path.join(__file__ ,"../../../data/dummy_data/")),
-    "input_file_name"           : "moons.csv",
+    "path_to_file"              : os.path.abspath(os.path.join(__file__ ,"../../../data/reactive_flow/")),
+    "input_file_name"           : "turbo2D.csv",
 }
 
 
 # dictionary with the options of spectral clustering:
 settings = {
     #centering and scaling options
-    "center"                    : False,
+    "center"                    : True,
     "centering_method"          : "mean",
-    "scale"                     : False,
+    "scale"                     : True,
     "scaling_method"            : "auto",
 
     #clustering options: choose the number of clusters
-    "number_of_clusters"        : 2,
+    "number_of_clusters"        : 4,
     "sigma"                     : 0.1,
 
     #write clustering solution on txt
@@ -40,10 +40,13 @@ settings = {
 X = readCSV(file_options["path_to_file"], file_options["input_file_name"])
 
 
-# Start the clustering step: call the class and the Kfit() method
+# Start the clustering step: call the class and the fitApprox() method
 # It is returned the idx, a vector containing the clustering solution
 model = clustering.spectralClustering(X, settings)
-idx = model.fit()
+
+# fitApprox uses the approximated version of the Kernel matrix computed via
+# the Nyström algorithm and a randomized SVD algorithm to decompose it faster
+idx = model.fitApprox()
 
 
 # Plot the clustering results 

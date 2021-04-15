@@ -19,6 +19,7 @@ MODULE: clustering.py
 from .utilities import *
 from . import model_order_reduction
 import warnings
+import time
 
 import numpy as np
 from numpy import linalg as LA
@@ -1536,42 +1537,47 @@ class spectralClustering():
 
         return index
 
-    def Kfit(self):
+    def fitApprox(self):
         
         
         self.X_tilde = self.preprocess_training(self.X, self._center, self._scale, self._centering, self._scaling)
 
-        
-        reduceSize = model_order_reduction.SamplePopulation(self.X)
-        reduceSize.sampling_strategy = "stratified"
-        reduceSize.set_size = 1500
-        reduceSize.set_conditioning = self.X[:,0]
-        
-        miniX = reduceSize.fit()
-        
-        miniX, mu, sigma = self.preprocess_training(miniX, self._center, self._scale, self._centering, self._scaling)
+        if self.X_tilde.shape[0] > 20000:
+            rowsToPick = 200
+        else:
+            rowsToPick = 100
 
-        #initialize the similarity matrix, whose dimensions are (nxn) --> WARNING: IT'S EXPENSIVE FOR LARGE MATRICES  
-        W = np.zeros([miniX.shape[0], miniX.shape[0]], dtype=float)
+        print("Computing the W matrix via Nyström approximation (std Nyström algorithm)..")
+        startTime = time.time()
+        model = model_order_reduction.Kernel_approximation(self.X_tilde, "rbf", False, False, "mean", "auto", rowsToPick, self._sigma, 50, 1)
+        W = model.Nystrom_standard()
+        W = W.real
+        endTime = time.time()
+        print("Elapsed time to compute Fully Connected Graph: {}".format(endTime-startTime))
 
-        print("Building weighted adjacency matrix..")
-        for ii in range(0, miniX.shape[0]):
-            for jj in range(0, miniX.shape[0]):
-                W[ii,jj] = np.exp(-LA.norm(miniX[ii,:]-miniX[jj,:])**2/(2*self._sigma**2))
 
-        D= np.zeros([miniX.shape[0], miniX.shape[0]],dtype=float)
+        D= np.zeros([self.X_tilde.shape[0], self.X_tilde.shape[0]],dtype=float)
         print("Building degree matrix..")
         #build the diagonal degree matrix
-        for ii in range(0, miniX.shape[0]):
+        for ii in range(0, self.X_tilde.shape[0]):
             D[ii,ii] = np.sum(W[ii,:])
 
+        
         #Now build Laplacian matrix and do an eigendecomposition
         L = D-W 
-        eigval, eigvec = LA.eigh(L)
+
+        print("Eigendecomposition step using Randomized SVD..")
+        startTime = time.time()
+        #L = L.real
+        eigvec, ____, ____ = fastSVD(L, L.shape[1])
+        eigvec = eigvec.real
+        endTime = time.time()
+        print("Elapsed time to compute Randomized SVD: {}".format(endTime-startTime))
 
         #Consider only the first 'k' columns of the eigenvector matrix
         eigvec = eigvec[:,:self._k]
-
+        
+        print("K-means step")
         #Now perform K-means on it, to partition in 'k' different clusters
         modelK = KMeans(eigvec)
         modelK.to_center = False
@@ -1581,29 +1587,4 @@ class spectralClustering():
         
         index = modelK.fit()
 
-        centroids = np.empty((1,self._k), dtype=float)
-        dist = np.empty((1,self._k), dtype=float)
-
-        clusters = get_all_clusters(miniX, index)
-
-        C_mat = np.empty((np.max(index)+1, self.X.shape[1]), dtype=float)
-        idx = np.empty((self.X.shape[0],), dtype=int)
-
-        print("The algorithm found {} clusters.".format(np.max(index)+1))
-
-        trainingScalX = center_scale(self.X, mu, sigma)
-
-        
-
-        for ii in range(np.max(index)+1):
-            C_mat[ii,:] = get_centroids(clusters[ii])
-        
-        from scipy.spatial.distance import euclidean, cdist
-
-        
-        dist = cdist(trainingScalX, C_mat)**2
-
-        for ii in range(self.X.shape[0]):
-            idx[ii] = np.argmin(dist[ii,:])
-        
-        return idx 
+        return index

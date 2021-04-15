@@ -1123,6 +1123,17 @@ class KPCA(PCA):
                 print("\tIt will be automatically set equal to: rbf (radial basis function).")
                 print("\tYou can ignore this warning if the kernel type has been assigned later via setter.")
                 print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
+            
+            try:
+                self._sigma = settings["sigma"]
+                if not isinstance(self._sigma, float):
+                    raise Exception
+            except:
+                self._sigma = 1
+                warnings.warn("An exception occured with regard to the input value for the sigma. It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: rbf (radial basis function).")
+                print("\tYou can ignore this warning if the sigma has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
 
 
     @property
@@ -1159,45 +1170,51 @@ class KPCA(PCA):
         #As usual, preprocess the matrix
         self.X_tilde = KPCA.preprocess_training(self.X, self.to_center, self.to_scale, self.centering, self.scaling)
 
-        from sklearn.metrics.pairwise import rbf_kernel
-        from sklearn.metrics.pairwise import polynomial_kernel
-        from sklearn.preprocessing import KernelCenterer
-
         import time 
         
         t = time.time()
+
+        if self.X_tilde.shape[0] > 20000:
+            rowsToPick = 200
+        else:
+            rowsToPick = 100
         
-        #compute the Kernel using sklearn
+        #compute the Kernel 
         if self._kernel == 'polynomial':
             print("Computing the Kernel (poly)..")
-            Kernel = polynomial_kernel(self.X_tilde, degree=3, gamma=1/self._n_ret)
+            model = Kernel_approximation(self.X_tilde, "polynomial", False, False, "mean", "auto", rowsToPick, self._sigma, 2, 1)
+            Kernel = model.Nystrom_standard()
+            Kernel = Kernel.real
         elif self._kernel == 'rbf':
             print("Computing the Kernel (rbf)..")
-            Kernel = rbf_kernel(self.X_tilde, gamma=1/self.X_tilde.shape[0])
+            model = Kernel_approximation(self.X_tilde, "rbf", False, False, "mean", "auto", rowsToPick, self._sigma, 50, 1)
+            Kernel = model.Nystrom_standard()
+            Kernel = Kernel.real
         else:
             raise Exception("The selected Kernel is not supported. Exiting with error..")
             exit()
 
         elapsed_kernel = time.time() - t   
         print("Kernel computed in {} s.".format(elapsed_kernel)) 
-        
-        #the Gram matrix must be centered
-        print("Centering the Kernel..")
-        tk2 = time.time()
-        transformer = KernelCenterer().fit(Kernel)
-        K3 = transformer.transform(Kernel)
-        elapsed_k2 = time.time() - tk2 
-        print("Kernel centered in {} s.".format(elapsed_k2))
+
+
+        #Compute the centering matrix;
+        N1 = np.ones((Kernel.shape[0], Kernel.shape[1]), dtype=float)
+        K_tilde = Kernel - N1@Kernel - Kernel@N1 + N1@Kernel@N1
+
 
         #now perform fast SVD to decompose the matrix
         print("Decomposing Kernel with fast SVD algorithm..")
         tSVD = time.time()
-        self.Zt, self.A, singularVal = fastSVD(K3, self._nPCs)
+        U, V, Sigma = fastSVD(K_tilde, K_tilde.shape[1])
         elapsed_SVD = time.time() - tSVD
         print("Decomposition accomplished in {} s.".format(elapsed_SVD))
 
-        #return modes (n x k)
-        return self.Zt, self.A, singularVal
+        U = U[:, self._nPCs]
+        V = V[:, self._nPCs]
+        Sigma = Sigma[:self._nPCs]
+
+        return U, V, Sigma
 
 
 
@@ -2820,106 +2837,123 @@ class Kernel_approximation:
     Vrije Universiteit Brussels, Faculty of Electromechanical engineering.
     '''
 
-    def __init__(self, X, dictionary):
+    def __init__(self, X, kernelType = "rbf", toCenter=True, toScale=True, centerCrit="mean", scalCrit="auto", numToPick=2000, sigma=1, rank=200, p=1, *dictionary):
 
         self.X = X
         self._number_of_rows = self.X.shape[0]
         self._number_of_columns = self.X.shape[1]
+
+        #predefined
+        self._kernelType = kernelType
+        self._center = toCenter
+        self._scale = toScale
+        self._centering = centerCrit
+        self._scaling = scalCrit
+        self._numberToPick = numToPick
+        self._sigma = sigma
+        self._rank = rank 
+        self._p = p
+
+        #optional
+        self._d = 2
+        self._c = 1
+        self._nu = 1
+        self._rho = 1
+        self._sigmaMatern = 1
+
+
+
+        if dictionary:
+            settings = dictionary[0]
         
-        try:
-            self._numberToPick = dictionary["number_to_pick"]
+            try:
+                self._numberToPick = settings["number_to_pick"]
 
-            if not isinstance(self._numberToPick, int):
-                raise Exception(" ")
-                exit()
-                
-        except:
-            print("The number of columns to pick has not been given in input to the dictionary via the predefined entry: dictionary['number_to_pick']")
-            print("Exiting with error.")
-            exit()
-        
-        try:
-            self._sigma = dictionary["sigma"]
+                if not isinstance(self._numberToPick, int):
+                    raise Exception(" ")
+                    exit()
+                    
+            except:
+                print("The number of columns to pick has not been given in input to the dictionary via the predefined entry: dictionary['number_to_pick']")
+                print("\tIt will be automatically set equal to: 2000.")
+            
+            try:
+                self._sigma = settings["sigma"]
 
-            if not isinstance(self._sigma, int) and not isinstance(self._sigma, float):
-                raise Exception(" ")
-                exit()
-        except:
-            print("The parameter sigma has not been given in input to the dictionary via the predefined entry: dictionary['sigma']")
-            exit()
+                if not isinstance(self._sigma, int) and not isinstance(self._sigma, float):
+                    raise Exception(" ")
+                    exit()
+            except:
+                print("The parameter sigma has not been given in input to the dictionary via the predefined entry: dictionary['sigma']")
+                print("\tIt will be automatically set equal to: 1.")
 
-        try:
-            self._rank = dictionary["rank"]
+            try:
+                self._rank = settings["rank"]
 
-            if not isinstance(self._rank, int):
-                raise Exception(" ")
-                exit()
+                if not isinstance(self._rank, int):
+                    raise Exception(" ")
+                    exit()
 
-        except:
-            print("The parameter rank has not been given in input to the dictionary via the predefined entry: dictionary['rank']")
-            exit()
+            except:
+                print("The parameter rank has not been given in input to the dictionary via the predefined entry: dictionary['rank']")
+                print("\tIt will be automatically set equal to: 200.")
 
-        try:
-            self._p = dictionary["number_of_matrices"]
+            try:
+                self._p = settings["number_of_matrices"]
 
-        except:
-            self._p = 1
-            print("The number of matrices has not been specified. This could be a problem only if the Nystrom ensemble algorith is chosen.")
-            print("The parameter has automatically been set equal to 1")
+            except:
+                print("The number of matrices has not been specified. This could be a problem only if the Nystrom ensemble algorith is chosen.")
+                print("\tIt will be automatically set equal to: 1.")
 
-        
-        try:
-            self._center = dictionary["center"]
-            if not isinstance(self._center, bool):
-                raise Exception
-        except:
-            self._center = True
-            warnings.warn("An exception occured with regard to the input value for the centering decision. It could be not acceptable, or not given to the dictionary.")
-            print("\tIt will be automatically set equal to: true.")
-            print("\tYou can ignore this warning if the centering decision has been assigned later via setter.")
-            print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
-        try:
-            self._centering = dictionary["centering_method"]
-            if not isinstance(self._centering, str):
-                raise Exception
-            elif self._centering.lower() != "mean" and self._centering.lower() != "min":
-                raise Exception
-        except:
-            self._centering = "mean"
-            warnings.warn("An exception occured with regard to the input value for the centering criterion . It could be not acceptable, or not given to the dictionary.")
-            print("\tIt will be automatically set equal to: mean.")
-            print("\tYou can ignore this warning if the centering criterion has been assigned later via setter.")
-            print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
-        try:
-            self._scale = dictionary["scale"]
-            if not isinstance(self._scale, bool):
-                raise Exception
-        except:
-            self._scale = True 
-            warnings.warn("An exception occured with regard to the input value for the scaling decision. It could be not acceptable, or not given to the dictionary.")
-            print("\tIt will be automatically set equal to: true.")
-            print("\tYou can ignore this warning if the scaling decision has been assigned later via setter.")
-            print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
-        try: 
-            self._scaling = dictionary["scaling_method"]
-            if not isinstance(self._scaling, str):
-                raise Exception
-            elif self._scaling.lower() != "auto" and self._scaling.lower() != "vast" and self._scaling.lower() != "pareto" and self._scaling.lower() != "range":
-                raise Exception
-        except:
-            self._scaling = "auto"
-            warnings.warn("An exception occured with regard to the input value for the scaling criterion. It could be not acceptable, or not given to the dictionary.")
-            print("\tIt will be automatically set equal to: auto.")
-            print("\tYou can ignore this warning if the scaling criterion has been assigned later via setter.")
-            print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
+            
+            try:
+                self._center = settings["center"]
+                if not isinstance(self._center, bool):
+                    raise Exception
+            except:
+                warnings.warn("An exception occured with regard to the input value for the centering decision. It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: true.")
+                print("\tYou can ignore this warning if the centering decision has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
+            try:
+                self._centering = settings["centering_method"]
+                if not isinstance(self._centering, str):
+                    raise Exception
+                elif self._centering.lower() != "mean" and self._centering.lower() != "min":
+                    raise Exception
+            except:
+                warnings.warn("An exception occured with regard to the input value for the centering criterion . It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: mean.")
+                print("\tYou can ignore this warning if the centering criterion has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
+            try:
+                self._scale = settings["scale"]
+                if not isinstance(self._scale, bool):
+                    raise Exception
+            except:
+                warnings.warn("An exception occured with regard to the input value for the scaling decision. It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: true.")
+                print("\tYou can ignore this warning if the scaling decision has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
+            try: 
+                self._scaling = settings["scaling_method"]
+                if not isinstance(self._scaling, str):
+                    raise Exception
+                elif self._scaling.lower() != "auto" and self._scaling.lower() != "vast" and self._scaling.lower() != "pareto" and self._scaling.lower() != "range":
+                    raise Exception
+            except:
+                warnings.warn("An exception occured with regard to the input value for the scaling criterion. It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: auto.")
+                print("\tYou can ignore this warning if the scaling criterion has been assigned later via setter.")
+                print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
 
-        #Optional 
-        self._kernelType = dictionary["kernel_type"]
-        self._d = dictionary["polynomial_degree"]
-        self._c = dictionary["polynomial_freeParameter"]
-        self._nu = dictionary["nu_matern"]
-        self._rho = dictionary["rho_matern"]
-        self._sigmaMatern = dictionary["sigma_matern"]
+            #Optional 
+            self._kernelType = settings["kernel_type"]
+            self._d = settings["polynomial_degree"]
+            self._c = settings["polynomial_freeParameter"]
+            self._nu = settings["nu_matern"]
+            self._rho = settings["rho_matern"]
+            self._sigmaMatern = settings["sigma_matern"]
 
     
     @staticmethod
