@@ -46,7 +46,7 @@ settings ={
 
 # Load the input matrix 
 X = readCSV(file_options["path_to_file"], file_options["input_file_name"])
-X = X[:100,:]
+
 
 # Start the dimensionality reduction and the feature extraction step:
 # call the PCA class and give in input X and the dictionary with the instructions
@@ -56,11 +56,8 @@ model = model_order_reduction.KPCA(X, settings)
 # Perform the dimensionality reduction via Principal Component Analysis,
 # and return the eigenvectors of the reduced manifold 
 U, V, Sigma = model.fit()
-print("dim U {}".format(U.shape))
-print("dim V {}".format(V.shape))
-print("dim Sigma {}".format(Sigma.shape))
 
-'''
+
 # Plot the first 3 scores on the mesh, to see the structures in the lower
 # dimensional space
 plt.rcParams.update({'font.size' : 12, 'text.usetex' : True})
@@ -86,4 +83,3 @@ axes.scatter(mesh[:,0], mesh[:,1], c=U[:,2],alpha=0.9, cmap='gnuplot')
 axes.set_xlabel('$x [m]$')
 axes.set_ylabel('$y [m]$')
 plt.show()
-'''
