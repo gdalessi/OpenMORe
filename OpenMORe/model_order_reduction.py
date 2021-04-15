@@ -1210,8 +1210,12 @@ class KPCA(PCA):
         elapsed_SVD = time.time() - tSVD
         print("Decomposition accomplished in {} s.".format(elapsed_SVD))
 
-        U = U[:, self._nPCs]
-        V = V[:, self._nPCs]
+        U = U.real
+        V = V.real
+        Sigma = Sigma.real
+
+        U = U[:, :self._nPCs]
+        V = V[:, :self._nPCs]
         Sigma = Sigma[:self._nPCs]
 
         return U, V, Sigma
