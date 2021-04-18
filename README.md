@@ -14,14 +14,13 @@ _Model Order Reduction:_
 _Clustering:_
 - Local PCA (via Vector Quantization, _unsupervised_)
 - FPCA (via conditioning vector, _supervised_)
-- Kmeans (_unsupervised_)
 - Spectral Clustering (_unsupervised_)
 
 _Utilities:_
 - Multivariate data preprocessing 
 - Varimax Rotation 
 - Clustering solution evaluation 
-- Fast algorithm for SVD of massive data (approx)
+- Fast algorithm for SVD 
 
 
 **Requirements**: in order to use OpenMORe on your devices, the following requirements must be satisfied:
@@ -31,7 +30,6 @@ _Utilities:_
 - Scipy must be installed 
 - Matplotlib must be installed
 - Pandas must be installed
-- Scikit-learn is optional (only needed from the KPCA class)
 
 
 **Installation**: if the libraries requirements are satisfied, clone/download the repo. After that, go to the OpenMORe folder from your terminal (where the file *setup.py* is located) and type: `python setup.py install`. 
