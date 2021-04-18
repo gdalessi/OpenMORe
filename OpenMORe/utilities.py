@@ -23,7 +23,7 @@ import time
 
 import matplotlib
 import matplotlib.pyplot as plt
-__all__ = ["unscale", "uncenter", "center", "scale", "center_scale", "evaluate_clustering_PHC", "fastSVD", "get_centroids", "get_cluster", "get_all_clusters", "explained_variance", "evaluate_clustering_DB", "NRMSE", "PCA_fit", "readCSV", "varimax_rotation", "get_medianoids", "split_for_validation", "get_medoids", "RandomizedSVD"]
+__all__ = ["unscale", "uncenter", "center", "scale", "center_scale", "evaluate_clustering_PHC", "fastSVD", "get_centroids", "get_cluster", "get_all_clusters", "explained_variance", "evaluate_clustering_DB", "NRMSE", "PCA_fit", "readCSV", "varimax_rotation", "get_medianoids", "split_for_validation", "get_medoids"]
 
 
 # ------------------------------
@@ -259,19 +259,23 @@ def fastSVD(X_tilde, n_eigs):
     
     #Step 2: Compute the H matrix of eq. (2.2) from [1]. 
     #To do that, an iterative procedure must be adopted (in the for loop):
+    Hmatr = [None] * i
+    Hmatr[0] = X_tilde @ G
 
-    for ii in range(0,i):
-        if ii == 0:
-            H = X_tilde @ G         # (n x p) @ [(p x n) @ (n x l)] = (n x p) @ (p x l) = (n x l)
-        else:
-            tmp = X_tilde @ X_tilde.T @ H 
-            H = np.concatenate((H, tmp), axis=1)
+    for ii in range(1,i):
+        Hmatr[ii] = X_tilde @ (X_tilde.T @ Hmatr[ii-1])
 
+            
+    H = Hmatr[0]
+    for ii in range(1, i):
+        H = np.concatenate((H,Hmatr[ii]),axis=1)
+            
+            
     #Step 3: decompose H with a QR decomposition, the column of the matrix
     #Q must be orthonormal
     Q, ____ = np.linalg.qr(H, mode='reduced')
-    
-    
+
+
     #Step 4: compute the T matrix as described in eq. (2.4) of [1]
     T = X_tilde.T @ Q 
 
@@ -284,7 +288,6 @@ def fastSVD(X_tilde, n_eigs):
     V = V_tilde[:, :n_eigs]
     Sigma = Sig_tilde[:n_eigs]
     
-
     return U, V, Sigma
 
 
@@ -435,41 +438,6 @@ def PCA_fit(X, n_eig):
 
     else:
         raise Exception("The number of PCs exceeds the number of variables in the data-set.")
-
-
-def RandomizedSVD(W,k,p,q):
-    #W is a m x m matrix
-    #p is the oversampling parameter
-    #q is the number of steps of a power iteration typically set to 1 or 2 which speed up the decay of the singular values of W
-    #k is the rank of the low rank Kernelmatrix
-
-    m = len(W)
-    
-    #create a standard gaussianrandom matrix
-    omega = np.random.normal(0,1,(m,k+p))
-    
-    #Z = W*omega
-    Z = np.matmul(W,omega)
-    
-    #Y = (W**q-1)*Z
-    Y = np.matmul(np.linalg.matrix_power(W,q-1),Z)
-    
-    #calculate the QR decomposition of Y
-    Q,R = np.linalg.qr(Y)
-    
-    #solve B(Q_transpose*omega)=Q_transpose*Z
-    A =np.matmul(np.transpose(Q),omega)
-    D = np.matmul(np.transpose(Q),Z)
-    
-    B = np.matmul(D,np.linalg.pinv(A))
-    
-    #SVD
-    V,Lambda,V_tilde = np.linalg.svd(B)
-    
-    #eigenvectors = Q*V
-    U = np.matmul(Q,V)
-    
-    return U, Lambda
 
 
 def readCSV(path, name):

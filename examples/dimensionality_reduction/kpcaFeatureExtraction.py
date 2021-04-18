@@ -7,27 +7,18 @@ import os
 
 ############################################################################
 # In this example it's shown how to perform dimensionality reduction and 
-# feature extraction on a matrix X (turbo2D.csv) via Principal Component 
-# Analysis (PCA).
+# feature extraction on a matrix X (moons.csv) via Kernel Principal Component 
+# Analysis (KPCA).
 ############################################################################
 
 # Dictionary to load the input matrix, found in .csv format
 file_options = {
-    "path_to_file"              : os.path.abspath(os.path.join(__file__ ,"../../../data/reactive_flow/")),
-    "input_file_name"           : "turbo2D.csv",
+    "path_to_file"              : os.path.abspath(os.path.join(__file__ ,"../../../data/dummy_data/")),
+    "input_file_name"           : "moons.csv",
 }
 
-# Dictionary to load the mesh, also found in .csv format
-mesh_options = {
-    #set the mesh file options (the path goes up twice - it's ok)
-    "path_to_file"              : os.path.abspath(os.path.join(__file__ ,"../../../data/reactive_flow/")),
-    "mesh_file_name"            : "mesh_turbo.csv",
 
-    #eventually enable the clustering solution plot on the mesh
-    "plot_on_mesh"              : True,
-}
-
-# Dictionary with the instruction for the PCA algorithm:
+# Dictionary with the instruction for the KPCA algorithm:
 settings ={
     #centering and scaling options
     "center"                    : True,
@@ -36,20 +27,26 @@ settings ={
     "scaling_method"            : "auto",
 
     #set the final dimensionality
-    "number_of_eigenvectors"    : 7,
+    "number_of_eigenvectors"    : 2,
     
     #set the kernel type
     "selected_kernel"           : "rbf",
+    #set the sigma parameter if rbf is selected as kernel
     "sigma"                     : 1,
 
+    #the following two, if set to True, allow to use approximation
+    #algorithms to speed-up Kernel PCA. Suggested for large X
+    "use_Nystrom"               : False,
+    "fast_SVD"                  : False,
 }
+
 
 # Load the input matrix 
 X = readCSV(file_options["path_to_file"], file_options["input_file_name"])
 
 
 # Start the dimensionality reduction and the feature extraction step:
-# call the PCA class and give in input X and the dictionary with the instructions
+# call the KPCA class and give in input X and the dictionary with the instructions
 model = model_order_reduction.KPCA(X, settings)
 
 
@@ -57,29 +54,10 @@ model = model_order_reduction.KPCA(X, settings)
 # and return the eigenvectors of the reduced manifold 
 U, V, Sigma = model.fit()
 
-
-# Plot the first 3 scores on the mesh, to see the structures in the lower
-# dimensional space
-plt.rcParams.update({'font.size' : 12, 'text.usetex' : True})
-mesh = np.genfromtxt(mesh_options["path_to_file"] + "/" + mesh_options["mesh_file_name"], delimiter= ',')
-
+#Plot the first two KPCs
 fig = plt.figure()
 axes = fig.add_axes([0.2,0.15,0.7,0.7], frameon=True)
-axes.scatter(mesh[:,0], mesh[:,1], c=U[:,0],alpha=0.9, cmap='gnuplot')
-axes.set_xlabel('$x [m]$')
-axes.set_ylabel('$y [m]$')
-plt.show()
-
-fig = plt.figure()
-axes = fig.add_axes([0.2,0.15,0.7,0.7], frameon=True)
-axes.scatter(mesh[:,0], mesh[:,1], c=U[:,1],alpha=0.9, cmap='gnuplot')
-axes.set_xlabel('$x [m]$')
-axes.set_ylabel('$y [m]$')
-plt.show()
-
-fig = plt.figure()
-axes = fig.add_axes([0.2,0.15,0.7,0.7], frameon=True)
-axes.scatter(mesh[:,0], mesh[:,1], c=U[:,2],alpha=0.9, cmap='gnuplot')
-axes.set_xlabel('$x [m]$')
-axes.set_ylabel('$y [m]$')
+axes.scatter(U[:,0], U[:,1])
+axes.set_xlabel('$First\ PC\ [-]$')
+axes.set_ylabel('$Second\ PC\ [-]$')
 plt.show()

@@ -1059,10 +1059,10 @@ class KPCA(PCA):
             settings = dictionary[0]
             try:
                 self._nPCs = settings["number_of_eigenvectors"]
-                if self._nPCs < 0 or self._nPCs >= self.X.shape[1]:
+                if self._nPCs < 0 or self._nPCs > self.X.shape[1]:
                     raise Exception
             except:
-                self._nPCs = self.X.shape[1]-1
+                self._nPCs = self.X.shape[1]
                 warnings.warn("An exception occured with regard to the input value for the number of PCs. It could be not acceptable, or not given to the dictionary.")
                 print("\tIt will be automatically set equal to: X.shape[1]-1.")
                 print("\tYou can ignore this warning if the number of PCs has been assigned later via setter.")
@@ -1126,7 +1126,7 @@ class KPCA(PCA):
             
             try:
                 self._sigma = settings["sigma"]
-                if not isinstance(self._sigma, float):
+                if not isinstance(self._sigma, float) and not isinstance(self._sigma, int):
                     raise Exception
             except:
                 self._sigma = 1
@@ -1134,6 +1134,26 @@ class KPCA(PCA):
                 print("\tIt will be automatically set equal to: rbf (radial basis function).")
                 print("\tYou can ignore this warning if the sigma has been assigned later via setter.")
                 print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
+
+            try:
+                self._Nystrom = settings["use_Nystrom"]
+                if not isinstance(self._Nystrom, bool):
+                    raise Exception
+            except:
+                self._Nystrom = False
+                warnings.warn("An exception occured with regard to the input value for the use Nystrom approximation. It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: False --> the full algorithm will be employed.")
+                print("\tPlease check the conditions which must be satisfied by the input in the detailed documentation.")
+            
+            try:
+                self._fastSVD = settings["fast_SVD"]
+                if not isinstance(self._fastSVD, bool):
+                    raise Exception
+            except:
+                self._fastSVD = True
+                warnings.warn("An exception occured with regard to the input value for the use of the fast SVD algorithm. It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: True.")
+                print("\tPlease check the conditions which must be satisfied by the input in the detailed documentation.")
 
 
     @property
@@ -1172,24 +1192,28 @@ class KPCA(PCA):
 
         import time 
         
-        t = time.time()
+        
 
         if self.X_tilde.shape[0] > 20000:
             rowsToPick = 200
         else:
             rowsToPick = 100
         
+        t = time.time()
         #compute the Kernel 
         if self._kernel == 'polynomial':
             print("Computing the Kernel (poly)..")
-            model = Kernel_approximation(self.X_tilde, "polynomial", False, False, "mean", "auto", rowsToPick, self._sigma, 2, 1)
+            model = Kernel_approximation(self.X_tilde, kernelType="polynomial", toCenter=False, toScale=False, centerCrit="mean", scalCrit="auto", numToPick=rowsToPick, sigma=self._sigma, rank=50, d=2, c=1)
             Kernel = model.Nystrom_standard()
             Kernel = Kernel.real
         elif self._kernel == 'rbf':
             print("Computing the Kernel (rbf)..")
-            model = Kernel_approximation(self.X_tilde, "rbf", False, False, "mean", "auto", rowsToPick, self._sigma, 50, 1)
-            Kernel = model.Nystrom_standard()
-            Kernel = Kernel.real
+            if self._Nystrom:
+                model = Kernel_approximation(self.X_tilde, kernelType="rbf", toCenter=False, toScale=False, centerCrit="mean", scalCrit="auto", numToPick=rowsToPick, sigma=self._sigma, rank=50, p=1)
+                Kernel = model.Nystrom_standard()
+                Kernel = Kernel.real
+            else:
+                Kernel = Kernel_approximation.RBFkernel(self.X_tilde, self.X_tilde, self._sigma, selfKernel="yes")
         else:
             raise Exception("The selected Kernel is not supported. Exiting with error..")
             exit()
@@ -1200,26 +1224,35 @@ class KPCA(PCA):
 
         #Compute the centering matrix;
         N1 = np.ones((Kernel.shape[0], Kernel.shape[1]), dtype=float)
+        N1 = N1/Kernel.shape[0]
+
+        print("Centering the Kernel matrix..")
+        #Compute the Gram matrix
         K_tilde = Kernel - N1@Kernel - Kernel@N1 + N1@Kernel@N1
 
-
+        t = time.time()
         #now perform fast SVD to decompose the matrix
-        print("Decomposing Kernel with fast SVD algorithm..")
-        tSVD = time.time()
-        U, V, Sigma = fastSVD(K_tilde, K_tilde.shape[1])
-        elapsed_SVD = time.time() - tSVD
-        print("Decomposition accomplished in {} s.".format(elapsed_SVD))
+        if self._fastSVD:
+            print("Decomposing Kernel with fast SVD algorithm..")
+            U, V, Sigma = fastSVD(K_tilde, 40)
+        else:
+            print("Decomposing Kernel with standard SVD algorithm..")
+            from scipy import linalg
+            U, Sigma, V = linalg.svd(K_tilde)
+        elapsed_SVD = time.time() - t
+
+        print("Elapsed SVD: {}".format(elapsed_SVD))
+
 
         U = U.real
         V = V.real
         Sigma = Sigma.real
 
-        U = U[:, :self._nPCs]
-        V = V[:, :self._nPCs]
+        U = U[:,:self._nPCs]
+        V = V[:,:self._nPCs]
         Sigma = Sigma[:self._nPCs]
 
         return U, V, Sigma
-
 
 
 class variables_selection(PCA):
@@ -1231,7 +1264,7 @@ class variables_selection(PCA):
     Three methods for variables selection via PCA are implemented in this class:
     i) Method B2 backward;
     ii) Method B4 forward;
-    iii) Variables selection via PCA and Procustes Analysis, by means of the Krzanovski iterative algorithm [b]
+    iii) Variables selection via PCA and procrustes Analysis, by means of the Krzanovski iterative algorithm [b]
 
     Additional info about the methods are available in the fit method.
 
@@ -1273,17 +1306,17 @@ class variables_selection(PCA):
     The variables associated with the largest weights on each of the 'm' first PCs are
     selected. This is not an iterative algorithm.
 
-    iii)    Variables selection via PCA and Procustes Analysis:
+    iii)    Variables selection via PCA and procrustes Analysis:
     The iterative variable selection algorithm introduced by Krzanovski is based on the following steps (1-3):
     1.  The dimensionality of m is initially set equal to p.
     2.  Each variable is deleted from the matrix X, obtaining p ~X matrices. The
-        corresponding scores matrices are computed by means of PCA. For each of them, a Procustes Analysis
+        corresponding scores matrices are computed by means of PCA. For each of them, a procrustes Analysis
         is performed with respect to the scores of the original matrix X, and the corresponding M2 coeffcient is computed.
     3.  The variable which, once excluded, leads to the smallest M2 coefficient is deleted from the matrix.
     4.  Steps 2 and 3 are repeated until m variables are left.
 
-    iv)  Variables selection via PCA, Procustes Analysis and Varimax rotation:
-    It follows the same steps of the method iii), but Varimax rotation is performed before Procustes analysis.
+    iv)  Variables selection via PCA, procrustes Analysis and Varimax rotation:
+    It follows the same steps of the method iii), but Varimax rotation is performed before procrustes analysis.
 
 
     '''
@@ -1299,7 +1332,7 @@ class variables_selection(PCA):
 
         super().__init__(self.X)
 
-        self._method = 'b2' #'B2', 'B4', "Procustes", "procustes_rotation"
+        self._method = 'b2' #'B2', 'B4', "procrustes", "procrustes_rotation"
 
         if dictionary:
             settings = dictionary[0]
@@ -1318,7 +1351,7 @@ class variables_selection(PCA):
                 self._method = settings["method"]
                 if not isinstance(self._method, str):
                     raise Exception
-                elif self._method.lower() != "procustes" and self._method.lower() != "b2" and self._method.lower() != "b4" and self._method.lower() != "procustes_rotation" and self._method.lower() != "b2_rotation" and self._method.lower() != "b4_rotation" and self._method.lower() != "mccabe" and self._method.lower() != "mccabe_rotation":
+                elif self._method.lower() != "procrustes" and self._method.lower() != "b2" and self._method.lower() != "b4" and self._method.lower() != "procrustes_rotation" and self._method.lower() != "b2_rotation" and self._method.lower() != "b4_rotation" and self._method.lower() != "mccabe" and self._method.lower() != "mccabe_rotation":
                     raise Exception
 
                 if self._method.lower() == "mccabe" or self._method.lower() == "mccabe_rotation":
@@ -1331,9 +1364,9 @@ class variables_selection(PCA):
         
 
             except:
-                self._method = 'procustes'
+                self._method = 'procrustes'
                 warnings.warn("An exception occured with regard to the input value for the variables selection method. It could be not acceptable, or not given to the dictionary.")
-                print("\tIt will be automatically set equal to: procustes.")
+                print("\tIt will be automatically set equal to: procrustes.")
                 print("\tYou can ignore this warning if the variables selection method has been assigned later via setter.")
                 print("\tOtherwise, please check the conditions which must be satisfied by the input in the detailed documentation.")
             try:
@@ -1453,14 +1486,14 @@ class variables_selection(PCA):
         self._method = new_string
 
         if not isinstance(self._method, str):
-            self._method = 'procustes'
+            self._method = 'procrustes'
             warnings.warn("An exception occured with regard to the input value for the variables selection method. It could be not acceptable, or not given to the dictionary.")
-            print("\tIt will be automatically set equal to: procustes.")
+            print("\tIt will be automatically set equal to: procrustes.")
             print("\tPlease check the conditions which must be satisfied by the input in the detailed documentation.")
-        elif self._method.lower() != "procustes" and self._method.lower() != "b2" and self._method.lower() != "b4":
-            self._method = 'procustes'
+        elif self._method.lower() != "procrustes" and self._method.lower() != "b2" and self._method.lower() != "b4":
+            self._method = 'procrustes'
             warnings.warn("An exception occured with regard to the input value for the variables selection method. It could be not acceptable, or not given to the dictionary.")
-            print("\tIt will be automatically set equal to: procustes.")
+            print("\tIt will be automatically set equal to: procrustes.")
             print("\tPlease check the conditions which must be satisfied by the input in the detailed documentation.")
 
 
@@ -1501,8 +1534,8 @@ class variables_selection(PCA):
         #preprocess the training matrix
         self.X_tilde = PCA.preprocess_training(self.X, self.to_center, self.to_scale, self.centering, self.scaling)
         self.var_num = np.linspace(0, self.X.shape[1]-1, self.X.shape[1], dtype=int)
-        if self._method.lower() == 'procustes':
-            print("Selecting global variables via PCA and Procustes Analysis...")
+        if self._method.lower() == 'procrustes':
+            print("Selecting global variables via PCA and procrustes Analysis...")
             
             #Start with PCA, and compute the scores (Z)
             eigenvec = PCA_fit(self.X_tilde, self._nPCs)
@@ -1522,7 +1555,7 @@ class variables_selection(PCA):
                     #Compute the reduced scores covariance matrix, and then apply SVD
                     covZZ = np.transpose(Z_tilde) @ Z
                     u, s, vh = np.linalg.svd(covZZ, full_matrices=True)
-                    #Compute the Procustes Analysis score M2 for the matrix without the 'ii' variable
+                    #Compute the procrustes Analysis score M2 for the matrix without the 'ii' variable
                     M2_tmp = np.trace((np.transpose(Z) @ Z) + (np.transpose(Z_tilde) @ Z_tilde) - 2*s)
                     #If the Silhouette score M2 is lower than the previous one in M2_tmp, store the
                     #variable 'ii' to remove it after the for loop
@@ -1595,7 +1628,7 @@ class variables_selection(PCA):
 
             return PVs, self.var_num
 
-        elif self._method.lower() == 'procustes_rotation':
+        elif self._method.lower() == 'procrustes_rotation':
 
             #Start with PCA, and compute the scores (Z)
             eigenvec = PCA_fit(self.X_tilde, self._nPCs)
@@ -1617,7 +1650,7 @@ class variables_selection(PCA):
                     #Compute the reduced scores covariance matrix, and then apply SVD
                     covZZ = np.transpose(Z_tilde) @ Z
                     u, s, vh = np.linalg.svd(covZZ, full_matrices=True)
-                    #Compute the Procustes Analysis score M2 for the matrix without the 'ii' variable
+                    #Compute the procrustes Analysis score M2 for the matrix without the 'ii' variable
                     M2_tmp = np.trace((np.transpose(Z) @ Z) + (np.transpose(Z_tilde) @ Z_tilde) - 2*s)
                     #If the Silhouette score M2 is lower than the previous one in M2_tmp, store the
                     #variable 'ii' to remove it after the for loop
@@ -2841,34 +2874,61 @@ class Kernel_approximation:
     Vrije Universiteit Brussels, Faculty of Electromechanical engineering.
     '''
 
-    def __init__(self, X, kernelType = "rbf", toCenter=True, toScale=True, centerCrit="mean", scalCrit="auto", numToPick=2000, sigma=1, rank=200, p=1, *dictionary):
+    def __init__(self, X, *args, **kwargs):
 
         self.X = X
         self._number_of_rows = self.X.shape[0]
         self._number_of_columns = self.X.shape[1]
 
         #predefined
-        self._kernelType = kernelType
-        self._center = toCenter
-        self._scale = toScale
-        self._centering = centerCrit
-        self._scaling = scalCrit
-        self._numberToPick = numToPick
-        self._sigma = sigma
-        self._rank = rank 
-        self._p = p
+        if kwargs.get('kernelType'):
+            self._kernelType = kwargs['kernelType']
+        if kwargs.get('toCenter'):
+            self._center = True
+        else:
+            self._center = False
+        if kwargs.get('toScale'):
+            self._scale = kwargs['toScale']
+        else:
+            self._scale = False
+        if kwargs.get('centerCrit'):
+            self._centering = kwargs['centerCrit']
+        if kwargs.get('scalCrit'):
+            self._scaling = kwargs['scalCrit']
+        if kwargs.get('numToPick'):
+            self._numberToPick = kwargs['numToPick']
+        if kwargs.get('sigma'):
+            self._sigma = kwargs['sigma']
+        if kwargs.get('rank'):
+            self._rank = kwargs['rank'] 
+        if kwargs.get('p'):
+            self._p = kwargs['p']
 
         #optional
-        self._d = 2
-        self._c = 1
-        self._nu = 1
-        self._rho = 1
-        self._sigmaMatern = 1
+        if kwargs.get('d'):
+            self._d = kwargs['d']
+        else:
+            self._d = 2
+        if kwargs.get('c'):
+            self._c = kwargs['c']
+        else:
+            self._c = 1
+        if kwargs.get('nu'):
+            self._nu = kwargs['nu']
+        else:
+            self._nu = 1
+        if kwargs.get('rho'):
+            self._rho = kwargs['rho']
+        else:
+            self._rho = 1
+        if kwargs.get('sigmaMatern'):
+            self._sigmaMatern = kwargs['sigmaMatern']
+        else:
+            self._sigmaMatern = 1
 
 
-
-        if dictionary:
-            settings = dictionary[0]
+        if args:
+            settings = args[0]
         
             try:
                 self._numberToPick = settings["number_to_pick"]
@@ -3003,14 +3063,21 @@ class Kernel_approximation:
 
 
     @staticmethod
-    def RBFkernel(x1,x2, sigma):
+    def RBFkernel(x1,x2, sigma, **kwargs):
         #x1 and x2 are the vectors that we are "comparing"
-        x1 = np.array(x1)
-        x2 = np.array(x2)
-        xtot = np.subtract(x1,x2)
-        xtot_norm_square = np.dot(xtot,xtot)
         
-        kernel = np.exp(-xtot_norm_square/2/sigma**2)
+        if not kwargs.get('selfKernel'):
+            
+            x1 = np.array(x1)
+            x2 = np.array(x2)
+            xtot = np.subtract(x1,x2)
+            xtot_norm_square = np.dot(xtot,xtot.T)
+            kernel = np.exp(-xtot_norm_square/(2*sigma**2))
+        else:
+            from scipy.spatial.distance import pdist, squareform
+            pairwise_dists = squareform(pdist(x1, 'euclidean'))
+            kernel = np.exp(-pairwise_dists**2 / (2*sigma ** 2))
+
         
         return kernel
 
@@ -3055,6 +3122,11 @@ class Kernel_approximation:
     def Nystrom_computeWC(self):
         #indices that were picked uniform randomly
         #these are the indices that will be used to make the C and W matrix
+        if self._numberToPick > self._number_of_rows:
+            print("The number of samples cannot be lower than the number of the observations of X.")
+            print("Exiting with error..")
+            exit()
+
         indices = self.uniformRandomSamp(self._number_of_rows, self._numberToPick)
         
         #sort the indices from small to big so that the for loops for W below can work

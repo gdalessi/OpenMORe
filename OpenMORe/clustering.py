@@ -1524,6 +1524,9 @@ class spectralClustering():
         eigval, eigvec = LA.eigh(L)
 
         #Consider only the first 'k' columns of the eigenvector matrix
+        #it is ok to consider the firsts and not the lasts because the eigh function orders them
+        #in ascending order of magnitude, so the firsts will be the smallest ones,
+        # as prescribed by the algorithm. 
         eigvec = eigvec[:,:self._k]
 
         #Now perform K-means on it, to partition in 'k' different clusters
@@ -1537,25 +1540,34 @@ class spectralClustering():
 
         return index
 
+
     def fitApprox(self):
+
+        '''
+        Group the observations with Spectral clustering, but compute the W matrix by means of
+        the Nyström algorithm.
+
+        --- RETURNS ---
+        idx:        vector whose dimensions are (n,) containing the cluster assignment for each observation.
+        type idx:   numpy array 
+        
+        '''
         
         
         self.X_tilde = self.preprocess_training(self.X, self._center, self._scale, self._centering, self._scaling)
 
         if self.X_tilde.shape[0] > 20000:
-            rowsToPick = 200
-        else:
             rowsToPick = 100
+        else:
+            rowsToPick = 50
 
         print("Computing the W matrix via Nyström approximation (std Nyström algorithm)..")
-        startTime = time.time()
-        model = model_order_reduction.Kernel_approximation(self.X_tilde, "rbf", False, False, "mean", "auto", rowsToPick, self._sigma, 50, 1)
+
+        model = model_order_reduction.Kernel_approximation(self.X_tilde, kernelType="rbf", toCenter=False, toScale=False, centerCrit="mean", scalCrit="auto", numToPick=rowsToPick, sigma=self._sigma, rank=50, p=1)
         W = model.Nystrom_standard()
         W = W.real
-        endTime = time.time()
-        print("Elapsed time to compute Fully Connected Graph: {}".format(endTime-startTime))
 
-
+       
         D= np.zeros([self.X_tilde.shape[0], self.X_tilde.shape[0]],dtype=float)
         print("Building degree matrix..")
         #build the diagonal degree matrix
@@ -1566,15 +1578,8 @@ class spectralClustering():
         #Now build Laplacian matrix and do an eigendecomposition
         L = D-W 
 
-        print("Eigendecomposition step using Randomized SVD..")
-        startTime = time.time()
-        #L = L.real
-        eigvec, ____, ____ = fastSVD(L, L.shape[1])
-        eigvec = eigvec.real
-        endTime = time.time()
-        print("Elapsed time to compute Randomized SVD: {}".format(endTime-startTime))
-
-        #Consider only the first 'k' columns of the eigenvector matrix
+        print("Eigendecomposition step..")
+        eigval, eigvec = LA.eigh(L)
         eigvec = eigvec[:,:self._k]
         
         print("K-means step")

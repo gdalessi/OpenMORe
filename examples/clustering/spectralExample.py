@@ -14,21 +14,21 @@ import numpy as np
 # dictionary to load the .csv file:
 file_options = {
     #set the training matrix file options
-    "path_to_file"              : os.path.abspath(os.path.join(__file__ ,"../../../data/reactive_flow/")),
-    "input_file_name"           : "turbo2D.csv",
+    "path_to_file"              : os.path.abspath(os.path.join(__file__ ,"../../../data/dummy_data/")),
+    "input_file_name"           : "moons.csv",
 }
 
 
 # dictionary with the options of spectral clustering:
 settings = {
     #centering and scaling options
-    "center"                    : True,
+    "center"                    : False,
     "centering_method"          : "mean",
-    "scale"                     : True,
+    "scale"                     : False,
     "scaling_method"            : "auto",
 
     #clustering options: choose the number of clusters
-    "number_of_clusters"        : 4,
+    "number_of_clusters"        : 2,
     "sigma"                     : 0.1,
 
     #write clustering solution on txt
@@ -46,11 +46,11 @@ model = clustering.spectralClustering(X, settings)
 
 # fitApprox uses the approximated version of the Kernel matrix computed via
 # the Nyström algorithm and a randomized SVD algorithm to decompose it faster
-idx = model.fitApprox()
+idx = model.fit()
 
 
 # Plot the clustering results 
-matplotlib.rcParams.update({'font.size' : 12, 'text.usetex' : True})
+matplotlib.rcParams.update({'font.size' : 14, 'text.usetex' : True})
 fig = plt.figure()
 axes = fig.add_axes([0.2,0.15,0.7,0.7], frameon=True)
 axes.scatter(X[:,0], X[:,1], c=idx,alpha=0.9, cmap='gnuplot')

@@ -25,7 +25,7 @@ settings = {
     "scaling_method"            : "auto",
 
     #variables selection options
-    "method"                    : "procustes",
+    "method"                    : "procrustes",
     "number_of_eigenvectors"    : 8,
     "number_of_variables"       : 25,
     "path_to_labels"            : os.path.abspath(os.path.join(__file__ ,"../../../data/reactive_flow/")),
