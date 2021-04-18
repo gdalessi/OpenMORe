@@ -33,7 +33,7 @@ class testPCA(unittest.TestCase):
         self.nPCtest = 1
         self.kernelType = 'rbf'
         self.nVarTest = 3
-        self.selMethod1 = 'procustes'
+        self.selMethod1 = 'procrustes'
         self.selMethod2 = 'b4'
         self.selMethod3 = 'b2'
 
@@ -53,17 +53,6 @@ class testPCA(unittest.TestCase):
         self.assertEqual(PCs.shape[1],self.nPCtest)
         self.assertEqual(len(eigenvalues),self.nPCtest)
         self.assertIsInstance(explained, float)
-
-    def test_kpca(self):
-        kernelPCA =  model_order_reduction.KPCA(self.X)
-        kernelPCA.eigens = self.nPCtest
-        kernelPCA.kernel_type = self.kernelType
-
-        Z, A, S = kernelPCA.fit()
-
-
-        self.assertEqual(Z.shape[1], self.nPCtest)
-        self.assertEqual(A.shape[1], self.nPCtest)
 
 
     def test_varSelection(self):
