@@ -87,12 +87,12 @@ if settings["evaluate_clustering"]:
 
 # Eventually plot the clustering solution on the mesh
 if mesh_options["plot_on_mesh"]:
-    matplotlib.rcParams.update({'font.size' : 12, 'text.usetex' : True})
+    matplotlib.rcParams.update({'font.size' : 14, 'text.usetex' : True})
     mesh = np.genfromtxt(mesh_options["path_to_file"] + "/" + mesh_options["mesh_file_name"], delimiter= ',')
 
     fig = plt.figure()
     axes = fig.add_axes([0.2,0.15,0.7,0.7], frameon=True)
-    axes.scatter(mesh[:,0], mesh[:,1], c=index,alpha=0.5, cmap='gnuplot')
+    axes.scatter(mesh[:,0], mesh[:,1], c=index,alpha=0.9, cmap='gnuplot')
     axes.set_xlabel('X [m]')
     axes.set_ylabel('Y [m]')
     plt.show()

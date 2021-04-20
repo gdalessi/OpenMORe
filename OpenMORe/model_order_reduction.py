@@ -1155,6 +1155,16 @@ class KPCA(PCA):
                 print("\tIt will be automatically set equal to: True.")
                 print("\tPlease check the conditions which must be satisfied by the input in the detailed documentation.")
 
+            try:
+                self._eigensFast = settings["eigensFast"]
+                if not isinstance(self._eigensFast, int) and self._fastSVD:
+                    raise Exception
+            except:
+                self._eigensFast = 100
+                warnings.warn("An exception occured with regard to the input value for the number of eigens to be used in the fast SVD algorithm. It could be not acceptable, or not given to the dictionary.")
+                print("\tIt will be automatically set equal to: 100.")
+                print("\tPlease check the conditions which must be satisfied by the input in the detailed documentation.")
+
 
     @property
     def kernel_type(self):
@@ -1234,7 +1244,7 @@ class KPCA(PCA):
         #now perform fast SVD to decompose the matrix
         if self._fastSVD:
             print("Decomposing Kernel with fast SVD algorithm..")
-            U, V, Sigma = fastSVD(K_tilde, 40)
+            U, V, Sigma = fastSVD(K_tilde, self._eigensFast)
         else:
             print("Decomposing Kernel with standard SVD algorithm..")
             from scipy import linalg

@@ -49,6 +49,16 @@ model = clustering.spectralClustering(X, settings)
 idx = model.fit()
 
 
+# Plot the original data 
+matplotlib.rcParams.update({'font.size' : 14, 'text.usetex' : True})
+fig = plt.figure()
+axes = fig.add_axes([0.2,0.15,0.7,0.7], frameon=True)
+axes.scatter(X[:,0], X[:,1], c=X[:,0],alpha=0.9, cmap='gnuplot')
+axes.set_xlabel('$x\ [-]$')
+axes.set_ylabel('$y\ [-]$')
+plt.show()
+
+
 # Plot the clustering results 
 matplotlib.rcParams.update({'font.size' : 14, 'text.usetex' : True})
 fig = plt.figure()
