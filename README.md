@@ -30,9 +30,10 @@ _Utilities:_
 - Scipy must be installed 
 - Matplotlib must be installed
 - Pandas must be installed
+- Latex must be installed (for the plots' labels)
 
 
-**Installation**: if the libraries requirements are satisfied, clone/download the repo. After that, go to the OpenMORe folder from your terminal (where the file *setup.py* is located) and type: `python setup.py install`. 
+**Installation**: if the libraries requirements are satisfied, clone or download the repo. After that, go to the OpenMORe folder from your terminal (where the file *setup.py* is located) and type: `python setup.py install`. 
 
 **Test**: it is possible to check if the installation process was successful running the tests. To do that, just type:
 - `python -m unittest tests/test_PCA.py`  
@@ -50,7 +51,7 @@ OK
 ___________________________
 ```
 
-**Usage**: if the tests are successful, you can now use OpenMORe. In the "examples" folder there are some pre-set cases, organized according to the final purpose (e.g., clustering, dimensionality-reduction, variables-selection, others). They are also fully commented to describe the required dictionary inputs.
+**Use**: if the tests are successful, you can now use OpenMORe. In the "examples" folder there are some pre-set cases, organized according to the final purpose (e.g., clustering, dimensionality-reduction, variables-selection, others). They are also fully commented to describe the required dictionary inputs.
 In the “data/reactive_flow” folder, there is a collection of data (from a CFD simulation of a turbulent reacting jet) to run the examples and test the code, while in "data/dummy_data" you can find relatively simple data sets to test the scripts' functionality. 
 A detailed description of all the classes and functions is available in the detailed documentation and in the source code. 
 
