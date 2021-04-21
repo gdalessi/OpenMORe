@@ -16,14 +16,11 @@ MODULE: classification.py
 
 '''
 from .utilities import *
-from . import model_order_reduction
 from . import clustering
 
 
 import numpy as np
 import numpy.matlib
-import matplotlib
-import matplotlib.pyplot as plt
 
 
 class VQPCA(clustering.lpca):
@@ -80,7 +77,7 @@ class VQPCA(clustering.lpca):
             centroids = get_centroids(cluster)
             modes = PCA_fit(cluster, self.nPCs)
             C_mat = np.matlib.repmat(centroids, rows, 1)
-            rec_err_os = (self.Y - C_mat) - (self.Y - C_mat) @ modes[0] @ modes[0].T
+            rec_err_os = (Y_tilde - C_mat) - (Y_tilde - C_mat) @ modes[0] @ modes[0].T
             sq_rec_oss = np.power(rec_err_os, 2)
             sq_rec_err[:,ii] = sq_rec_oss.sum(axis=1)
 

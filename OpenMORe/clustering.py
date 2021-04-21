@@ -682,7 +682,7 @@ class lpca:
             sq_rec_err = np.zeros((rows, self._k), dtype=float)
 
             if self._correction == 'phc_multi':
-                PHC_coefficients, PHC_std = evaluate_clustering_PHC(self.X, idx, method='phc_standard')   #PHC_index(self.X, idx) or PHC_robustTrim(self.X, idx)
+                PHC_coefficients, PHC_std = evaluate_clustering_PHC(self.X, idx)   #PHC_index(self.X, idx) or PHC_robustTrim(self.X, idx)
                 PHC_coefficients = PHC_coefficients/np.max(PHC_coefficients)
 
             for ii in range(0, self._k):
@@ -779,7 +779,7 @@ class lpca:
                 else:
                     pass                            
             # Update idx --> choose the cluster where the rec err is minimized
-            if self.__activateCorrection == True:
+            if self.__activateCorrection:
                 idx = np.argmin(scores_factor, axis = 1)
             else:
                 idx = np.argmin(sq_rec_err, axis = 1)
