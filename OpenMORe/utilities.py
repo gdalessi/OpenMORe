@@ -581,13 +581,12 @@ def unscale(X_tilde, sigma):
         exit()
 
 
-def varimax_rotation(X, b, normalize=True):
+def varimax_rotation(X, b):
     '''
     Rotate the factors by means of the varimax rotation.
     - Input:
     X = training data matrix, SCALED/UNSCALED it makes no difference
     b = factors/modes to be rotated
-    normalize = (optional), the factors/modes are normalized with their standard deviation
 
     - Output:
     rot_loadings = rotated modes or factors, returned after the algorithm convergenceß
@@ -666,4 +665,3 @@ def varimax_rotation(X, b, normalize=True):
         rot_loadings[:,ii] = loadings[:,ii] * norm_factor[ii]
 
     return rot_loadings
-    
