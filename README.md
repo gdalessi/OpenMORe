@@ -6,7 +6,6 @@ _Model Order Reduction:_
 - Principal Component Analysis (PCA)
 - Local PCA (LPCA)
 - Kernel PCA (KPCA)
-- Non-negative Matrix Factorization (NMF) 
 - Feature selection via PCA 
 - Outlier removal via PCA
 - Data sampling 
@@ -38,7 +37,6 @@ _Utilities:_
 **Test**: it is possible to check if the installation process was successful running the tests. To do that, just type:
 - `python -m unittest tests/test_PCA.py`  
 - `python -m unittest tests/test_sampling.py `
-- `python -m unittest tests/test_NMF.py` 
 - `python -m unittest tests/test_clustering.py `
 
 If the tests have positive response, you should get a message like: 
