@@ -1995,7 +1995,7 @@ class SamplePopulation():
         self.__nObs = self.X.shape[0]
         self.__nVar = self.X.shape[1]
         
-        #Choose the sampling strategy: random, cluster (KMeans, LPCA), stratifed or multistage.
+        #Choose the sampling strategy: random, clustered (KMeans, LPCA) or conditioned.
         self._method = 'KMeans'
         self.__condVec = False
         
@@ -2016,7 +2016,7 @@ class SamplePopulation():
 
                 if not isinstance(self._method, str):
                     raise Exception
-                elif self._method.lower() != "random" and self._method.lower() != "lpca" and self._method.lower() != 'kmeans' and self._method.lower() != "stratified":
+                elif self._method.lower() != "random" and self._method.lower() != "lpca" and self._method.lower() != 'kmeans' and self._method.lower() != "conditioned":
                     raise Exception
             except:
                 self._method = "random"

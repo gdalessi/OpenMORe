@@ -21,8 +21,8 @@ file_options = {
 # Dictionary with the instructions for the sampling class:
 settings = {
     #set the method which has to be used for the sampling.
-    #available options: "random", "cluster", "stratified", "multistage"
-    "method"                    : "stratified",
+    #available options: "random", "cluster", "conditioned", "multistage"
+    "method"                    : "conditioned",
 
     #set the final size of the sampled dataset
     "final_size"                : 1500,
