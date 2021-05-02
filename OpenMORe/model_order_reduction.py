@@ -1655,7 +1655,7 @@ class variables_selection(PCA):
                     #Compute the scores of the reduced matrix, after PCA
                     eigenvec = PCA_fit(X_cut, self._nPCs)
                     #ROTATE THE MODES VIA VARIMAX
-                    rotated_PCs = varimax_rotation(self.X_tilde, eigenvec[0], normalize=True)
+                    rotated_PCs = varimax_rotation(self.X_tilde, eigenvec[0])
                     Z_tilde = X_cut @ rotated_PCs
                     #Compute the reduced scores covariance matrix, and then apply SVD
                     covZZ = np.transpose(Z_tilde) @ Z
@@ -1688,7 +1688,7 @@ class variables_selection(PCA):
             model = PCA(self.X)
             model.eigens = self.X.shape[1] -1
             PCs,eigvals = model.fit()
-            PCs = varimax_rotation(self.X_tilde, PCs, normalize=True)
+            PCs = varimax_rotation(self.X_tilde, PCs)
             while max_var > self.retained:
                 #Check which variable has the max weight on the last PC. Python starts to count from
                 #zero, that's why the last number is "self._nPCs -1" and not "self._nPCs"
@@ -1720,7 +1720,7 @@ class variables_selection(PCA):
 
             model.eigens = self._nPCs
             PCs, eigvals = model.fit()
-            PCs = varimax_rotation(self.X_tilde, PCs, normalize=True)
+            PCs = varimax_rotation(self.X_tilde, PCs)
             PVs = []
             self.var_num = []
 
@@ -1861,7 +1861,7 @@ class variables_selection(PCA):
             eigvec, eigval = model.fit()
 
             #rotate the PCs
-            eigvec = varimax_rotation(self.X_tilde, eigvec, normalize=True)
+            eigvec = varimax_rotation(self.X_tilde, eigvec)
 
             MC_1_min = 1.0e+16
             MC_2_min = 1.0e+16

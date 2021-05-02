@@ -795,6 +795,7 @@ class lpca:
             # Check convergence condition
             if (eps_rec_var <= eps_tol):
                 lpca.write_final_stats(iteration, eps_rec)
+                idx = self.merge_clusters(self.X_tilde, idx)
                 break
             else:
                 residuals = np.append(residuals, eps_rec_new)
@@ -802,7 +803,7 @@ class lpca:
             iteration += 1
             # Consider only statistical meaningful groups of points: if there are <2 points
             #in a cluster, delete it because it's not statistically meaningful
-            idx = lpca.merge_clusters(self.X_tilde, idx)
+            idx = self.merge_clusters(self.X_tilde, idx)
             self._k = max(idx) +1
         print("Convergence reached in {} iterations.".format(iteration))
         #lpca.plot_residuals(iteration, residuals)

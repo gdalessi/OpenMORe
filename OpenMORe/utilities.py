@@ -395,7 +395,7 @@ def NRMSE (X_true, X_pred):
 
     #compute the NRMSE for each observation of the two matrices
     for ii in range(0, n_var):
-        NRMSE[ii] = np.sqrt(np.mean((X_true[:,ii] - X_pred[:,ii])**2)) / np.sqrt(np.mean(X_true[:,ii]**2))
+        NRMSE[ii] = np.sqrt(np.mean((X_true[:,ii] - X_pred[:,ii])**2)) / np.mean(X_true[:,ii])
 
     return NRMSE
 
