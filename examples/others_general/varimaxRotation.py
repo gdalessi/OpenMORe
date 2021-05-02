@@ -46,7 +46,7 @@ PCs, ____ = model.fit()
 #plot the original PC
 model.plot_PCs()
 #apply the varimax rotation algorithm from the utilities module
-rotated = varimax_rotation(X, PCs, normalize=False)
+rotated = varimax_rotation(X, PCs)
 
 #plot the rotated PC
 fig = plt.figure()
