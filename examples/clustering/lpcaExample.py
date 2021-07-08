@@ -51,6 +51,10 @@ settings = {
     "classify"                  : False,    # --> call the method to classify a new matrix Y on the basis of the lpca clustering
     "write_on_txt"              : True,     # --> write the idx vector containing the label for each observation
     "evaluate_clustering"       : True,     # --> enable the calculation of indeces to evaluate the goodness of the clustering
+    
+    #improve the clustering solution via kNN
+    "kNN_post"                  : True,     # activate the kNN algorithm once the convergence is achieved
+    "neighbors_number"          : 40,       # set the number of neighbors that has to be taken into account
 }
 
 # Load the input matrix

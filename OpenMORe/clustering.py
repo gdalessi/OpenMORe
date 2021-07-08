@@ -120,6 +120,9 @@ class lpca:
 
         self._writeFolder = True
 
+        self._postKNN = False
+        self._neighborsNum = 0
+
         if dictionary:
             settings = dictionary[0]
             try:
@@ -221,6 +224,25 @@ class lpca:
                     raise Exception
             except:
                 self._writeFolder = True
+            try:
+                self._postKNN = settings["kNN_post"]
+                if not isinstance(self._postKNN, bool):
+                    raise Exception
+            except:
+                self._postKNN = True
+            try:
+                self._postKNN = settings["kNN_post"]
+                if not isinstance(self._postKNN, bool):
+                    raise Exception
+            except:
+                self._postKNN = True
+            try:
+                self._neighborsNum = settings["neighbors_number"]
+                if not isinstance(self._neighborsNum, int) or self._neighborsNum < 0:
+                    raise Exception
+            except:
+                print("Number of neighbors must be an integer and higher or equal to zero. Exiting with an error..")
+                exit()
 
 
     @property
@@ -650,6 +672,36 @@ class lpca:
 
         return X_tilde
 
+    @staticmethod
+    def kNNpost(X, idx, neighborsNumber):
+        from collections import Counter
+
+        id1 = idx
+        yo1 = np.zeros((len(idx)),dtype=int)
+
+        for ii in range(X.shape[0]):
+            print("Observation number: {}".format(ii))
+            dist = np.exp(np.linalg.norm(X - X[ii,:], axis=1))**2
+            Nearest = dist.argsort()[:neighborsNumber+1]
+            nn_id = idx[Nearest]
+            #print("Nearest idx: {}".format(nn_id))
+            c = Counter(nn_id)
+            #print("Attributed value by LPCA: {}".format(idx[ii]))
+            #print(c)
+            id_num = 0
+            for jj in range(np.max(idx)+1):
+                if c[jj] > id_num:
+                    yo1[ii] = jj 
+                    id_num = c[ii]
+            id_num = 0
+
+        yo = id1 - yo1
+
+        print("Changed {} elements".format(np.count_nonzero(yo)))
+
+
+        return yo1     
+
 
     def fit(self):
         '''
@@ -807,6 +859,14 @@ class lpca:
             self._k = max(idx) +1
         print("Convergence reached in {} iterations.".format(iteration))
         #lpca.plot_residuals(iteration, residuals)
+        lpca.write_final_stats(iteration, eps_rec)
+        idx = self.merge_clusters(self.X_tilde, idx)
+        if self._postKNN == True:
+            print("Moving observations via kNN..")
+            idx = self.kNNpost(self.X_tilde, idx, self._neighborsNum)
+            # Consider only statistical meaningful groups of points: if there are <2 points
+            #in a cluster, delete it because it's not statistically meaningful
+            idx = self.merge_clusters(self.X_tilde, idx)
         return idx
 
 
