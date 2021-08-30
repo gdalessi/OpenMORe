@@ -6,6 +6,9 @@ import os
 import OpenMORe.clustering as clustering
 from OpenMORe.utilities import *
 
+# NewVersion
+
+
 ############################################################################
 # In this example it's shown how to cluster a matrix X (turbo2D.csv) via
 # Local Principal Component Analysis. The results are afterwards analyzed 
