@@ -34,12 +34,12 @@ settings = {
 # Load the input matrix 
 X = readCSV(file_options["path_to_file"], file_options["input_file_name"])
 
-#In this case, we use the temperature vector as a conditioning variable for our multistage
-#approach. Other conditioning variables (e.g., mixture fraction) can be loaded separately.
-Temperature = X[:,0]
+# Feed the function with the conditioning variables (e.g., mixture fraction)
+# you want to use.
+condVar = X[:,0]
 
 reduceSize = model_order_reduction.SamplePopulation(X, settings)
-reduceSize.set_conditioning = Temperature
+reduceSize.set_conditioning = condVar
 miniX = reduceSize.fit()
 
 print("Training matrix sampled. New size: {}x{}".format(miniX.shape[0],miniX.shape[1]))
