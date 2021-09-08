@@ -21,7 +21,7 @@ from numpy import linalg as LA
 
 import matplotlib
 import matplotlib.pyplot as plt
-__all__ = ["unscale", "uncenter", "center", "scale", "center_scale", "evaluate_clustering_PHC", "fastSVD", "get_centroids", "get_cluster", "get_all_clusters", "explained_variance", "evaluate_clustering_DB", "NRMSE", "PCA_fit", "readCSV", "varimax_rotation", "get_medianoids", "split_for_validation", "get_medoids"]
+__all__ = ["unscale", "uncenter", "center", "scale", "center_scale", "evaluate_clustering_PHC", "fastSVD", "get_centroids", "get_cluster", "get_all_clusters", "explained_variance", "evaluate_clustering_DB", "NRMSE", "PCA_fit", "readCSV", "varimax_rotation", "get_medianoids", "split_for_validation", "get_medoids", "denoise"]
 
 
 # ------------------------------
@@ -93,6 +93,31 @@ def center_scale(X, mu, sig):
     else:
         raise Exception("The matrix to be centered & scaled and the centering/scaling vectors must have the same dimensionality.")
 
+
+def denoise(X):
+    import statistics 
+
+    rows = X.shape[0]
+    cols = X.shape[1]
+
+    if rows > cols:
+        Beta = cols/rows
+    elif cols < rows:
+        Beta = rows/cols
+    else:
+        raise Exception("This method does not work with square matrices")
+
+    u, s, vh = np.linalg.svd(X, full_matrices=False)
+    yMed = statistics.median(s)
+
+    omegaBeta = 0.56 * Beta**3 - 0.95 * Beta**2 + 1.82 * Beta + 1.43 
+
+    tauStar = omegaBeta * yMed
+    rankOpt = np.where(s >= tauStar)[0][-1]
+
+    return rankOpt
+
+    
 
 def explained_variance(X, n_eigs, plot=False):
     '''
