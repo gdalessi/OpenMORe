@@ -102,7 +102,7 @@ def denoise(X):
 
     if rows > cols:
         Beta = cols/rows
-    elif cols < rows:
+    elif rows < cols:
         Beta = rows/cols
     else:
         raise Exception("This method does not work with square matrices")
