@@ -235,14 +235,16 @@ class lpca:
                 if not isinstance(self._postKNN, bool):
                     raise Exception
             except:
-                self._postKNN = True
+                self._postKNN = False
             try:
                 self._neighborsNum = settings["neighbors_number"]
                 if not isinstance(self._neighborsNum, int) or self._neighborsNum < 0:
                     raise Exception
             except:
-                print("Number of neighbors must be an integer and higher or equal to zero. Exiting with an error..")
-                exit()
+                self._postKNN = False
+                print("WARNING: number of neighbors for the LPCA clustering algorithm not given. This option will be automatically set to: OFF.")
+                
+              
 
 
     @property

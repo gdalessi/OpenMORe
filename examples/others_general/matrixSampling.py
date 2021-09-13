@@ -90,7 +90,7 @@ if settings["plot_accessed"]:
         matplotlib.rcParams.update({'font.size' : 16, 'text.usetex' : True})
         fig = plt.figure()
         axes = fig.add_axes([0.2,0.15,0.7,0.7], frameon=True)
-        axes.scatter(Temperature, X[:,ii], 2, color= 'k', marker='s')
+        axes.scatter(X[:,0], X[:,ii], 2, color= 'k', marker='s')
         axes.scatter(miniX[:,0], miniX[:,ii], 2, color= 'b')
 
         axes.set_xlabel('$T$')

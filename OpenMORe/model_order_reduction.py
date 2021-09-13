@@ -364,6 +364,8 @@ class PCA:
         self.evecs = self.ALLevecs[:,mask]
         self.evals = self.ALLevals[mask]
 
+        self.evals_uncut = self.evals
+
         #Cut the last PCs and consider only the prescribed number of eigenvectors
         self.evecs = self.evecs[:,:self._nPCs]
         self.evals = self.evals[:self._nPCs]
@@ -440,13 +442,25 @@ class PCA:
             matplotlib.rcParams.update({'font.size' : 18, 'text.usetex' : True})
             fig = plt.figure()
             axes = fig.add_axes([0.15,0.15,0.7,0.7], frameon=True)
-            axes.plot(np.linspace(1, len(explained_variance), len(explained_variance)), explained_variance, color='b', marker='s', linestyle='-', linewidth=2, markersize=4, markerfacecolor='b', label='Cumulative explained')
-            axes.plot([self._nPCs, self._nPCs], [explained_variance[0], explained_variance[-1]], color='r', marker='s', linestyle='-', linewidth=2, markersize=4, markerfacecolor='r', label='Explained by {} PCs'.format(self._nPCs))
-            axes.set_xlabel('Number of PCs [-]')
-            axes.set_ylabel('Explained variance [-]')
-            axes.set_title('Variance explained by {} PCs: {}'.format(self.eigens, round(explained,3)))
-            axes.legend()
-        plt.show()
+            axes.plot(np.linspace(1, len(explained_variance), len(explained_variance)), explained_variance, color='mediumblue', marker='s', linestyle='-', linewidth=2, markersize=4, markerfacecolor='mediumblue', label='$Cumulative$')
+            axes.plot([self._nPCs, self._nPCs], [explained_variance[0], explained_variance[-1]], color='peru', marker='s', linestyle='-.', linewidth=2, markersize=4, markerfacecolor='peru', label='$Explained\ by\ {}\ PCs$'.format(self._nPCs))
+            axes.set_xlabel('$Number\ of\ PCs\ [-]$')
+            axes.set_ylabel('$Explained\ variance\ [-]$')
+            axes.set_title('$Variance\ explained\ by\ {}\ PCs:\ {}$'.format(self.eigens, round(explained,3)))
+            axes.legend(fontsize =14)
+            plt.savefig("explainedIncrease.eps")
+        #plt.show()
+
+
+        if self._plot_explained_variance:
+            matplotlib.rcParams.update({'font.size' : 18, 'text.usetex' : True})
+            fig = plt.figure()
+            axes = fig.add_axes([0.15,0.15,0.7,0.7], frameon=True)
+            axes.plot(np.linspace(1, len(self.evals_uncut), len(self.evals_uncut)), self.evals_uncut, color='mediumblue', marker='s', linestyle='-', linewidth=2, markersize=4)
+            axes.set_xlabel('$PC\ number\ [-]$')
+            axes.set_ylabel('$Eigenvalues\ magnitude\ [-]$')
+            plt.savefig("eigenDecay.eps")
+        #plt.show()
 
         return explained
 
@@ -539,8 +553,8 @@ class PCA:
 
         x = np.linspace(1, self.n_var, self.n_var)
         axes.bar(x, self.evecs[:,self._num_to_plot])
-        axes.set_xlabel('Variables [-]')
-        axes.set_ylabel('Weights on the PC number: {} [-]'.format(self._num_to_plot))
+        axes.set_xlabel('$Variables\ [-]$')
+        axes.set_ylabel('$Associated\ weight\ on\ PC:\ {}\ [-]$'.format(self._num_to_plot +1))
         plt.show()
 
 
@@ -564,14 +578,14 @@ class PCA:
         #plot
         matplotlib.rcParams.update({'font.size' : 18, 'text.usetex' : True})
         fig = plt.figure()
-        axes = fig.add_axes([0.25,0.15,0.7,0.7], frameon=True)
-        axes.plot(self.X[:,self._num_to_plot], self.X[:,self._num_to_plot], color='r', linestyle='-', linewidth=2, markerfacecolor='b')
-        axes.scatter(self.X[:,self._num_to_plot], self.X_rec[:,self._num_to_plot], 1, color= 'k')
-        axes.set_xlabel('Original variable')
-        axes.set_ylabel('Reconstructed from PCA manifold')
+        axes = fig.add_axes([0.15,0.15,0.7,0.7], frameon=True)
+        axes.plot(self.X[:,self._num_to_plot], self.X[:,self._num_to_plot], color='darkblue', linestyle='-.', linewidth=2)
+        axes.scatter(self.X[:,self._num_to_plot], self.X_rec[:,self._num_to_plot], 1, color= 'slategrey', alpha=0.4)
+        axes.set_xlabel('$Original\ variable$')
+        axes.set_ylabel('$Reconstructed\ via\ PCA\ $')
         plt.xlim(min(self.X[:,self._num_to_plot]), max(self.X[:,self._num_to_plot]))
         plt.ylim(min(self.X[:,self._num_to_plot]), max(self.X[:,self._num_to_plot]))
-        #axes.set_title('Parity plot')
+        plt.savefig("parityReconstruction.eps")
         plt.show()
 
 
