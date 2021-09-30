@@ -1601,11 +1601,9 @@ class variables_selection(PCA):
             counter = 1
             #While the number of variables is larger than the number you want to retain ('m'), go on
             #with the elimination process:
-
-            #Perform PCA:
-            model = PCA(self.X)
-            model.eigens = self.X.shape[1] -1
-            PCs,eigvals = model.fit()
+            self._nPCs = self.X.shape[1] -1
+            PCs, eigenValues__ = PCA_fit(self.X, self._nPCs)
+            
             while max_var > self._n_ret:#self.retained:
                 #Check which variable has the max weight on the last PC. Python starts to count from
                 #zero, that's why the last number is "self._nPCs -1" and not "self._nPCs"
@@ -1628,15 +1626,14 @@ class variables_selection(PCA):
         elif self._method.lower() == 'b4':
             print("Selecting global variables via B4 method..")
 
-            model = PCA(self.X)
+
             if self._nPCs < self._n_ret:
                 print("For the B4 it is not possible to choose a number of PCs lower than the required number of variables.")
                 print("The number of PCs will be set equal to the required number of variables.")
                 print(" ")
                 self._nPCs = self._n_ret
 
-            model.eigens = self._nPCs
-            PCs, eigvals = model.fit()
+            PCs, eigenValues__ = PCA_fit(self.X, self._nPCs)
             PVs = []
             self.var_num = []
 
@@ -1699,9 +1696,7 @@ class variables_selection(PCA):
             #with the elimination process:
 
             #Perform PCA:
-            model = PCA(self.X)
-            model.eigens = self.X.shape[1] -1
-            PCs,eigvals = model.fit()
+            PCs, eigenValues__ = PCA_fit(self.X, self._nPCs)
             PCs = varimax_rotation(self.X_tilde, PCs)
             while max_var > self.retained:
                 #Check which variable has the max weight on the last PC. Python starts to count from
@@ -1725,15 +1720,13 @@ class variables_selection(PCA):
         elif self._method.lower() == 'b4_rotation':
             print("Selecting global variables via B4 method..")
 
-            model = PCA(self.X)
             if self._nPCs < self._n_ret:
                 print("For the B4 it is not possible to choose a number of PCs lower than the required number of variables.")
                 print("The number of PCs will be set equal to the required number of variables.")
                 print(" ")
                 self._nPCs = self._n_ret
 
-            model.eigens = self._nPCs
-            PCs, eigvals = model.fit()
+            PCs, eigenValues__ = PCA_fit(self.X, self._nPCs)
             PCs = varimax_rotation(self.X_tilde, PCs)
             PVs = []
             self.var_num = []
