@@ -1633,7 +1633,7 @@ class variables_selection(PCA):
                 print(" ")
                 self._nPCs = self._n_ret
 
-            PCs, eigenValues__ = PCA_fit(self.X, self._nPCs)
+            PCs, eigenValues__ = PCA_fit(self.X_tilde, self._nPCs)
             PVs = []
             self.var_num = []
 
@@ -1696,7 +1696,7 @@ class variables_selection(PCA):
             #with the elimination process:
 
             #Perform PCA:
-            PCs, eigenValues__ = PCA_fit(self.X, self._nPCs)
+            PCs, eigenValues__ = PCA_fit(self.X_tilde, self._nPCs)
             PCs = varimax_rotation(self.X_tilde, PCs)
             while max_var > self.retained:
                 #Check which variable has the max weight on the last PC. Python starts to count from
@@ -1726,7 +1726,7 @@ class variables_selection(PCA):
                 print(" ")
                 self._nPCs = self._n_ret
 
-            PCs, eigenValues__ = PCA_fit(self.X, self._nPCs)
+            PCs, eigenValues__ = PCA_fit(self.X_tilde, self._nPCs)
             PCs = varimax_rotation(self.X_tilde, PCs)
             PVs = []
             self.var_num = []
@@ -1753,7 +1753,7 @@ class variables_selection(PCA):
             ret_index = list(itertools.combinations(range(self.X.shape[1]), self._n_ret))
             n_comb = len(ret_index)
 
-            eigvec, eigenValues__ = PCA_fit(self.X, self._nPCs)
+            eigvec, eigenValues__ = PCA_fit(self.X_tilde, self._nPCs)
 
             MC_1_min = 1.0e+16
             MC_2_min = 1.0e+16
@@ -1863,7 +1863,7 @@ class variables_selection(PCA):
             ret_index = list(itertools.combinations(range(self.X.shape[1]), self._n_ret))
             n_comb = len(ret_index)
 
-            eigvec, eigenValues__ = PCA_fit(self.X, self._nPCs)
+            eigvec, eigenValues__ = PCA_fit(self.X_tilde, self._nPCs)
 
             #rotate the PCs
             eigvec = varimax_rotation(self.X_tilde, eigvec)
