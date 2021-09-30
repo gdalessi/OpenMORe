@@ -1753,8 +1753,7 @@ class variables_selection(PCA):
             ret_index = list(itertools.combinations(range(self.X.shape[1]), self._n_ret))
             n_comb = len(ret_index)
 
-            model = PCA(self.X)
-            eigvec, eigval = model.fit()
+            eigvec, eigenValues__ = PCA_fit(self.X, self._nPCs)
 
             MC_1_min = 1.0e+16
             MC_2_min = 1.0e+16
@@ -1864,8 +1863,7 @@ class variables_selection(PCA):
             ret_index = list(itertools.combinations(range(self.X.shape[1]), self._n_ret))
             n_comb = len(ret_index)
 
-            model = PCA(self.X)
-            eigvec, eigval = model.fit()
+            eigvec, eigenValues__ = PCA_fit(self.X, self._nPCs)
 
             #rotate the PCs
             eigvec = varimax_rotation(self.X_tilde, eigvec)
