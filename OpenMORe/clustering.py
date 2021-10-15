@@ -998,12 +998,13 @@ class fpca(lpca):
 
         #Find the observations in each bin (find the idx, where the classes are
         #the different bins number)
-        while counter <= self._k:
+        while counter < self._k:
             var_right = var_left + delta_step
             mask = np.logical_and(self.condVec >= var_left, self.condVec < var_right)
             self.idx[np.where(mask)] = counter
             counter += 1
             var_left += delta_step
+
 
         return self.idx
 

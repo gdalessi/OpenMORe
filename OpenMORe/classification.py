@@ -65,6 +65,7 @@ class VQPCA(clustering.lpca):
         
         # Scale the new matrix with these factors
         Y_tilde = center_scale(self.Y, mu, sigma)
+        X_tilde = center_scale(self.X, mu, sigma)
         
         # Initialize arrays
         rows, cols = np.shape(self.Y)
@@ -73,8 +74,9 @@ class VQPCA(clustering.lpca):
         
         # Compute the reconstruction errors
         for ii in range (0, self.k):
-            cluster = get_cluster(self.X, self.idx, ii)
-            centroids = get_centroids(cluster)
+            cluster__ = get_cluster(X_tilde, self.idx, ii)
+            centroids = get_centroids(cluster__)
+            ____, cluster = center(cluster__, "mean")
             modes = PCA_fit(cluster, self.nPCs)
             C_mat = np.matlib.repmat(centroids, rows, 1)
             rec_err_os = (Y_tilde - C_mat) - (Y_tilde - C_mat) @ modes[0] @ modes[0].T
