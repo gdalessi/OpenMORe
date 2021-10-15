@@ -76,7 +76,7 @@ class VQPCA(clustering.lpca):
         for ii in range (0, self.k):
             cluster__ = get_cluster(X_tilde, self.idx, ii)
             centroids = get_centroids(cluster__)
-            ____, cluster = center(cluster__, "mean")
+            ____, cluster = center(cluster__, "mean", True)
             modes = PCA_fit(cluster, self.nPCs)
             C_mat = np.matlib.repmat(centroids, rows, 1)
             rec_err_os = (Y_tilde - C_mat) - (Y_tilde - C_mat) @ modes[0] @ modes[0].T
