@@ -753,7 +753,7 @@ class lpca:
                 #perform PCA in the cluster, centering and scaling can be avoided
                 #because the observations are already standardized
                 local_model = model_order_reduction.PCA(cluster)
-                local_model.to_center = False
+                local_model.to_center = True
                 local_model.to_scale = False
                 if not self._adaptive:
                     local_model.eigens = self._nPCs
