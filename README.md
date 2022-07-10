@@ -3,18 +3,17 @@ OpenMORe is a collection of Python modules for Model-Order-Reduction, clustering
 
 # How to cite
 If you use OpenMORe for your publications, I kindly ask you to cite the following papers:
-- If you use clustering.py and/or classification.py:
+If you use clustering.py and/or classification.py:
 
-*D’Alessio et al., "Adaptive chemistry via pre-partitioning of composition space and mechanism reduction." Combustion and Flame 211 (2020): 68-82.*
-and
-*D'Alessio et al., "Feature extraction and artificial neural networks for the on-the-fly classification of high-dimensional thermochemical spaces in adaptive-chemistry simulations." Data-Centric Engineering 2 (2021).*
+* _D’Alessio et al., "Adaptive chemistry via pre-partitioning of composition space and mechanism reduction." Combustion and Flame 211 (2020): 68-82._
+* _D'Alessio et al., "Feature extraction and artificial neural networks for the on-the-fly classification of high-dimensional thermochemical spaces in adaptive-chemistry simulations." Data-Centric Engineering 2 (2021)._
 
-- If you use model_order_reduction.py:
+If you use model_order_reduction.py:
 
-*D'Alessio et al., D’Alessio, Giuseppe, et al. "Analysis of turbulent reacting jets via principal component analysis." Data Analysis for Direct Numerical Simulations of Turbulent Combustion. Springer, Cham, 2020. 233-251.*
+* *D'Alessio et al., D’Alessio, Giuseppe, et al. "Analysis of turbulent reacting jets via principal component analysis." Data Analysis for Direct Numerical Simulations of Turbulent Combustion. Springer, Cham, 2020. 233-251.*
 
 
-**Implemented techniques:**
+# **Implemented techniques:**
 
 _Model Order Reduction:_
 - Principal Component Analysis (PCA)
@@ -36,7 +35,8 @@ _Utilities:_
 - Fast algorithm for SVD 
 
 
-**Requirements**: in order to use OpenMORe on your devices, the following requirements must be satisfied:
+# **Requirements**: 
+In order to use OpenMORe on your devices, the following requirements must be satisfied:
 
 - Python version >= 3.6 
 - Numpy must be installed 
@@ -46,9 +46,11 @@ _Utilities:_
 - Latex must be installed (for the plots' labels)
 
 
-**Installation**: if the libraries requirements are satisfied, clone or download the repo. After that, go to the OpenMORe folder from your terminal (where the file *setup.py* is located) and type: `python setup.py install`. 
+# **Installation**: 
+If the libraries requirements are satisfied, clone or download the repo. After that, go to the OpenMORe folder from your terminal (where the file *setup.py* is located) and type: `python setup.py install`. 
 
-**Test**: it is possible to check if the installation process was successful running the tests. To do that, just type:
+# **Test**: 
+It is possible to check if the installation process was successful running the tests. To do that, just type:
 - `python -m unittest tests/test_PCA.py`  
 - `python -m unittest tests/test_sampling.py `
 - `python -m unittest tests/test_clustering.py `
@@ -63,10 +65,12 @@ OK
 ___________________________
 ```
 
-**Use**: if the tests are successful, you can now use OpenMORe. In the "examples" folder there are some pre-set cases, organized according to the final purpose (e.g., clustering, dimensionality-reduction, variables-selection, others). They are also fully commented to describe the required dictionary inputs.
+# **Usage**: 
+If the tests are successful, you can now use OpenMORe. In the "examples" folder there are some pre-set cases, organized according to the final purpose (e.g., clustering, dimensionality-reduction, variables-selection, others). They are also fully commented to describe the required dictionary inputs.
 In the “data/reactive_flow” folder, there is a collection of data (from a CFD simulation of a turbulent reacting jet) to run the examples and test the code, while in "data/dummy_data" you can find relatively simple data sets to test the scripts' functionality. 
 A detailed description of all the classes and functions is available in the detailed documentation and in the source code. 
 
-**Documentation**: the official documentation is available in /OpenMORe/Documentation. It is strongly suggested to read it before using the software.
+# **Documentation**: 
+The official documentation is available in /OpenMORe/Documentation. It is strongly suggested to read it before using the software.
 
 For any question or problem regarding the code you can write to me at the following address: giuseppe.dalessio@ulb.ac.be 
