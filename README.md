@@ -1,4 +1,18 @@
+# General
 OpenMORe is a collection of Python modules for Model-Order-Reduction, clustering and classification. 
+
+# How to cite
+If you use OpenMORe for your publications, I kindly ask you to cite the following papers:
+- If you use clustering.py and/or classification.py:
+
+*D’Alessio et al., "Adaptive chemistry via pre-partitioning of composition space and mechanism reduction." Combustion and Flame 211 (2020): 68-82.*
+and
+*D'Alessio et al., "Feature extraction and artificial neural networks for the on-the-fly classification of high-dimensional thermochemical spaces in adaptive-chemistry simulations." Data-Centric Engineering 2 (2021).*
+
+- If you use model_order_reduction.py:
+
+*D'Alessio et al., D’Alessio, Giuseppe, et al. "Analysis of turbulent reacting jets via principal component analysis." Data Analysis for Direct Numerical Simulations of Turbulent Combustion. Springer, Cham, 2020. 233-251.*
+
 
 **Implemented techniques:**
 
