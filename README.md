@@ -10,7 +10,7 @@ If you use clustering.py and/or classification.py:
 
 If you use model_order_reduction.py:
 
-* *D'Alessio et al., D’Alessio, Giuseppe, et al. "Analysis of turbulent reacting jets via principal component analysis." Data Analysis for Direct Numerical Simulations of Turbulent Combustion. Springer, Cham, 2020. 233-251.*
+* *D'Alessio et al., "Analysis of turbulent reacting jets via principal component analysis." Data Analysis for Direct Numerical Simulations of Turbulent Combustion. Springer, Cham, 2020. 233-251.*
 
 
 # **Implemented techniques:**
